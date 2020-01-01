@@ -1,0 +1,14 @@
+{
+  "domain": "hubitat",
+  "name": "Hubitat",
+  "config_flow": true,
+  "documentation": "https://github.com/jason0x43/hass-components",
+  "requirements": ["beautifulsoup4==4.8.2"],
+  "ssdp": [],
+  "zeroconf": [],
+  "homekit": {},
+  "dependencies": [],
+  "codeowners": [
+    "@jason0x43"
+  ]
+}
