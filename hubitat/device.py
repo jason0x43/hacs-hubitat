@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Union
 from homeassistant.helpers.entity import Entity
 
 from .const import DOMAIN
-from .hubitat import HubitatHub
+from .hubitat import HubitatHub, InvalidAttribute
 
 _LOGGER = getLogger(__name__)
 
@@ -17,7 +17,7 @@ class HubitatDevice(Entity):
     # Hubitat will push device updates
     should_poll = False
 
-    def __init__(self, hub: HubitatHub = None, device: Dict[str, Any] = None):
+    def __init__(self, hub: HubitatHub, device: Dict[str, Any]):
         """Initialize a device."""
         self._hub = hub
         self._device: Dict[str, Any] = device
@@ -68,9 +68,9 @@ class HubitatDevice(Entity):
         arg = ",".join([str(a) for a in args])
         await self._hub.send_command(self.device_id, command, arg)
 
-    def _get_attr(self, attr: str):
+    def _get_attr(self, attr: str, **kwargs: Any):
         """Get the current value of an attribute."""
-        dev_attr = self._hub.get_device_attribute(self.device_id, attr)
+        dev_attr = self._hub.get_device_attribute(self.device_id, attr, **kwargs)
         return dev_attr["currentValue"]
 
     def _create_listener(self):

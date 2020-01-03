@@ -14,6 +14,7 @@ Listener = Callable[[], None]
 
 CAP_COLOR_CONTROL = "ColorControl"
 CAP_COLOR_TEMP = "ColorTemperature"
+CAP_POWER_METER = "PowerMeter"
 CAP_SWITCH = "Switch"
 CAP_SWITCH_LEVEL = "SwitchLevel"
 
@@ -80,7 +81,7 @@ COMMANDS_SCHEMA = vol.Schema([COMMAND_SCHEMA])
 class HubitatHub:
     """A representation of a Hubitat hub."""
 
-    api: str
+    api_url: str
     app_id: str
     host: str
     token: str
@@ -97,7 +98,7 @@ class HubitatHub:
         self.host = host
         self.app_id = app_id
         self.token = access_token
-        self.api = f"http://{host}/apps/api/{app_id}"
+        self.api_url = f"http://{host}/apps/api/{app_id}"
 
         self._devices: Dict[str, Dict[str, Any]] = {}
         self._info: Dict[str, str] = {}
@@ -204,17 +205,21 @@ class HubitatHub:
             path += f"/{arg}"
         await self._api_request(path)
 
-    def get_device_attribute(self, device_id: str, attr_name: str) -> Dict[str, Any]:
+    def get_device_attribute(
+        self, device_id: str, attr_name: str, **kwargs: Any
+    ) -> Dict[str, Any]:
         """Get an attribute value for a specific device."""
         state = self._devices[device_id]
         for attr in state["attributes"]:
             if attr["name"] == attr_name:
                 return attr
+        if "default" in kwargs:
+            return kwargs["default"]
         raise InvalidAttribute(f"{device_id}.{attr_name}")
 
     async def set_event_url(self, event_url: str):
         """Set the URL that Hubitat will POST events to."""
-        _LOGGER.info(f"Posting update to {self.api}/postURL/{event_url}")
+        _LOGGER.info(f"Posting update to {self.api_url}/postURL/{event_url}")
         url = quote(event_url, safe="")
         await self._api_request(f"postURL/{url}")
 
@@ -324,7 +329,7 @@ class HubitatHub:
 
     async def _api_request(self, path: str, method="GET"):
         params = {"access_token": self.token}
-        async with request(method, f"{self.api}/{path}", params=params) as resp:
+        async with request(method, f"{self.api_url}/{path}", params=params) as resp:
             if resp.status >= 400:
                 if resp.status == 401:
                     raise InvalidToken()
@@ -383,6 +388,5 @@ class RequestError(Exception):
 
     def __init__(self, resp: ClientResponse, **kwargs):
         """Initialize a request error."""
-        super().__init__(
-            f"{resp.method} {resp.url} - [{resp.status}] {resp.reason}", **kwargs,
-        )
+        super().__init__(f"{resp.method} {resp.url} - [{resp.status}] {resp.reason}")
+

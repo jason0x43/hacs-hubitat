@@ -141,7 +141,7 @@ POSSIBLE_LIGHT_CAPABILITIES = (CAP_SWITCH, CAP_SWITCH_LEVEL)
 MATCH_LIGHT = re.compile(r".*\b(light|lamp|chandelier)s?\b.*", re.IGNORECASE)
 
 
-def _is_light(device):
+def is_light(device):
     """Return True if device looks like a light."""
     if any(cap in device["capabilities"] for cap in LIGHT_CAPABILITIES):
         return True
@@ -157,6 +157,6 @@ async def async_setup_entry(
 ):
     """Initialize light devices."""
     hub: HubitatHub = hass.data[DOMAIN][entry.entry_id].hub
-    lights = [HubitatLight(hub=hub, device=d) for d in hub.devices if _is_light(d)]
+    lights = [HubitatLight(hub=hub, device=d) for d in hub.devices if is_light(d)]
     async_add_entities(lights)
     _LOGGER.debug(f"Added entities for lights: {lights}")

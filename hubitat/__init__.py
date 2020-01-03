@@ -2,14 +2,19 @@
 from asyncio import gather
 from copy import deepcopy
 from logging import getLogger
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from aiohttp.web import Request
 import voluptuous as vol
 
 from homeassistant.components.webhook import async_generate_url
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_WEBHOOK_ID
+from homeassistant.const import (
+    ATTR_ENTITY_ID,
+    CONF_ACCESS_TOKEN,
+    CONF_HOST,
+    CONF_WEBHOOK_ID,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry
 
@@ -20,7 +25,7 @@ _LOGGER = getLogger(__name__)
 
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 
-PLATFORMS = ["light", "sensor", "binary_sensor"]
+PLATFORMS = ["light", "switch", "sensor", "binary_sensor"]
 
 
 async def async_setup(hass: HomeAssistant, config: dict):
@@ -42,20 +47,17 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up Hubitat from a config entry."""
+    manager = Hubitat(hass, entry)
 
-    host = entry.data.get(CONF_HOST)
-    app_id = entry.data.get(CONF_APP_ID)
-    token = entry.data.get(CONF_ACCESS_TOKEN)
-
-    hub = HubitatHub(host, app_id, token)
-    await hub.connect()
-
-    manager = Hubitat(hub)
+    if not await manager.async_setup():
+        return False
 
     if DOMAIN not in hass.data:
         hass.data[DOMAIN] = {}
 
     hass.data[DOMAIN][entry.entry_id] = manager
+
+    hub = manager.hub
 
     dreg = await device_registry.async_get_registry(hass)
     dreg.async_get_or_create(
@@ -66,19 +68,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         name=hub.name,
         model=hub.hw_version,
         sw_version=hub.sw_version,
-    )
-
-    for component in PLATFORMS:
-        hass.async_create_task(
-            hass.config_entries.async_forward_entry_setup(entry, component)
-        )
-
-    hass.components.webhook.async_register(
-        DOMAIN, "Hubitat", entry.data[CONF_WEBHOOK_ID], handle_event
-    )
-
-    hass.async_create_task(
-        hub.set_event_url(async_generate_url(hass, entry.data[CONF_WEBHOOK_ID]))
     )
 
     return True
@@ -110,10 +99,70 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
 class Hubitat:
     """Hubitat management class."""
 
-    def __init__(self, hub: HubitatHub):
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
         """Initialize a Hubitat manager."""
-        self.hub = hub
+        self.hass = hass
+        self.config_entry = entry
         self.entity_ids: List[int] = []
+
+    @property
+    def host(self) -> str:
+        return self.config_entry.data.get(CONF_HOST)
+
+    @property
+    def app_id(self) -> str:
+        return self.config_entry.data.get(CONF_APP_ID)
+
+    @property
+    def token(self) -> str:
+        return self.config_entry.data.get(CONF_ACCESS_TOKEN)
+
+    async def async_setup(self) -> bool:
+        self.hub = HubitatHub(self.host, self.app_id, self.token)
+        await self.hub.connect()
+
+        hub = self.hub
+        hass = self.hass
+        config_entry = self.config_entry
+
+        for component in PLATFORMS:
+            hass.async_create_task(
+                hass.config_entries.async_forward_entry_setup(config_entry, component)
+            )
+        _LOGGER.debug(f"Registered platforms")
+
+        webhook_id = config_entry.data[CONF_WEBHOOK_ID]
+
+        hass.components.webhook.async_register(
+            DOMAIN, "Hubitat", webhook_id, self.handle_event
+        )
+        _LOGGER.debug(f"Registered webhook {webhook_id}")
+
+        hass.async_create_task(hub.set_event_url(async_generate_url(hass, webhook_id)))
+        _LOGGER.debug(f"Set event POST URL")
+
+        return True
+
+    async def handle_event(
+        self, hass: HomeAssistant, webhook_id: str, request: Request
+    ):
+        """Handle an event from the hub."""
+        try:
+            data = await request.json()
+            event = EVENT_SCHEMA(data)["content"]
+        except Exception as e:
+            _LOGGER.warning(f"Invalid message from Hubitat: {e}")
+            return None
+
+        if event["name"] == "ssdpTerm":
+            # Ignore upnp events
+            return
+
+        _LOGGER.debug(
+            f"Received event from {self.hub} for for {event['displayName']} ({event['deviceId']}) - {event['name']} -> {event['value']}"
+        )
+
+        self.hub.update_state(event)
 
 
 EVENT_SCHEMA = vol.Schema(
@@ -130,34 +179,3 @@ EVENT_SCHEMA = vol.Schema(
     },
     required=True,
 )
-
-
-async def handle_event(hass: HomeAssistant, webhook_id: str, request: Request):
-    """Handle an event from the hub."""
-    try:
-        data = await request.json()
-        event = EVENT_SCHEMA(data)["content"]
-    except Exception as e:
-        _LOGGER.warning(f"Invalid message from Hubitat: {e}")
-        return None
-
-    if event["name"] == "ssdpTerm":
-        # Ignore upnp events
-        return
-
-    hub = _get_hub_for_webhook(hass, webhook_id)
-    _LOGGER.info(
-        f"Received event from {hub} for for {event['displayName']} ({event['deviceId']}) - {event['name']} -> {event['value']}"
-    )
-
-    if hub:
-        hub.update_state(event)
-
-
-def _get_hub_for_webhook(hass: HomeAssistant, webhook_id: str) -> Optional[HubitatHub]:
-    """Return the hub corresponding to a webhook id."""
-    entries = hass.config_entries.async_entries(DOMAIN)
-    for entry in entries:
-        if entry.data[CONF_WEBHOOK_ID] == webhook_id:
-            return hass.data[DOMAIN][entry.entry_id].hub
-    return None
