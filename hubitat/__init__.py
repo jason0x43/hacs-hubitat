@@ -2,7 +2,7 @@
 from asyncio import gather
 from copy import deepcopy
 from logging import getLogger
-from typing import Any, List, Optional
+from typing import Any, List, Optional, cast
 
 from aiohttp.web import Request
 import voluptuous as vol
@@ -101,21 +101,28 @@ class Hubitat:
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
         """Initialize a Hubitat manager."""
+        if not CONF_HOST in entry.data:
+            raise ValueError(f"Missing host in config entry")
+        if not CONF_APP_ID in entry.data:
+            raise ValueError(f"Missing app ID in config entry")
+        if not CONF_ACCESS_TOKEN in entry.data:
+            raise ValueError(f"Missing access token in config entry")
+
         self.hass = hass
         self.config_entry = entry
         self.entity_ids: List[int] = []
 
     @property
     def host(self) -> str:
-        return self.config_entry.data.get(CONF_HOST)
+        return cast(str, self.config_entry.data.get(CONF_HOST))
 
     @property
     def app_id(self) -> str:
-        return self.config_entry.data.get(CONF_APP_ID)
+        return cast(str, self.config_entry.data.get(CONF_APP_ID))
 
     @property
     def token(self) -> str:
-        return self.config_entry.data.get(CONF_ACCESS_TOKEN)
+        return cast(str, self.config_entry.data.get(CONF_ACCESS_TOKEN))
 
     async def async_setup(self) -> bool:
         self.hub = HubitatHub(self.host, self.app_id, self.token)
