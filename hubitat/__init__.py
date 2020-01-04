@@ -71,6 +71,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     )
 
     hass.bus.fire(EVENT_READY)
+    _LOGGER.info("Hubitat is ready")
 
     return True
 
