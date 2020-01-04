@@ -18,7 +18,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry
 
-from .const import CONF_APP_ID, DOMAIN
+from .const import CONF_APP_ID, DOMAIN, EVENT_READY
 from .hubitat import HubitatHub
 
 _LOGGER = getLogger(__name__)
@@ -69,6 +69,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         model=hub.hw_version,
         sw_version=hub.sw_version,
     )
+
+    hass.bus.fire(EVENT_READY)
 
     return True
 
@@ -155,6 +157,7 @@ class Hubitat:
         hass.async_create_task(hub.set_event_url(async_generate_url(hass, webhook_id)))
         _LOGGER.debug(f"Set event POST URL")
 
+        # Create an entity for the Hubitat hub with basic hub information
         hass.states.async_set(
             self.hub_entity_id,
             "connected",
