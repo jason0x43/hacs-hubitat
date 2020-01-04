@@ -47,13 +47,13 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up Hubitat from a config entry."""
-    manager = Hubitat(hass, entry)
+    if DOMAIN not in hass.data:
+        hass.data[DOMAIN] = {}
+
+    manager = Hubitat(hass, entry, len(hass.data[DOMAIN]) + 1)
 
     if not await manager.async_setup():
         return False
-
-    if DOMAIN not in hass.data:
-        hass.data[DOMAIN] = {}
 
     hass.data[DOMAIN][entry.entry_id] = manager
 
@@ -99,7 +99,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
 class Hubitat:
     """Hubitat management class."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, index: int):
         """Initialize a Hubitat manager."""
         if not CONF_HOST in entry.data:
             raise ValueError(f"Missing host in config entry")
@@ -111,6 +111,11 @@ class Hubitat:
         self.hass = hass
         self.config_entry = entry
         self.entity_ids: List[int] = []
+
+        if index == 1:
+            self.hub_entity_id = "hubitat.hub"
+        else:
+            self.hub_entity_id = f"hubitat.hub_{index}"
 
     @property
     def host(self) -> str:
@@ -126,6 +131,8 @@ class Hubitat:
 
     async def async_setup(self) -> bool:
         self.hub = HubitatHub(self.host, self.app_id, self.token)
+        self.hass.states.async_set(self.hub_entity_id, "unknown")
+
         await self.hub.connect()
 
         hub = self.hub
@@ -147,6 +154,12 @@ class Hubitat:
 
         hass.async_create_task(hub.set_event_url(async_generate_url(hass, webhook_id)))
         _LOGGER.debug(f"Set event POST URL")
+
+        hass.states.async_set(
+            self.hub_entity_id,
+            "connected",
+            {"id": hub.id, "host": hub.host, "sw_version": hub.sw_version,},
+        )
 
         return True
 
