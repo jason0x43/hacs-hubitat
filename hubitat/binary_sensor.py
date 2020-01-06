@@ -33,7 +33,7 @@ class HubitatBinarySensor(HubitatDevice, BinarySensorDevice):
     @property
     def name(self):
         """Return the display name for this sensor."""
-        return f"{super().name} ({self._attribute})"
+        return f"{super().name} {self._attribute}"
 
     @property
     def unique_id(self):

@@ -17,6 +17,7 @@ CAP_COLOR_TEMP = "ColorTemperature"
 CAP_POWER_METER = "PowerMeter"
 CAP_SWITCH = "Switch"
 CAP_SWITCH_LEVEL = "SwitchLevel"
+CAP_THERMOSTAT = "Thermostat"
 
 ATTR_ACCELERATION = "acceleration"
 ATTR_BATTERY = "battery"
@@ -27,13 +28,28 @@ ATTR_MOTION = "motion"
 ATTR_TEMPERATURE = "temperature"
 ATTR_UV = "ultravioletIndex"
 
+CMD_AUTO = "auto"
+CMD_AWAY = "away"
+CMD_COOL = "cool"
+CMD_ECO = "eco"
+CMD_EMERGENCY_HEAT = "emergencyHeat"
+CMD_FAN_AUTO = "fanAuto"
+CMD_FAN_CIRCULATE = "fanCirculate"
+CMD_FAN_ON = "fanOn"
+CMD_HEAT = "heat"
 CMD_OFF = "off"
 CMD_ON = "on"
+CMD_PRESENT = "present"
 CMD_SET_COLOR = "setColor"
 CMD_SET_COLOR_TEMP = "setColorTemperature"
 CMD_SET_HUE = "setHue"
 CMD_SET_LEVEL = "setLevel"
 CMD_SET_SAT = "setSaturation"
+CMD_SET_HEATING_SETPOINT = "setHeatingSetpoint"
+CMD_SET_COOLING_SETPOINT = "setCoolingSetpoint"
+CMD_SET_PRESENCE = "setPresence"
+CMD_SET_THERMOSTAT_MODE = "setThermostatMode"
+CMD_SET_FAN_MODE = "setThermostatFanMode"
 
 DEVICE_SCHEMA = vol.Schema({"id": str, "name": str, "label": str}, required=True)
 
@@ -160,13 +176,13 @@ class HubitatHub:
         """Remove all listeners for a device."""
         self._listeners[device_id] = []
 
-    def device_has_attribute(self, device_id: str, attr: str):
+    def device_has_attribute(self, device_id: str, attr_name: str):
         """Return True if the given device device has the given attribute."""
-        try:
-            self.get_device_attribute(device_id, attr)
-            return True
-        except Exception:
-            return False
+        state = self._devices[device_id]
+        for attr in state["attributes"]:
+            if attr["name"] == attr_name:
+                return True
+        return False
 
     async def check_config(self):
         """Verify that the hub is accessible."""
@@ -206,16 +222,14 @@ class HubitatHub:
         await self._api_request(path)
 
     def get_device_attribute(
-        self, device_id: str, attr_name: str, **kwargs: Any
-    ) -> Dict[str, Any]:
+        self, device_id: str, attr_name: str
+    ) -> Optional[Dict[str, Any]]:
         """Get an attribute value for a specific device."""
         state = self._devices[device_id]
         for attr in state["attributes"]:
             if attr["name"] == attr_name:
                 return attr
-        if "default" in kwargs:
-            return kwargs["default"]
-        raise InvalidAttribute(f"{device_id}.{attr_name}")
+        return None
 
     async def set_event_url(self, event_url: str):
         """Set the URL that Hubitat will POST events to."""
@@ -236,12 +250,17 @@ class HubitatHub:
     ):
         """Update a device attribute value."""
         _LOGGER.debug(f"Updating {attr_name} of {device_id} to {value}")
-        state = self._devices[device_id]
+        try:
+            state = self._devices[device_id]
+        except KeyError:
+            _LOGGER.warning(f"Tried to update unknown device {device_id}")
+            return
+
         for attr in state["attributes"]:
             if attr["name"] == attr_name:
                 attr["currentValue"] = value
                 return
-        raise InvalidAttribute
+        raise InvalidAttribute(f"Device {device_id} has no attribute {attr_name}")
 
     async def _load_info(self):
         """Load general info about the hub."""
@@ -276,7 +295,6 @@ class HubitatHub:
             # load devices sequentially to avoid overloading the hub
             for dev in devices:
                 await self._load_device(dev["id"], force_refresh)
-                _LOGGER.debug(f"Loaded device {dev['id']}")
 
     async def _load_device(self, device_id: str, force_refresh=False):
         """

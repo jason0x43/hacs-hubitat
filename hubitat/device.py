@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Union
 from homeassistant.helpers.entity import Entity
 
 from .const import DOMAIN
-from .hubitat import HubitatHub, InvalidAttribute
+from .hubitat import HubitatHub
 
 _LOGGER = getLogger(__name__)
 
@@ -63,15 +63,24 @@ class HubitatDevice(Entity):
         """Run when entity will be removed from hass."""
         self._hub.remove_device_listeners(self.device_id)
 
-    async def _send_command(self, command: str, *args: List[Union[int, str]]):
+    async def _send_command(self, command: str, *args: Union[int, str]):
         """Send a command to this device."""
         arg = ",".join([str(a) for a in args])
         await self._hub.send_command(self.device_id, command, arg)
 
-    def _get_attr(self, attr: str, **kwargs: Any):
+    def _get_attr(self, attr: str):
         """Get the current value of an attribute."""
-        dev_attr = self._hub.get_device_attribute(self.device_id, attr, **kwargs)
-        return dev_attr["currentValue"]
+        dev_attr = self._hub.get_device_attribute(self.device_id, attr)
+        if dev_attr:
+            return dev_attr["currentValue"]
+        return None
+
+    def _get_attr_values(self, attr: str):
+        """Get the possible values of an enum attribute."""
+        dev_attr = self._hub.get_device_attribute(self.device_id, attr)
+        if dev_attr:
+            return dev_attr["values"]
+        return None
 
     def _create_listener(self):
         def handle_event():

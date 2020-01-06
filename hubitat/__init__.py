@@ -25,7 +25,7 @@ _LOGGER = getLogger(__name__)
 
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 
-PLATFORMS = ["light", "switch", "sensor", "binary_sensor"]
+PLATFORMS = ["light", "switch", "sensor", "binary_sensor", "climate"]
 
 
 async def async_setup(hass: HomeAssistant, config: dict):

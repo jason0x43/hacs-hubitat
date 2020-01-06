@@ -19,7 +19,7 @@ class HubitatSensor(HubitatDevice):
     @property
     def name(self):
         """Return this sensor's display name."""
-        return f"{super().name} ({self._attribute})"
+        return f"{super().name} {self._attribute}"
 
     @property
     def state(self):
