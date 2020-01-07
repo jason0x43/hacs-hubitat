@@ -134,7 +134,6 @@ class Hubitat:
 
     async def async_setup(self) -> bool:
         self.hub = HubitatHub(self.host, self.app_id, self.token)
-        self.hass.states.async_set(self.hub_entity_id, "unknown")
 
         await self.hub.connect()
 
@@ -162,7 +161,12 @@ class Hubitat:
         hass.states.async_set(
             self.hub_entity_id,
             "connected",
-            {"id": hub.id, "host": hub.host, "sw_version": hub.sw_version,},
+            {
+                "id": hub.id,
+                "host": hub.host,
+                "sw_version": hub.sw_version,
+                "hidden": True,
+            },
         )
 
         return True
