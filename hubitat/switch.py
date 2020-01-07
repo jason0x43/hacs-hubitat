@@ -2,11 +2,12 @@
 
 from logging import getLogger
 import re
+from typing import List
 
 from homeassistant.components.switch import (
-    SwitchDevice,
     DEVICE_CLASS_OUTLET,
     DEVICE_CLASS_SWITCH,
+    SwitchDevice,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -14,14 +15,8 @@ from homeassistant.util import color as color_util
 
 from .const import DOMAIN
 from .device import HubitatDevice
+from .hubitat import CAP_POWER_METER, CAP_SWITCH, CMD_OFF, CMD_ON, HubitatHub
 from .light import is_light
-from .hubitat import (
-    CAP_POWER_METER,
-    CAP_SWITCH,
-    CMD_ON,
-    CMD_OFF,
-    HubitatHub,
-)
 
 _LOGGER = getLogger(__name__)
 
@@ -81,7 +76,7 @@ async def async_setup_entry(
     """Initialize switch devices."""
     hub: HubitatHub = hass.data[DOMAIN][entry.entry_id].hub
     switch_devs = [d for d in hub.devices if is_switch(d)]
-    switches = []
+    switches: List[HubitatSwitch] = []
     for s in switch_devs:
         if is_energy_meter(s):
             switches.append(HubitatPowerMeterSwitch(hub=hub, device=s))
