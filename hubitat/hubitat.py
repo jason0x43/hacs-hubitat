@@ -21,12 +21,15 @@ CAP_THERMOSTAT = "Thermostat"
 
 ATTR_ACCELERATION = "acceleration"
 ATTR_BATTERY = "battery"
+ATTR_CARBON_MONOXIDE = "carbonMonoxide"
 ATTR_CONTACT = "contact"
 ATTR_HUMIDITY = "humidity"
 ATTR_ILLUMINANCE = "illuminance"
 ATTR_MOTION = "motion"
+ATTR_SMOKE = "smoke"
 ATTR_TEMPERATURE = "temperature"
 ATTR_UV = "ultravioletIndex"
+ATTR_WATER = "water"
 
 CMD_AUTO = "auto"
 CMD_AWAY = "away"
@@ -405,6 +408,5 @@ class RequestError(Exception):
     """An error indicating that a request failed."""
 
     def __init__(self, resp: ClientResponse, **kwargs):
-        """Initialize a request error."""
         super().__init__(f"{resp.method} {resp.url} - [{resp.status}] {resp.reason}")
 

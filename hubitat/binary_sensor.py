@@ -7,8 +7,11 @@ from typing import Any, Dict
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_DOOR,
     DEVICE_CLASS_GARAGE_DOOR,
+    DEVICE_CLASS_GAS,
+    DEVICE_CLASS_MOISTURE,
     DEVICE_CLASS_MOTION,
     DEVICE_CLASS_MOVING,
+    DEVICE_CLASS_SMOKE,
     DEVICE_CLASS_WINDOW,
     BinarySensorDevice,
 )
@@ -17,9 +20,22 @@ from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
 from .device import HubitatDevice
-from .hubitat import ATTR_ACCELERATION, ATTR_CONTACT, ATTR_MOTION, HubitatHub
+from .hubitat import (
+    ATTR_ACCELERATION,
+    ATTR_CARBON_MONOXIDE,
+    ATTR_CONTACT,
+    ATTR_MOTION,
+    ATTR_SMOKE,
+    ATTR_WATER,
+    HubitatHub,
+)
 
 _LOGGER = getLogger(__name__)
+
+_CONTACT_MATCHERS = (
+    (re.compile("garage door", re.IGNORECASE), DEVICE_CLASS_GARAGE_DOOR),
+    (re.compile("window", re.IGNORECASE), DEVICE_CLASS_WINDOW),
+)
 
 
 class HubitatBinarySensor(HubitatDevice, BinarySensorDevice):
@@ -49,29 +65,20 @@ class HubitatBinarySensor(HubitatDevice, BinarySensorDevice):
             return None
 
 
-class HubitatMotionSensor(HubitatBinarySensor):
-    """A motion sensor."""
+class HubitatAccelerationSensor(HubitatBinarySensor):
+    """An acceleration sensor."""
 
     _active_state = "active"
-    _attribute = ATTR_MOTION
-    _device_class = DEVICE_CLASS_MOTION
+    _attribute = ATTR_ACCELERATION
+    _device_class = DEVICE_CLASS_MOVING
 
 
-_CONTACT_MATCHERS = (
-    (re.compile("garage door", re.IGNORECASE), DEVICE_CLASS_GARAGE_DOOR),
-    (re.compile("window", re.IGNORECASE), DEVICE_CLASS_WINDOW),
-)
+class HubitatCoSensor(HubitatBinarySensor):
+    """A carbon monoxide sensor."""
 
-
-def _get_contact_device_class(device: Dict[str, Any]):
-    """Guess the type of contact sensor from the device's label."""
-    label = device["label"]
-
-    for matcher in _CONTACT_MATCHERS:
-        if matcher[0].match(label):
-            return matcher[1]
-
-    return DEVICE_CLASS_DOOR
+    _active_state = "detected"
+    _attribute = ATTR_CARBON_MONOXIDE
+    _device_class = DEVICE_CLASS_GAS
 
 
 class HubitatContactSensor(HubitatBinarySensor):
@@ -86,18 +93,37 @@ class HubitatContactSensor(HubitatBinarySensor):
         self._device_class = _get_contact_device_class(kwargs["device"])
 
 
-class HubitatAccelerationSensor(HubitatBinarySensor):
-    """An acceleration sensor."""
+class HubitatMoistureSensor(HubitatBinarySensor):
+    """A moisture sensor."""
+
+    _active_state = "wet"
+    _attribute = ATTR_WATER
+    _device_class = DEVICE_CLASS_MOISTURE
+
+
+class HubitatMotionSensor(HubitatBinarySensor):
+    """A motion sensor."""
 
     _active_state = "active"
-    _attribute = ATTR_ACCELERATION
-    _device_class = DEVICE_CLASS_MOVING
+    _attribute = ATTR_MOTION
+    _device_class = DEVICE_CLASS_MOTION
+
+
+class HubitatSmokeSensor(HubitatBinarySensor):
+    """A smoke sensor."""
+
+    _active_state = "active"
+    _attribute = ATTR_SMOKE
+    _device_class = DEVICE_CLASS_SMOKE
 
 
 _SENSOR_ATTRS = (
-    (ATTR_MOTION, HubitatMotionSensor),
     (ATTR_ACCELERATION, HubitatAccelerationSensor),
+    (ATTR_CARBON_MONOXIDE, HubitatCoSensor),
     (ATTR_CONTACT, HubitatContactSensor),
+    (ATTR_MOTION, HubitatMotionSensor),
+    (ATTR_SMOKE, HubitatSmokeSensor),
+    (ATTR_WATER, HubitatMoistureSensor),
 )
 
 
@@ -115,3 +141,14 @@ async def async_setup_entry(
         ]
         async_add_entities(sensors)
         _LOGGER.debug(f"Added entities for binary sensors: {sensors}")
+
+
+def _get_contact_device_class(device: Dict[str, Any]):
+    """Guess the type of contact sensor from the device's label."""
+    label = device["label"]
+
+    for matcher in _CONTACT_MATCHERS:
+        if matcher[0].match(label):
+            return matcher[1]
+
+    return DEVICE_CLASS_DOOR
