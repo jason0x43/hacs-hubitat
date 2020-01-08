@@ -67,6 +67,7 @@ class HubitatDevice(Entity):
         """Send a command to this device."""
         arg = ",".join([str(a) for a in args])
         await self._hub.send_command(self.device_id, command, arg)
+        _LOGGER.info(f"Sent {command} to {self.device_id}")
 
     def _get_attr(self, attr: str):
         """Get the current value of an attribute."""

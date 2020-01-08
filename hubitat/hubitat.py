@@ -222,7 +222,7 @@ class HubitatHub:
         path = f"devices/{device_id}/{command}"
         if arg:
             path += f"/{arg}"
-        await self._api_request(path)
+        return await self._api_request(path)
 
     def get_device_attribute(
         self, device_id: str, attr_name: str
