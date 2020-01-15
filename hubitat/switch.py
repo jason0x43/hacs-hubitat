@@ -2,7 +2,7 @@
 
 from logging import getLogger
 import re
-from typing import List
+from typing import Any, List, Optional
 
 from homeassistant.components.switch import (
     DEVICE_CLASS_OUTLET,
@@ -27,43 +27,43 @@ class HubitatSwitch(HubitatDevice, SwitchDevice):
     """Representation of a Hubitat switch."""
 
     @property
-    def is_on(self):
+    def is_on(self) -> bool:
         """Return True if the switch is on."""
-        return self._get_attr("switch") == "on"
+        return self.get_str_attr("switch") == "on"
 
     @property
-    def device_class(self):
+    def device_class(self) -> str:
         """Return the class of this device, from component DEVICE_CLASSES."""
         if _NAME_TEST.match(self._device["label"]):
             return DEVICE_CLASS_SWITCH
         return DEVICE_CLASS_OUTLET
 
-    async def async_turn_on(self, **kwargs):
+    async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""
         _LOGGER.debug(f"Turning on {self.name} with {kwargs}")
-        await self._send_command(CMD_ON)
+        await self.send_command(CMD_ON)
 
-    async def async_turn_off(self, **kwargs):
+    async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the switch."""
         _LOGGER.debug(f"Turning off {self.name}")
-        await self._send_command("off")
+        await self.send_command("off")
 
 
 class HubitatPowerMeterSwitch(HubitatSwitch):
     @property
-    def current_power_w(self):
+    def current_power_w(self) -> Optional[float]:
         """Return the current power usage in W."""
-        return self._get_attr("power")
+        return self.get_float_attr("power")
 
 
-def is_switch(device):
+def is_switch(device) -> bool:
     """Return True if device looks like a switch."""
     if CAP_SWITCH in device["capabilities"] and not is_light(device):
         return True
     return False
 
 
-def is_energy_meter(device):
+def is_energy_meter(device) -> bool:
     """Return True if device can measure power."""
     if CAP_POWER_METER in device["capabilities"]:
         return True
@@ -72,7 +72,7 @@ def is_energy_meter(device):
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
-):
+) -> None:
     """Initialize switch devices."""
     hub: HubitatHub = hass.data[DOMAIN][entry.entry_id].hub
     switch_devs = [d for d in hub.devices if is_switch(d)]

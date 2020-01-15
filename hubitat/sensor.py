@@ -1,6 +1,7 @@
 """Hubitat sensor entities."""
 
 from logging import getLogger
+from typing import Any, Optional, Union
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import TEMP_FAHRENHEIT
@@ -16,23 +17,26 @@ _LOGGER = getLogger(__name__)
 class HubitatSensor(HubitatDevice):
     """A generic Hubitat sensor."""
 
+    _attribute: str
+    _units: str
+
     @property
-    def name(self):
+    def name(self) -> str:
         """Return this sensor's display name."""
         return f"{super().name} {self._attribute}"
 
     @property
-    def state(self):
+    def state(self) -> Union[float, int, str, None]:
         """Return this sensor's current state."""
-        return self._get_attr(self._attribute)
+        return self.get_attr(self._attribute)
 
     @property
-    def unique_id(self):
+    def unique_id(self) -> str:
         """Return a unique ID for this sensor."""
         return f"{super().unique_id}:{self._attribute}"
 
     @property
-    def unit_of_measurement(self):
+    def unit_of_measurement(self) -> Optional[str]:
         """Return the units for this sensor's value."""
         try:
             return self._units
@@ -43,7 +47,7 @@ class HubitatSensor(HubitatDevice):
 class HubitatIlluminanceSensor(HubitatSensor):
     """An illuminance sensor."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         """Initialize an illuminance sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = ATTR_ILLUMINANCE
@@ -53,7 +57,7 @@ class HubitatIlluminanceSensor(HubitatSensor):
 class HubitatTemperatureSensor(HubitatSensor):
     """A temperature sensor."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         """Initialize a temperature sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = ATTR_TEMPERATURE
@@ -63,7 +67,7 @@ class HubitatTemperatureSensor(HubitatSensor):
 class HubitatBatterySensor(HubitatSensor):
     """A battery sensor."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         """Initialize a battery sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = ATTR_BATTERY
@@ -79,7 +83,7 @@ _SENSOR_ATTRS = (
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
-):
+) -> None:
     """Initialize light devices."""
     hub: HubitatHub = hass.data[DOMAIN][entry.entry_id].hub
     for attr in _SENSOR_ATTRS:

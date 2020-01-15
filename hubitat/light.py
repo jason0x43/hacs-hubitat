@@ -2,6 +2,7 @@
 
 from logging import getLogger
 import re
+from typing import Any, Dict, List, Optional, Union
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -40,32 +41,38 @@ class HubitatLight(HubitatDevice, Light):
     """Representation of a Hubitat light."""
 
     @property
-    def brightness(self):
+    def brightness(self) -> Optional[int]:
         """Return the level of this light."""
-        return int(255 * int(self._get_attr("level")) / 100)
+        level = self.get_int_attr("level")
+        if level is None:
+            return None
+        return int(255 * level / 100)
 
     @property
-    def hs_color(self):
+    def hs_color(self) -> Optional[List[float]]:
         """Return the hue and saturation color value [float, float]."""
-        hue = int(self._get_attr("hue"))
-        sat = int(self._get_attr("saturation"))
+        hue = self.get_float_attr("hue")
+        sat = self.get_float_attr("saturation")
+        if hue is None or sat is None:
+            return None
         hass_hue = 360 * hue / 100
         return [hass_hue, sat]
 
     @property
-    def color_temp(self):
+    def color_temp(self) -> Optional[float]:
         """Return the CT color value in mireds."""
-        temp = int(self._get_attr("colorTemperature"))
-        mireds = color_util.color_temperature_kelvin_to_mired(temp)
-        return mireds
+        temp = self.get_int_attr("colorTemperature")
+        if temp is None:
+            return None
+        return color_util.color_temperature_kelvin_to_mired(temp)
 
     @property
-    def is_on(self):
+    def is_on(self) -> bool:
         """Return True if the light is on."""
-        return self._get_attr("switch") == "on"
+        return self.get_str_attr("switch") == "on"
 
     @property
-    def supported_features(self):
+    def supported_features(self) -> int:
         """Return supported feature flags."""
         features = 0
         caps = self._device["capabilities"]
@@ -79,15 +86,15 @@ class HubitatLight(HubitatDevice, Light):
 
         return features
 
-    def supports_feature(self, feature):
+    def supports_feature(self, feature) -> bool:
         """Return True if light supports a given feature."""
         return self.supported_features & feature != 0
 
-    async def async_turn_on(self, **kwargs):
+    async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the light."""
         _LOGGER.debug(f"Turning on {self.name} with {kwargs}")
 
-        props = {}
+        props: Dict[str, Union[int, str]] = {}
 
         if ATTR_BRIGHTNESS in kwargs and self.supports_feature(SUPPORT_BRIGHTNESS):
             props["level"] = int(100 * kwargs[ATTR_BRIGHTNESS] / 255)
@@ -102,38 +109,38 @@ class HubitatLight(HubitatDevice, Light):
 
         if ATTR_COLOR_TEMP in kwargs and self.supports_feature(SUPPORT_COLOR_TEMP):
             mireds = kwargs[ATTR_COLOR_TEMP]
-            props["temp"] = color_util.color_temperature_mired_to_kelvin(mireds)
+            props["temp"] = round(color_util.color_temperature_mired_to_kelvin(mireds))
 
         if "level" in props:
             if "time" in props:
-                await self._send_command(CMD_SET_LEVEL, props["level"], props["time"])
+                await self.send_command(CMD_SET_LEVEL, props["level"], props["time"])
                 del props["time"]
             elif "hue" in props:
-                await self._send_command(
+                await self.send_command(
                     CMD_SET_COLOR, props["hue"], props["sat"], props["level"]
                 )
                 del props["hue"]
                 del props["sat"]
             else:
-                await self._send_command(CMD_SET_LEVEL, props["level"])
+                await self.send_command(CMD_SET_LEVEL, props["level"])
 
             del props["level"]
         else:
-            await self._send_command(CMD_ON)
+            await self.send_command(CMD_ON)
 
         if "hue" in props:
-            await self._send_command(CMD_SET_HUE, props["hue"])
-            await self._send_command(CMD_SET_SAT, props["sat"])
+            await self.send_command(CMD_SET_HUE, props["hue"])
+            await self.send_command(CMD_SET_SAT, props["sat"])
             del props["hue"]
             del props["sat"]
 
         if "temp" in props:
-            await self._send_command(CMD_SET_COLOR_TEMP, props["temp"])
+            await self.send_command(CMD_SET_COLOR_TEMP, props["temp"])
 
-    async def async_turn_off(self, **kwargs):
+    async def async_turn_off(self, **kwargs) -> None:
         """Turn off the light."""
         _LOGGER.debug(f"Turning off {self.name}")
-        await self._send_command("off")
+        await self.send_command("off")
 
 
 LIGHT_CAPABILITIES = (CAP_COLOR_TEMP, CAP_COLOR_CONTROL)

@@ -1,7 +1,7 @@
 """Support for Hubitat thermostats."""
 
 from logging import getLogger
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional
 
 from homeassistant.components.climate import ClimateDevice
 from homeassistant.components.climate.const import (
@@ -116,17 +116,17 @@ class HubitatThermostat(HubitatDevice, ClimateDevice):
     @property
     def current_humidity(self) -> Optional[int]:
         """Return the current humidity."""
-        return int(self._get_attr(ATTR_HUMIDITY))
+        return self.get_int_attr(ATTR_HUMIDITY)
 
     @property
     def current_temperature(self) -> Optional[float]:
         """Return the current temperature."""
-        return float(self._get_attr(ATTR_TEMP))
+        return self.get_float_attr(ATTR_TEMP)
 
     @property
     def fan_mode(self) -> Optional[str]:
         """Return the fan setting."""
-        mode = self._get_attr(ATTR_FAN_MODE)
+        mode = self.get_str_attr(ATTR_FAN_MODE)
         if mode == FAN_MODE_CIRCULATE or mode == FAN_MODE_ON:
             return FAN_ON
         if mode == FAN_MODE_AUTO:
@@ -141,7 +141,7 @@ class HubitatThermostat(HubitatDevice, ClimateDevice):
     @property
     def hvac_mode(self) -> str:
         """Return hvac operation ie. heat, cool mode."""
-        mode = self._get_attr(ATTR_MODE)
+        mode = self.get_str_attr(ATTR_MODE)
         if mode == MODE_OFF:
             return HVAC_MODE_OFF
         if mode == MODE_HEAT or mode == MODE_EMERGENCY_HEAT:
@@ -158,7 +158,7 @@ class HubitatThermostat(HubitatDevice, ClimateDevice):
     @property
     def hvac_action(self) -> Optional[str]:
         """Return the current running hvac operation if supported."""
-        opstate = self._get_attr(ATTR_OPERATING_STATE)
+        opstate = self.get_str_attr(ATTR_OPERATING_STATE)
         if opstate == OPSTATE_PENDING_HEAT or opstate == OPSTATE_HEATING:
             return CURRENT_HVAC_HEAT
         if opstate == OPSTATE_PENDING_COOL or opstate == OPSTATE_COOLING:
@@ -172,8 +172,8 @@ class HubitatThermostat(HubitatDevice, ClimateDevice):
     @property
     def preset_mode(self) -> Optional[str]:
         """Return the current preset mode, e.g., home, away, temp."""
-        nest_mode = self._get_attr(ATTR_NEST_MODE)
-        presence = self._get_attr(ATTR_PRESENCE)
+        nest_mode = self.get_str_attr(ATTR_NEST_MODE)
+        presence = self.get_str_attr(ATTR_PRESENCE)
         if nest_mode == MODE_NEST_ECO:
             if presence == PRESENCE_AWAY:
                 return PRESET_AWAY_AND_ECO
@@ -185,7 +185,7 @@ class HubitatThermostat(HubitatDevice, ClimateDevice):
     @property
     def preset_modes(self) -> Optional[List[str]]:
         """Return a list of available preset modes."""
-        nest_mode = self._get_attr(ATTR_NEST_MODE)
+        nest_mode = self.get_str_attr(ATTR_NEST_MODE)
         if nest_mode is not None:
             return HASS_NEST_PRESET_MODES
         return HASS_PRESET_MODES
@@ -204,29 +204,29 @@ class HubitatThermostat(HubitatDevice, ClimateDevice):
     def target_temperature(self) -> Optional[float]:
         """Return the temperature we try to reach."""
         if self.hvac_mode == HVAC_MODE_HEAT:
-            return float(self._get_attr(ATTR_HEATING_SETPOINT))
+            return self.get_float_attr(ATTR_HEATING_SETPOINT)
         if self.hvac_mode == HVAC_MODE_COOL:
-            return float(self._get_attr(ATTR_COOLING_SETPOINT))
+            return self.get_float_attr(ATTR_COOLING_SETPOINT)
         return None
 
     @property
     def target_temperature_high(self) -> Optional[float]:
         """Return the highbound target temperature we try to reach."""
         if self.hvac_mode == HVAC_MODE_HEAT_COOL or self.hvac_mode == HVAC_MODE_AUTO:
-            return float(self._get_attr(ATTR_HEATING_SETPOINT))
+            return self.get_float_attr(ATTR_HEATING_SETPOINT)
         return None
 
     @property
     def target_temperature_low(self) -> Optional[float]:
         """Return the lowbound target temperature we try to reach."""
         if self.hvac_mode == HVAC_MODE_HEAT_COOL or self.hvac_mode == HVAC_MODE_AUTO:
-            return float(self._get_attr(ATTR_COOLING_SETPOINT))
+            return self.get_float_attr(ATTR_COOLING_SETPOINT)
         return None
 
     @property
     def temperature_unit(self) -> str:
         """Return the unit of measurement used by the platform."""
-        unit = self._get_attr(ATTR_TEMP_UNIT)
+        unit = self.get_str_attr(ATTR_TEMP_UNIT)
         if unit == UNIT_FAHRENHEIT:
             return TEMP_FAHRENHEIT
         return TEMP_CELSIUS
@@ -234,32 +234,32 @@ class HubitatThermostat(HubitatDevice, ClimateDevice):
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new target fan mode."""
         if fan_mode == FAN_ON:
-            await self._send_command(CMD_FAN_ON)
+            await self.send_command(CMD_FAN_ON)
         elif fan_mode == FAN_AUTO:
-            await self._send_command(CMD_FAN_AUTO)
+            await self.send_command(CMD_FAN_AUTO)
 
     async def async_set_hvac_mode(self, hvac_mode: str) -> None:
         """Set new target hvac mode."""
         if hvac_mode == HVAC_MODE_COOL:
-            await self._send_command(CMD_COOL)
+            await self.send_command(CMD_COOL)
         elif hvac_mode == HVAC_MODE_HEAT:
-            await self._send_command(CMD_HEAT)
+            await self.send_command(CMD_HEAT)
         elif hvac_mode == HVAC_MODE_HEAT_COOL:
-            await self._send_command(CMD_AUTO)
+            await self.send_command(CMD_AUTO)
         elif hvac_mode == HVAC_MODE_OFF:
-            await self._send_command(CMD_OFF)
+            await self.send_command(CMD_OFF)
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
         if preset_mode == PRESET_AWAY:
-            await self._send_command(CMD_AWAY)
+            await self.send_command(CMD_AWAY)
         if preset_mode == PRESET_HOME:
-            await self._send_command(CMD_PRESENT)
+            await self.send_command(CMD_PRESENT)
         if preset_mode == PRESET_ECO:
-            await self._send_command(CMD_ECO)
+            await self.send_command(CMD_ECO)
         if preset_mode == PRESET_AWAY_AND_ECO:
-            await self._send_command(CMD_AWAY)
-            await self._send_command(CMD_ECO)
+            await self.send_command(CMD_AWAY)
+            await self.send_command(CMD_ECO)
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
@@ -267,26 +267,26 @@ class HubitatThermostat(HubitatDevice, ClimateDevice):
             temp_low = kwargs.get(ATTR_TARGET_TEMP_LOW)
             temp_high = kwargs.get(ATTR_TARGET_TEMP_HIGH)
             if temp_low is not None:
-                await self._send_command(CMD_SET_COOLING_SETPOINT, temp_low)
+                await self.send_command(CMD_SET_COOLING_SETPOINT, temp_low)
             if temp_high is not None:
-                await self._send_command(CMD_SET_HEATING_SETPOINT, temp_high)
+                await self.send_command(CMD_SET_HEATING_SETPOINT, temp_high)
         else:
             temp = kwargs.get(ATTR_TEMPERATURE)
             if temp is not None:
                 if self.hvac_mode == HVAC_MODE_COOL:
-                    await self._send_command(CMD_SET_COOLING_SETPOINT, temp)
+                    await self.send_command(CMD_SET_COOLING_SETPOINT, temp)
                 elif self.hvac_mode == HVAC_MODE_HEAT:
-                    await self._send_command(CMD_SET_HEATING_SETPOINT, temp)
+                    await self.send_command(CMD_SET_HEATING_SETPOINT, temp)
 
 
-def is_thermostat(device: Dict[str, Any]):
+def is_thermostat(device: Dict[str, Any]) -> bool:
     """Return True if device looks like a thermostat."""
     return CAP_THERMOSTAT in device["capabilities"]
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
-):
+) -> None:
     """Initialize thermostat devices."""
     hub: HubitatHub = hass.data[DOMAIN][entry.entry_id].hub
     therms = [

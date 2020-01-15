@@ -63,20 +63,46 @@ class HubitatDevice(Entity):
         """Run when entity will be removed from hass."""
         self._hub.remove_device_listeners(self.device_id)
 
-    async def _send_command(self, command: str, *args: Union[int, str]):
+    async def send_command(self, command: str, *args: Union[int, str]):
         """Send a command to this device."""
         arg = ",".join([str(a) for a in args])
         await self._hub.send_command(self.device_id, command, arg)
         _LOGGER.info(f"Sent {command} to {self.device_id}")
 
-    def _get_attr(self, attr: str):
+    @callback
+    def get_attr(self, attr: str) -> Union[float, int, str, None]:
         """Get the current value of an attribute."""
         dev_attr = self._hub.get_device_attribute(self.device_id, attr)
         if dev_attr:
             return dev_attr["currentValue"]
         return None
 
-    def _get_attr_values(self, attr: str):
+    @callback
+    def get_float_attr(self, attr: str) -> Optional[float]:
+        """Get the current value of an attribute."""
+        val = self.get_attr(attr)
+        if val is None:
+            return None
+        return float(val)
+
+    @callback
+    def get_int_attr(self, attr: str) -> Optional[int]:
+        """Get the current value of an attribute."""
+        val = self.get_float_attr(attr)
+        if val is None:
+            return None
+        return round(val)
+
+    @callback
+    def get_str_attr(self, attr: str) -> Optional[str]:
+        """Get the current value of an attribute."""
+        val = self.get_attr(attr)
+        if val is None:
+            return None
+        return str(val)
+
+    @callback
+    def get_attr_values(self, attr: str) -> Optional[List[str]]:
         """Get the possible values of an enum attribute."""
         dev_attr = self._hub.get_device_attribute(self.device_id, attr)
         if dev_attr:

@@ -44,7 +44,7 @@ class HubitatBinarySensor(HubitatDevice, BinarySensorDevice):
     @property
     def is_on(self):
         """Return True if this sensor is on/active."""
-        return self._get_attr(self._attribute) == self._active_state
+        return self.get_str_attr(self._attribute) == self._active_state
 
     @property
     def name(self):
