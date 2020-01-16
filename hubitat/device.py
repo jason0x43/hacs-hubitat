@@ -1,8 +1,9 @@
 """Base module for Hubitat devices."""
 
 from logging import getLogger
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
+from homeassistant.core import callback
 from homeassistant.helpers.entity import Entity
 
 from .const import DOMAIN
