@@ -4,6 +4,16 @@ from logging import getLogger
 import re
 from typing import Any, Dict
 
+from hubitatmaker import (
+    ATTR_ACCELERATION,
+    ATTR_CARBON_MONOXIDE,
+    ATTR_CONTACT,
+    ATTR_MOTION,
+    ATTR_SMOKE,
+    ATTR_WATER,
+    Hub as HubitatHub,
+)
+
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_DOOR,
     DEVICE_CLASS_GARAGE_DOOR,
@@ -20,15 +30,6 @@ from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
 from .device import HubitatDevice
-from .hubitat import (
-    ATTR_ACCELERATION,
-    ATTR_CARBON_MONOXIDE,
-    ATTR_CONTACT,
-    ATTR_MOTION,
-    ATTR_SMOKE,
-    ATTR_WATER,
-    HubitatHub,
-)
 
 _LOGGER = getLogger(__name__)
 

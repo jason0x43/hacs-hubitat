@@ -4,6 +4,8 @@ from logging import getLogger
 import re
 from typing import Any, List, Optional
 
+from hubitatmaker import CAP_POWER_METER, CAP_SWITCH, CMD_OFF, CMD_ON, Hub as HubitatHub
+
 from homeassistant.components.switch import (
     DEVICE_CLASS_OUTLET,
     DEVICE_CLASS_SWITCH,
@@ -15,7 +17,6 @@ from homeassistant.util import color as color_util
 
 from .const import DOMAIN
 from .device import HubitatDevice
-from .hubitat import CAP_POWER_METER, CAP_SWITCH, CMD_OFF, CMD_ON, HubitatHub
 from .light import is_light
 
 _LOGGER = getLogger(__name__)

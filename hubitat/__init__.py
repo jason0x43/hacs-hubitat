@@ -6,6 +6,7 @@ from typing import Any, List, Optional, cast
 
 from aiohttp.web import Request
 import voluptuous as vol
+from hubitatmaker import Hub as HubitatHub
 
 from homeassistant.components.webhook import async_generate_url
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
@@ -19,7 +20,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry
 
 from .const import CONF_APP_ID, DOMAIN, EVENT_READY
-from .hubitat import HubitatHub
 
 _LOGGER = getLogger(__name__)
 

@@ -3,11 +3,12 @@
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Union
 
+from hubitatmaker import Hub as HubitatHub
+
 from homeassistant.core import callback
 from homeassistant.helpers.entity import Entity
 
 from .const import DOMAIN
-from .hubitat import HubitatHub
 
 _LOGGER = getLogger(__name__)
 

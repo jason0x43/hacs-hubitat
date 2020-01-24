@@ -3,6 +3,25 @@
 from logging import getLogger
 from typing import Any, Dict, List, Optional
 
+from hubitatmaker import (
+    CAP_THERMOSTAT,
+    CMD_AUTO,
+    CMD_AWAY,
+    CMD_COOL,
+    CMD_ECO,
+    CMD_EMERGENCY_HEAT,
+    CMD_FAN_AUTO,
+    CMD_FAN_ON,
+    CMD_HEAT,
+    CMD_OFF,
+    CMD_PRESENT,
+    CMD_SET_COOLING_SETPOINT,
+    CMD_SET_FAN_MODE,
+    CMD_SET_HEATING_SETPOINT,
+    CMD_SET_THERMOSTAT_MODE,
+    Hub as HubitatHub,
+)
+
 from homeassistant.components.climate import ClimateDevice
 from homeassistant.components.climate.const import (
     ATTR_TARGET_TEMP_HIGH,
@@ -36,24 +55,6 @@ from homeassistant.util import color as color_util
 
 from .const import DOMAIN
 from .device import HubitatDevice
-from .hubitat import (
-    CAP_THERMOSTAT,
-    CMD_AUTO,
-    CMD_AWAY,
-    CMD_COOL,
-    CMD_ECO,
-    CMD_EMERGENCY_HEAT,
-    CMD_FAN_AUTO,
-    CMD_FAN_ON,
-    CMD_HEAT,
-    CMD_OFF,
-    CMD_PRESENT,
-    CMD_SET_COOLING_SETPOINT,
-    CMD_SET_FAN_MODE,
-    CMD_SET_HEATING_SETPOINT,
-    CMD_SET_THERMOSTAT_MODE,
-    HubitatHub,
-)
 from .light import is_light
 
 _LOGGER = getLogger(__name__)

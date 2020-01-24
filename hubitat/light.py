@@ -4,6 +4,20 @@ from logging import getLogger
 import re
 from typing import Any, Dict, List, Optional, Union
 
+from hubitatmaker import (
+    CAP_COLOR_CONTROL,
+    CAP_COLOR_TEMP,
+    CAP_SWITCH,
+    CAP_SWITCH_LEVEL,
+    CMD_ON,
+    CMD_SET_COLOR,
+    CMD_SET_COLOR_TEMP,
+    CMD_SET_HUE,
+    CMD_SET_LEVEL,
+    CMD_SET_SAT,
+    Hub as HubitatHub,
+)
+
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP,
@@ -20,19 +34,6 @@ from homeassistant.util import color as color_util
 
 from .const import DOMAIN
 from .device import HubitatDevice
-from .hubitat import (
-    CAP_COLOR_CONTROL,
-    CAP_COLOR_TEMP,
-    CAP_SWITCH,
-    CAP_SWITCH_LEVEL,
-    CMD_ON,
-    CMD_SET_COLOR,
-    CMD_SET_COLOR_TEMP,
-    CMD_SET_HUE,
-    CMD_SET_LEVEL,
-    CMD_SET_SAT,
-    HubitatHub,
-)
 
 _LOGGER = getLogger(__name__)
 

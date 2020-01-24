@@ -4,19 +4,19 @@ import logging
 from typing import Any, Dict
 
 import voluptuous as vol
-
-from homeassistant import config_entries, core
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_WEBHOOK_ID
-
-from .const import CONF_APP_ID, DOMAIN
-from .hubitat import (
+from hubitatmaker import (
     ConnectionError,
-    HubitatHub,
+    Hub as HubitatHub,
     InvalidConfig,
     InvalidInfo,
     InvalidToken,
     RequestError,
 )
+
+from homeassistant import config_entries, core
+from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_WEBHOOK_ID
+
+from .const import CONF_APP_ID, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
