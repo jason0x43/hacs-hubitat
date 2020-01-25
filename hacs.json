@@ -1,0 +1,16 @@
+{
+	"name": "Hubitat",
+	"content_in_root": false,
+	"zip_release": false,
+	"render_readme": true,
+	"domains": [
+		"binary_sensor",
+		"climate",
+		"light",
+		"sensor",
+		"switch"
+	],
+	"country": "US",
+	"homeassistant": "0.130.0",
+	"iot_class": "local_push"
+}
