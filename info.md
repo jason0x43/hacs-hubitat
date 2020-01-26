@@ -1,6 +1,6 @@
-# Hubitat Integration for Home Assistant
+{% if prerelease %}This is a beta version!{% endif %}
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
+# Hubitat Integration
 
 This is an integration for Hubitat that uses Hubitat’s Maker API. It currently
 supports the following device types (platforms) to varying degrees:
@@ -11,22 +11,15 @@ supports the following device types (platforms) to varying degrees:
 - sensor
 - switch
 
-## Installation
-
-### HACS
-
-Add this repository as a custom repository in HACS (Marketplace -> Settings).
-
-### Manually
-
-Clone this repository and copy the `hubitat` folder into your
-`<config>/custom_components/` directory. Be sure to copy the entire directory,
-including the (possibly hidden) `.translations` subdirectory.
+Please see the
+[README](https://github.com/jason0x43/hacs-hubitat/blob/master/README.md) for
+more information.
 
 ## Setup
 
 First, create a Maker API instance in the Hubitat UI. Add whatever devices you'd
-like to make available to Home Assistant.
+like to make available to Home Assistant. Take note of the instance’s app ID
+and access token.
 
 To configure the hubitat integration, go to Configuration -> Integrations in the
 Home Assistant UI and click the “+” button to add a new integration. Pick
@@ -37,3 +30,7 @@ Home Assistant UI and click the “+” button to add a new integration. Pick
 - The app ID of the Maker API instance (the 3 or 4 digit number after
   `/apps/api/` in any of the Maker API URLs)
 - The API access token
+
+After you’ve configured the integration, it will connect to your Hubitat hub
+and create devices in Home Assistant for all the devices that were included in
+the Maker API instance.
