@@ -3,7 +3,7 @@
   "name": "Hubitat",
   "config_flow": true,
   "documentation": "https://github.com/jason0x43/hass-components",
-  "requirements": ["hubitatmaker"],
+  "requirements": ["hubitatmaker>=0.0.2"],
   "ssdp": [],
   "zeroconf": [],
   "homekit": {},

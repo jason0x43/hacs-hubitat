@@ -135,7 +135,7 @@ class Hubitat:
     async def async_setup(self) -> bool:
         self.hub = HubitatHub(self.host, self.app_id, self.token)
 
-        await self.hub.connect()
+        await self.hub.start()
 
         hub = self.hub
         hass = self.hass
@@ -190,7 +190,7 @@ class Hubitat:
             f"Received event from {self.hub} for for {event['displayName']} ({event['deviceId']}) - {event['name']} -> {event['value']}"
         )
 
-        self.hub.update_state(event)
+        self.hub.process_event(event)
 
 
 EVENT_SCHEMA = vol.Schema(
