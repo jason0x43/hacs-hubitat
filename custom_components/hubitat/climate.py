@@ -55,7 +55,6 @@ from homeassistant.util import color as color_util
 
 from .const import DOMAIN
 from .device import HubitatDevice
-from .light import is_light
 
 _LOGGER = getLogger(__name__)
 
