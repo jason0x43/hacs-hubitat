@@ -176,34 +176,13 @@ class Hubitat:
     ):
         """Handle an event from the hub."""
         try:
-            data = await request.json()
-            event = EVENT_SCHEMA(data)["content"]
+            event = await request.json()
         except Exception as e:
             _LOGGER.warning(f"Invalid message from Hubitat: {e}")
             return None
-
-        if event["name"] == "ssdpTerm":
-            # Ignore upnp events
-            return
 
         _LOGGER.debug(
             f"Received event from {self.hub} for for {event['displayName']} ({event['deviceId']}) - {event['name']} -> {event['value']}"
         )
 
         self.hub.process_event(event)
-
-
-EVENT_SCHEMA = vol.Schema(
-    {
-        "content": {
-            "name": str,
-            "value": vol.Any(str, int),
-            "deviceId": vol.Any(None, str),
-            "displayName": vol.Any(None, str),
-            "descriptionText": vol.Any(None, str),
-            "unit": vol.Any(None, str),
-            "data": vol.Any(None, dict, list, int, str),
-        }
-    },
-    required=True,
-)
