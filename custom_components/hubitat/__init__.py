@@ -181,8 +181,5 @@ class Hubitat:
             _LOGGER.warning(f"Invalid message from Hubitat: {e}")
             return None
 
-        _LOGGER.debug(
-            f"Received event from {self.hub} for for {event['displayName']} ({event['deviceId']}) - {event['name']} -> {event['value']}"
-        )
-
+        _LOGGER.debug("received event from %s", self.hub)
         self.hub.process_event(event)
