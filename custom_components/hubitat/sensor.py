@@ -57,7 +57,7 @@ class HubitatSensor(HubitatDevice):
     @property
     def unique_id(self) -> str:
         """Return a unique ID for this sensor."""
-        return f"{super().unique_id}:{self._attribute}"
+        return f"{super().unique_id}::{self._attribute}"
 
     @property
     def unit_of_measurement(self) -> Optional[str]:

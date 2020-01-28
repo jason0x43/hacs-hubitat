@@ -55,7 +55,7 @@ class HubitatBinarySensor(HubitatDevice, BinarySensorDevice):
     @property
     def unique_id(self):
         """Return a unique ID for this sensor."""
-        return f"{super().unique_id}:{self._attribute}"
+        return f"{super().unique_id}::{self._attribute}"
 
     @property
     def device_class(self):

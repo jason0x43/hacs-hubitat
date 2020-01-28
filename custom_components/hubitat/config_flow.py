@@ -32,9 +32,8 @@ async def validate_input(hass: core.HomeAssistant, data: Dict[str, Any]):
     await hub.check_config()
 
     return {
-        "mac": hub.mac,
         "id": hub.id,
-        "label": f"Hubitat ({hub.mac.lower()})",
+        "label": f"Hubitat ({hub.id})",
     }
 
 

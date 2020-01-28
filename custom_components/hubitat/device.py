@@ -23,7 +23,7 @@ class HubitatDevice(Entity):
         """Initialize a device."""
         self._hub = hub
         self._device: Dict[str, Any] = device
-        self._id = f"{self._hub.id}:{self._device['id']}"
+        self._id = f"{self._hub.id}::{self._device['id']}"
         self._hub.add_device_listener(self._device["id"], self._create_listener())
 
     @property
