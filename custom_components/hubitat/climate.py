@@ -229,6 +229,13 @@ class HubitatThermostat(HubitatDevice, ClimateDevice):
         unit = self.get_str_attr(ATTR_TEMP_UNIT)
         if unit == UNIT_FAHRENHEIT:
             return TEMP_FAHRENHEIT
+        if unit == UNIT_CELSIUS:
+            return TEMP_CELSIUS
+
+        # Guess the scale based on the current reported temperature
+        temp = self.current_temperature
+        if temp is None or temp > 50:
+            return TEMP_FAHRENHEIT
         return TEMP_CELSIUS
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
