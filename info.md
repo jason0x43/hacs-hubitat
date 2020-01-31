@@ -23,3 +23,7 @@ To configure the hubitat integration, go to Configuration -> Integrations in the
 - The API access token
 
 After you’ve configured the integration, it will connect to your Hubitat hub and create devices in Home Assistant for all the devices that were included in the Maker API instance.
+
+## Network setup
+
+Note that Hubitat must be able to see your Home Assistant server on the network to be able to push device events to it. Currently the integration uses HA’s webhook system as the destination for Hubitat messages, so it tells Hubitat to push events to whatever your HA instance's public address is.
