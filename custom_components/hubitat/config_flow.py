@@ -1,9 +1,8 @@
 """Config flow for Hubitat integration."""
 from copy import deepcopy
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Union
 
-import voluptuous as vol
 from hubitatmaker import (
     ConnectionError,
     Hub as HubitatHub,
@@ -12,21 +11,35 @@ from hubitatmaker import (
     InvalidToken,
     RequestError,
 )
+import voluptuous as vol
 
-from homeassistant import config_entries, core
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_WEBHOOK_ID
+from homeassistant.config_entries import (
+    CONN_CLASS_LOCAL_PUSH,
+    ConfigEntry,
+    ConfigFlow,
+    OptionsFlow,
+)
+from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_PORT, CONF_WEBHOOK_ID
+from homeassistant.core import HomeAssistant, callback
 
-from .const import CONF_APP_ID, DOMAIN
+from .const import CONF_APP_ID, CONF_SERVER_PORT, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_SCHEMA = vol.Schema({CONF_HOST: str, CONF_APP_ID: str, CONF_ACCESS_TOKEN: str})
+CONFIG_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_HOST): str,
+        vol.Required(CONF_APP_ID): str,
+        vol.Required(CONF_ACCESS_TOKEN): str,
+        vol.Optional(CONF_SERVER_PORT): str,
+    }
+)
 
 
-async def validate_input(hass: core.HomeAssistant, data: Dict[str, Any]):
+async def validate_input(data: Dict[str, Any]):
     """Validate the user input allows us to connect."""
 
-    # data has the keys from DATA_SCHEMA with values provided by the user.
+    # data has the keys from OPTIONS_SCHEMA with values provided by the user.
     hub = HubitatHub(data[CONF_HOST], data[CONF_APP_ID], data[CONF_ACCESS_TOKEN])
 
     await hub.check_config()
@@ -37,21 +50,36 @@ async def validate_input(hass: core.HomeAssistant, data: Dict[str, Any]):
     }
 
 
-class HubitatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Hubitat."""
 
     VERSION = 1
-    CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_PUSH
+    CONNECTION_CLASS = CONN_CLASS_LOCAL_PUSH
 
-    async def async_step_user(self, user_input=None):
-        """Handle the initial step."""
-        errors = {}
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry):
+        return HubitatOptionsFlow(config_entry)
+
+    async def async_step_user(self, user_input: Dict[str, Any] = None):
+        """Handle the user step."""
+        errors: Dict[str, str] = {}
+
         if user_input is not None:
             try:
-                info = await validate_input(self.hass, user_input)
+                info = await validate_input(user_input)
                 entry_data = deepcopy(user_input)
-                entry_data[CONF_WEBHOOK_ID] = info["id"]
-                return self.async_create_entry(title=info["label"], data=entry_data)
+
+                placeholders: Dict[str, str] = {}
+                for key in user_input:
+                    if user_input[key] is not None and key in placeholders:
+                        placeholders[key] = user_input[key]
+
+                return self.async_create_entry(
+                    title=info["label"],
+                    data=entry_data,
+                    description_placeholders=placeholders,
+                )
             except ConnectionError:
                 _LOGGER.exception("Connection error")
                 errors["base"] = "cannot_connect"
@@ -71,6 +99,45 @@ class HubitatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 
+        if len(errors) == 0:
+            form_errors = None
+        else:
+            form_errors = errors
+
         return self.async_show_form(
-            step_id="user", data_schema=DATA_SCHEMA, errors=errors
+            step_id="user", data_schema=CONFIG_SCHEMA, errors=form_errors,
+        )
+
+
+class HubitatOptionsFlow(OptionsFlow):
+    """Handle an options flow for Hubitat."""
+
+    def __init__(self, config_entry: ConfigEntry):
+        """Initialize an options flow."""
+        super().__init__()
+        self.config_entry = config_entry
+        self.options = dict(config_entry.options)
+
+    async def async_step_init(self, user_input=None):
+        """Handle integration options."""
+        return await self.async_step_user()
+
+    async def async_step_user(self, user_input=None):
+        """Handle integration options."""
+        errors: Dict[str, str] = {}
+
+        if user_input is not None:
+            self.options[CONF_SERVER_PORT] = user_input[CONF_SERVER_PORT]
+            return self.async_create_entry(title="", data=self.options)
+
+        return self.async_show_form(
+            step_id="user",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_SERVER_PORT,
+                        default=self.config_entry.options.get(CONF_SERVER_PORT),
+                    ): str
+                }
+            ),
         )

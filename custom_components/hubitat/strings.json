@@ -3,11 +3,14 @@
     "title": "Hubitat",
     "step": {
       "user": {
-        "title": "Connect to the hub",
+        "title": "Connect to your Hubitat hub",
+        "description": "Provide the IP address or hostname of your Hubitat hub, along with the app ID of its Maker API instance. Optionally, provide a port number and/or an address for the integration's event server to listen on.",
         "data": {
           "host": "Hub address",
           "app_id": "Maker API app ID",
-          "access_token": "Maker API access token"
+          "access_token": "Maker API access token",
+          "server_addr": "Event server address (optional)",
+          "server_port": "Event server port (optional)"
         }
       }
     },
@@ -21,6 +24,20 @@
     },
     "abort": {
       "already_configured": "Hub is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "user": {
+        "data": {
+          "host": "Hub address",
+          "app_id": "Maker API app ID",
+          "access_token": "Maker API access token",
+          "server_port": "Event server port (optional)"
+        },
+        "description": "Configure options for Hubitat. Note that changing the hub address or the Maker API app ID will cause the integration to rediscover your devices.",
+        "title": "Hubitat options"
+      }
     }
   }
 }
