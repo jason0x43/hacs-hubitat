@@ -13,8 +13,9 @@ from homeassistant.const import (
     ATTR_ENTITY_ID,
     CONF_ACCESS_TOKEN,
     CONF_HOST,
+    EVENT_HOMEASSISTANT_STOP,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Event, HomeAssistant
 from homeassistant.helpers import device_registry
 
 from .const import CONF_APP_ID, CONF_SERVER_PORT, DOMAIN, EVENT_READY
@@ -65,6 +66,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         manufacturer="Hubitat",
         name="Hubitat Elevation",
     )
+
+    def stop_hub(event: Event):
+        hub.stop()
+
+    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_hub)
 
     hass.bus.fire(EVENT_READY)
     _LOGGER.info("Hubitat is ready")
