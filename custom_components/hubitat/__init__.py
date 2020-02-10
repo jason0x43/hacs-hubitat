@@ -6,7 +6,7 @@ from typing import Any, List, Optional, cast
 
 from aiohttp.web import Request
 import voluptuous as vol
-from hubitatmaker import Hub as HubitatHub
+from hubitatmaker import Hub
 
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import (
@@ -19,6 +19,7 @@ from homeassistant.core import Event, HomeAssistant
 from homeassistant.helpers import device_registry
 
 from .const import CONF_APP_ID, CONF_SERVER_PORT, DOMAIN, EVENT_READY
+from .device import HubitatEventDevice
 
 _LOGGER = getLogger(__name__)
 
@@ -28,19 +29,7 @@ PLATFORMS = ["light", "switch", "sensor", "binary_sensor", "climate"]
 
 
 async def async_setup(hass: HomeAssistant, config: dict):
-    """Set up the Hubitat component."""
-
-    if DOMAIN not in config:
-        return True
-
-    conf = config[DOMAIN]
-
-    hass.async_create_task(
-        hass.config_entries.flow.async_init(
-            DOMAIN, context={"source": SOURCE_IMPORT}, data=deepcopy(conf)
-        )
-    )
-
+    """Legacy setup -- not implemented."""
     return True
 
 
@@ -90,6 +79,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
         )
     )
 
+    # Event emitters are managed separately from stateful devices
+    for emitter in hass.data[DOMAIN][entry.entry_id].event_emitters:
+        emitter.async_will_remove_from_hass()
+
     _LOGGER.debug(f"Unloaded all components for {entry.entry_id}")
 
     if unload_ok:
@@ -99,7 +92,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
 
 
 class Hubitat:
-    """Hubitat management class."""
+    """Manage a Hubitat hub."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry, index: int):
         """Initialize a Hubitat manager."""
@@ -113,6 +106,7 @@ class Hubitat:
         self.hass = hass
         self.config_entry = entry
         self.entity_ids: List[int] = []
+        self.event_emitters: List[HubitatEventDevice] = []
 
         if index == 1:
             self.hub_entity_id = "hubitat.hub"
@@ -139,7 +133,7 @@ class Hubitat:
         port = options_port if options_port is not None else config_port
 
         _LOGGER.debug("initializing Hubitat hub with event server on port %s", port)
-        self.hub = HubitatHub(self.host, self.app_id, self.token, port)
+        self.hub = Hub(self.host, self.app_id, self.token, port)
 
         await self.hub.start()
 

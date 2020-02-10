@@ -1,11 +1,43 @@
 """Constants for the Hubitat integration."""
 
+from hubitatmaker.const import (
+    ATTR_DEVICE_ID,
+    ATTR_NAME,
+    ATTR_NUM_BUTTONS,
+    ATTR_VALUE,
+    CAP_COLOR_CONTROL,
+    CAP_COLOR_TEMP,
+    CAP_CONTACT_SENSOR,
+    CAP_HOLDABLE_BUTTON,
+    CAP_ILLUMINANCE_MEASUREMENT,
+    CAP_LIGHT,
+    CAP_MOTION_SENSOR,
+    CAP_MUSIC_PLAYER,
+    CAP_POWER_METER,
+    CAP_PUSHABLE_BUTTON,
+    CAP_RELATIVE_HUMIDITY_MEASUREMENT,
+    CAP_SWITCH,
+    CAP_SWITCH_LEVEL,
+    CAP_TEMPERATURE_MEASUREMENT,
+)
+
 DOMAIN = "hubitat"
 
 CONF_APP_ID = "app_id"
 CONF_HUB = "hub"
+CONF_HUBITAT_EVENT = "hubitat_event"
 CONF_SERVER_ADDR = "server_addr"
 CONF_SERVER_PORT = "server_port"
+
+CONF_BUTTON = "button"
+CONF_BUTTON_1 = "1"
+CONF_BUTTON_2 = "2"
+CONF_BUTTON_3 = "3"
+CONF_BUTTON_4 = "4"
+CONF_HELD = "held"
+CONF_PUSHED = "pushed"
+CONF_SUBTYPE = "subtype"
+CONF_VALUE = "value"
 
 EVENT_DEVICE = "hubitat.device"
 EVENT_READY = "hubitat.ready"

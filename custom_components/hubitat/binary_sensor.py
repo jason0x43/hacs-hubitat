@@ -11,7 +11,8 @@ from hubitatmaker import (
     ATTR_MOTION,
     ATTR_SMOKE,
     ATTR_WATER,
-    Hub as HubitatHub,
+    Device,
+    Hub,
 )
 
 from homeassistant.components.binary_sensor import (
@@ -29,7 +30,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
-from .device import HubitatDevice
+from .device import HubitatStatefulDevice
 
 _LOGGER = getLogger(__name__)
 
@@ -39,7 +40,7 @@ _CONTACT_MATCHERS = (
 )
 
 
-class HubitatBinarySensor(HubitatDevice, BinarySensorDevice):
+class HubitatBinarySensor(HubitatStatefulDevice, BinarySensorDevice):
     """A generic Hubitat sensor."""
 
     @property
@@ -88,10 +89,10 @@ class HubitatContactSensor(HubitatBinarySensor):
     _active_state = "open"
     _attribute = ATTR_CONTACT
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, hub: Hub, device: Device):
         """Initialize a contact sensor."""
-        super().__init__(*args, **kwargs)
-        self._device_class = _get_contact_device_class(kwargs["device"])
+        super().__init__(hub=hub, device=device)
+        self._device_class = _get_contact_device_class(device)
 
 
 class HubitatMoistureSensor(HubitatBinarySensor):
@@ -132,24 +133,25 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
 ):
     """Initialize light devices."""
-    hub: HubitatHub = hass.data[DOMAIN][entry.entry_id].hub
+    hub: Hub = hass.data[DOMAIN][entry.entry_id].hub
+    devices = hub.devices
     for attr in _SENSOR_ATTRS:
         Sensor = attr[1]
         sensors = [
-            Sensor(hub=hub, device=d)
-            for d in hub.devices
-            if hub.device_has_attribute(d["id"], attr[0])
+            Sensor(hub=hub, device=devices[i])
+            for i in devices
+            if attr[0] in devices[i].attributes
         ]
         async_add_entities(sensors)
         _LOGGER.debug(f"Added entities for binary sensors: {sensors}")
 
 
-def _get_contact_device_class(device: Dict[str, Any]):
+def _get_contact_device_class(device: Device):
     """Guess the type of contact sensor from the device's label."""
-    label = device["label"]
+    name = device.name
 
     for matcher in _CONTACT_MATCHERS:
-        if matcher[0].match(label):
+        if matcher[0].match(name):
             return matcher[1]
 
     return DEVICE_CLASS_DOOR

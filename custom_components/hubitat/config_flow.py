@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional, Union
 
 from hubitatmaker import (
     ConnectionError,
-    Hub as HubitatHub,
+    Hub,
     InvalidConfig,
     InvalidInfo,
     InvalidToken,
@@ -40,7 +40,7 @@ async def validate_input(data: Dict[str, Any]):
     """Validate the user input allows us to connect."""
 
     # data has the keys from OPTIONS_SCHEMA with values provided by the user.
-    hub = HubitatHub(data[CONF_HOST], data[CONF_APP_ID], data[CONF_ACCESS_TOKEN])
+    hub = Hub(data[CONF_HOST], data[CONF_APP_ID], data[CONF_ACCESS_TOKEN])
 
     await hub.check_config()
 

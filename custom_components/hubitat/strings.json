@@ -26,6 +26,18 @@
       "already_configured": "Hub is already configured"
     }
   },
+  "device_automation": {
+    "trigger_subtype": {
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4"
+    },
+    "trigger_type": {
+      "held": "Button {subtype} held",
+      "pushed": "Button {subtype} pushed"
+    }
+  },
   "options": {
     "step": {
       "user": {

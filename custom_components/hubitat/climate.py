@@ -19,7 +19,8 @@ from hubitatmaker import (
     CMD_SET_FAN_MODE,
     CMD_SET_HEATING_SETPOINT,
     CMD_SET_THERMOSTAT_MODE,
-    Hub as HubitatHub,
+    Device,
+    Hub,
 )
 
 from homeassistant.components.climate import ClimateDevice
@@ -54,7 +55,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import color as color_util
 
 from .const import DOMAIN
-from .device import HubitatDevice
+from .device import HubitatStatefulDevice
 
 _LOGGER = getLogger(__name__)
 
@@ -110,7 +111,7 @@ FAN_MODE_CIRCULATE = "circulate"
 HASS_FAN_MODES = [FAN_ON, FAN_AUTO]
 
 
-class HubitatThermostat(HubitatDevice, ClimateDevice):
+class HubitatThermostat(HubitatStatefulDevice, ClimateDevice):
     """Representation of a Hubitat switch."""
 
     @property
@@ -286,17 +287,20 @@ class HubitatThermostat(HubitatDevice, ClimateDevice):
                     await self.send_command(CMD_SET_HEATING_SETPOINT, temp)
 
 
-def is_thermostat(device: Dict[str, Any]) -> bool:
+def is_thermostat(device: Device) -> bool:
     """Return True if device looks like a thermostat."""
-    return CAP_THERMOSTAT in device["capabilities"]
+    return CAP_THERMOSTAT in device.capabilities
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
 ) -> None:
     """Initialize thermostat devices."""
-    hub: HubitatHub = hass.data[DOMAIN][entry.entry_id].hub
+    hub: Hub = hass.data[DOMAIN][entry.entry_id].hub
+    devices = hub.devices
     therms = [
-        HubitatThermostat(hub=hub, device=d) for d in hub.devices if is_thermostat(d)
+        HubitatThermostat(hub=hub, device=devices[i])
+        for i in devices
+        if is_thermostat(devices[i])
     ]
     async_add_entities(therms)

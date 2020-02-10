@@ -15,7 +15,8 @@ from hubitatmaker import (
     CMD_SET_HUE,
     CMD_SET_LEVEL,
     CMD_SET_SAT,
-    Hub as HubitatHub,
+    Device,
+    Hub,
 )
 
 from homeassistant.components.light import (
@@ -33,12 +34,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import color as color_util
 
 from .const import DOMAIN
-from .device import HubitatDevice
+from .device import HubitatStatefulDevice
 
 _LOGGER = getLogger(__name__)
 
 
-class HubitatLight(HubitatDevice, Light):
+class HubitatLight(HubitatStatefulDevice, Light):
     """Representation of a Hubitat light."""
 
     @property
@@ -76,7 +77,7 @@ class HubitatLight(HubitatDevice, Light):
     def supported_features(self) -> int:
         """Return supported feature flags."""
         features = 0
-        caps = self._device["capabilities"]
+        caps = self._device.capabilities
 
         if CAP_COLOR_CONTROL in caps:
             features |= SUPPORT_COLOR
@@ -149,13 +150,13 @@ POSSIBLE_LIGHT_CAPABILITIES = (CAP_SWITCH, CAP_SWITCH_LEVEL)
 MATCH_LIGHT = re.compile(r".*\b(light|lamp|chandelier)s?\b.*", re.IGNORECASE)
 
 
-def is_light(device):
+def is_light(device: Device) -> bool:
     """Return True if device looks like a light."""
-    if any(cap in device["capabilities"] for cap in LIGHT_CAPABILITIES):
+    if any(cap in device.capabilities for cap in LIGHT_CAPABILITIES):
         return True
     if any(
-        cap in device["capabilities"] for cap in POSSIBLE_LIGHT_CAPABILITIES
-    ) and MATCH_LIGHT.match(device["label"]):
+        cap in device.capabilities for cap in POSSIBLE_LIGHT_CAPABILITIES
+    ) and MATCH_LIGHT.match(device.name):
         return True
     return False
 
@@ -164,7 +165,12 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
 ):
     """Initialize light devices."""
-    hub: HubitatHub = hass.data[DOMAIN][entry.entry_id].hub
-    lights = [HubitatLight(hub=hub, device=d) for d in hub.devices if is_light(d)]
+    hub: Hub = hass.data[DOMAIN][entry.entry_id].hub
+    devices = hub.devices
+    lights = [
+        HubitatLight(hub=hub, device=devices[i])
+        for i in devices
+        if is_light(devices[i])
+    ]
     async_add_entities(lights)
     _LOGGER.debug(f"Added entities for lights: {lights}")
