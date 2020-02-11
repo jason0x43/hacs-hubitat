@@ -33,12 +33,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import color as color_util
 
 from .const import DOMAIN
-from .device import HubitatDevice
+from .device import HubitatStatefulDevice
 
 _LOGGER = getLogger(__name__)
 
 
-class HubitatLight(HubitatDevice, Light):
+class HubitatLight(HubitatStatefulDevice, Light):
     """Representation of a Hubitat light."""
 
     @property

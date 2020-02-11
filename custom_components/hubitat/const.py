@@ -6,6 +6,7 @@ DOMAIN = "hubitat"
 
 CONF_APP_ID = "app_id"
 CONF_HUB = "hub"
+CONF_HUBITAT_EVENT = "hubitat_event"
 CONF_SERVER_ADDR = "server_addr"
 CONF_SERVER_PORT = "server_port"
 

@@ -11,6 +11,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def get_hubitat_device_id(device: DeviceEntry) -> Optional[str]:
+    """Return a Hubitat device ID for a Home Assistant device."""
     for identifier in device.identifiers:
         if identifier[0] == DOMAIN:
             return identifier[1]
@@ -20,6 +21,7 @@ def get_hubitat_device_id(device: DeviceEntry) -> Optional[str]:
 def get_device_capabilities(
     hass: HomeAssistant, device: DeviceEntry
 ) -> Optional[Dict[str, Any]]:
+    """Return a list of device capabilities."""
     device_id = get_hubitat_device_id(device)
     if device_id == None:
         _LOGGER.warn("no Hubitat device found for %s", device)
@@ -36,6 +38,7 @@ def get_device_capabilities(
 def device_has_capability(
     hass: HomeAssistant, device: DeviceEntry, capability: str
 ) -> bool:
+    """Return True if a device is known to have a given capability."""
     capabilities = get_device_capabilities(hass, device)
     if capabilities:
         for cap in capabilities:

@@ -19,6 +19,7 @@ from homeassistant.core import Event, HomeAssistant
 from homeassistant.helpers import device_registry
 
 from .const import CONF_APP_ID, CONF_SERVER_PORT, DOMAIN, EVENT_READY
+from .device import HubitatEventDevice
 
 _LOGGER = getLogger(__name__)
 
@@ -90,6 +91,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
         )
     )
 
+    # Event emitters are managed separately from stateful devices
+    for emitter in hass.data[DOMAIN][entry.entry_id].event_emitters:
+        emitter.async_will_remove_from_hass()
+
     _LOGGER.debug(f"Unloaded all components for {entry.entry_id}")
 
     if unload_ok:
@@ -113,6 +118,7 @@ class Hubitat:
         self.hass = hass
         self.config_entry = entry
         self.entity_ids: List[int] = []
+        self.event_emitters: List[HubitatEventDevice] = []
 
         if index == 1:
             self.hub_entity_id = "hubitat.hub"

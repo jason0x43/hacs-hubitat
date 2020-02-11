@@ -54,7 +54,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import color as color_util
 
 from .const import DOMAIN
-from .device import HubitatDevice
+from .device import HubitatStatefulDevice
 
 _LOGGER = getLogger(__name__)
 
@@ -110,7 +110,7 @@ FAN_MODE_CIRCULATE = "circulate"
 HASS_FAN_MODES = [FAN_ON, FAN_AUTO]
 
 
-class HubitatThermostat(HubitatDevice, ClimateDevice):
+class HubitatThermostat(HubitatStatefulDevice, ClimateDevice):
     """Representation of a Hubitat switch."""
 
     @property

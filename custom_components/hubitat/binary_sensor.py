@@ -29,7 +29,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
-from .device import HubitatDevice
+from .device import HubitatStatefulDevice
 
 _LOGGER = getLogger(__name__)
 
@@ -39,7 +39,7 @@ _CONTACT_MATCHERS = (
 )
 
 
-class HubitatBinarySensor(HubitatDevice, BinarySensorDevice):
+class HubitatBinarySensor(HubitatStatefulDevice, BinarySensorDevice):
     """A generic Hubitat sensor."""
 
     @property

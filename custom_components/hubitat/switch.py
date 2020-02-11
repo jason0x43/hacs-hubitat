@@ -4,7 +4,14 @@ from logging import getLogger
 import re
 from typing import Any, List, Optional
 
-from hubitatmaker import CAP_POWER_METER, CAP_SWITCH, CMD_OFF, CMD_ON, Hub as HubitatHub
+from hubitatmaker import (
+    CAP_POWER_METER,
+    CAP_PUSHBUTTON,
+    CAP_SWITCH,
+    CMD_OFF,
+    CMD_ON,
+    Hub as HubitatHub,
+)
 
 from homeassistant.components.switch import (
     DEVICE_CLASS_OUTLET,
@@ -16,7 +23,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import color as color_util
 
 from .const import DOMAIN
-from .device import HubitatDevice
+from .device import HubitatStatefulDevice, HubitatEventDevice
 from .light import is_light
 
 _LOGGER = getLogger(__name__)
@@ -24,7 +31,7 @@ _LOGGER = getLogger(__name__)
 _NAME_TEST = re.compile(r"\bswitch\b", re.IGNORECASE)
 
 
-class HubitatSwitch(HubitatDevice, SwitchDevice):
+class HubitatSwitch(HubitatStatefulDevice, SwitchDevice):
     """Representation of a Hubitat switch."""
 
     @property
@@ -59,16 +66,17 @@ class HubitatPowerMeterSwitch(HubitatSwitch):
 
 def is_switch(device) -> bool:
     """Return True if device looks like a switch."""
-    if CAP_SWITCH in device["capabilities"] and not is_light(device):
-        return True
-    return False
+    return CAP_SWITCH in device["capabilities"] and not is_light(device)
 
 
 def is_energy_meter(device) -> bool:
     """Return True if device can measure power."""
-    if CAP_POWER_METER in device["capabilities"]:
-        return True
-    return False
+    return CAP_POWER_METER in device["capabilities"]
+
+
+def is_button_controller(device) -> bool:
+    """Return true if the device is a stateless button controller."""
+    return CAP_PUSHBUTTON in device["capabilities"]
 
 
 async def async_setup_entry(
@@ -84,4 +92,13 @@ async def async_setup_entry(
         else:
             switches.append(HubitatSwitch(hub=hub, device=s))
     async_add_entities(switches)
-    _LOGGER.debug(f"Added entities for switches: {switches}")
+    _LOGGER.debug("Added entities for switches: %s", switches)
+
+    event_emitters = hass.data[DOMAIN][entry.entry_id].event_emitters
+    button_controllers = [
+        HubitatEventDevice(hass=hass, hub=hub, device=d)
+        for d in hub.devices
+        if is_button_controller(d)
+    ]
+    event_emitters.append(*button_controllers)
+    _LOGGER.debug("Added entities for pushbutton controllers: %s", button_controllers)
