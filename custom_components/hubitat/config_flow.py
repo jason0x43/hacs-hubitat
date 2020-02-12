@@ -45,8 +45,7 @@ async def validate_input(data: Dict[str, Any]):
     await hub.check_config()
 
     return {
-        "id": hub.id,
-        "label": f"Hubitat ({hub.id})",
+        "label": f"Hubitat ({hub.mac})",
     }
 
 
