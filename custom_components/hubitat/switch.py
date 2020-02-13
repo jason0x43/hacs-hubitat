@@ -6,7 +6,8 @@ from typing import Any, List, Optional
 
 from hubitatmaker import (
     CAP_POWER_METER,
-    CAP_PUSHBUTTON,
+    CAP_PUSHABLE_BUTTON,
+    CAP_HOLDABLE_BUTTON,
     CAP_SWITCH,
     CMD_OFF,
     CMD_ON,
@@ -76,7 +77,10 @@ def is_energy_meter(device) -> bool:
 
 def is_button_controller(device) -> bool:
     """Return true if the device is a stateless button controller."""
-    return CAP_PUSHBUTTON in device["capabilities"]
+    return (
+        CAP_PUSHABLE_BUTTON in device["capabilities"]
+        or CAP_HOLDABLE_BUTTON in device["capabilities"]
+    )
 
 
 async def async_setup_entry(
