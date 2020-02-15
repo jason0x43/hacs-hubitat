@@ -23,7 +23,7 @@ class HubitatDevice(Entity):
         """Initialize a device."""
         self._hub = hub
         self._device: Dict[str, Any] = device
-        self._id = f"{self._hub.id}::{self._device['id']}"
+        self._id = f"{self._hub.host}::{self._hub.app_id}::{self._device['id']}"
         self._hub.add_device_listener(self._device["id"], self._create_listener())
 
     @property
@@ -39,7 +39,7 @@ class HubitatDevice(Entity):
             "name": self._device["label"],
             "manufacturer": "Hubitat",
             "model": self.type,
-            "via_device": (DOMAIN, self._hub.id),
+            "via_device": (DOMAIN, self._hub.mac),
         }
 
     @property

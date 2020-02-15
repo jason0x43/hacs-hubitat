@@ -8,18 +8,17 @@ from aiohttp.web import Request
 import voluptuous as vol
 from hubitatmaker import Hub as HubitatHub
 
-from homeassistant.components.webhook import async_generate_url
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     CONF_ACCESS_TOKEN,
     CONF_HOST,
-    CONF_WEBHOOK_ID,
+    EVENT_HOMEASSISTANT_STOP,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Event, HomeAssistant
 from homeassistant.helpers import device_registry
 
-from .const import CONF_APP_ID, DOMAIN, EVENT_READY
+from .const import CONF_APP_ID, CONF_SERVER_PORT, DOMAIN, EVENT_READY
 
 _LOGGER = getLogger(__name__)
 
@@ -63,12 +62,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     dreg.async_get_or_create(
         config_entry_id=entry.entry_id,
         connections={(device_registry.CONNECTION_NETWORK_MAC, hub.mac)},
-        identifiers={(DOMAIN, hub.id)},
+        identifiers={(DOMAIN, hub.mac)},
         manufacturer="Hubitat",
-        name=hub.name,
-        model=hub.hw_version,
-        sw_version=hub.sw_version,
+        name="Hubitat Elevation",
     )
+
+    def stop_hub(event: Event):
+        hub.stop()
+
+    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_hub)
 
     hass.bus.fire(EVENT_READY)
     _LOGGER.info("Hubitat is ready")
@@ -78,9 +80,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload a config entry."""
-
-    hass.components.webhook.async_unregister(entry.data[CONF_WEBHOOK_ID])
-    _LOGGER.debug(f"Unregistered webhook {entry.data[CONF_WEBHOOK_ID]}")
 
     unload_ok = all(
         await gather(
@@ -120,6 +119,8 @@ class Hubitat:
         else:
             self.hub_entity_id = f"hubitat.hub_{index}"
 
+        entry.add_update_listener(self.async_update_options)
+
     @property
     def host(self) -> str:
         return cast(str, self.config_entry.data.get(CONF_HOST))
@@ -133,7 +134,12 @@ class Hubitat:
         return cast(str, self.config_entry.data.get(CONF_ACCESS_TOKEN))
 
     async def async_setup(self) -> bool:
-        self.hub = HubitatHub(self.host, self.app_id, self.token)
+        options_port = self.config_entry.options.get(CONF_SERVER_PORT)
+        config_port = self.config_entry.data.get(CONF_SERVER_PORT)
+        port = options_port if options_port is not None else config_port
+
+        _LOGGER.debug("initializing Hubitat hub with event server on port %s", port)
+        self.hub = HubitatHub(self.host, self.app_id, self.token, port)
 
         await self.hub.start()
 
@@ -147,39 +153,21 @@ class Hubitat:
             )
         _LOGGER.debug(f"Registered platforms")
 
-        webhook_id = config_entry.data[CONF_WEBHOOK_ID]
-
-        hass.components.webhook.async_register(
-            DOMAIN, "Hubitat", webhook_id, self.handle_event
-        )
-        _LOGGER.debug(f"Registered webhook {webhook_id}")
-
-        hass.async_create_task(hub.set_event_url(async_generate_url(hass, webhook_id)))
-        _LOGGER.debug(f"Set event POST URL")
-
         # Create an entity for the Hubitat hub with basic hub information
         hass.states.async_set(
             self.hub_entity_id,
             "connected",
-            {
-                "id": hub.id,
-                "host": hub.host,
-                "sw_version": hub.sw_version,
-                "hidden": True,
-            },
+            {"id": f"{hub.host}::{hub.app_id}", "host": hub.host, "hidden": True,},
         )
 
         return True
 
-    async def handle_event(
-        self, hass: HomeAssistant, webhook_id: str, request: Request
-    ):
-        """Handle an event from the hub."""
-        try:
-            event = await request.json()
-        except Exception as e:
-            _LOGGER.warning(f"Invalid message from Hubitat: {e}")
-            return None
-
-        _LOGGER.debug("received event from %s", self.hub)
-        self.hub.process_event(event)
+    @staticmethod
+    async def async_update_options(hass: HomeAssistant, entry: ConfigEntry):
+        """Handle options update."""
+        hub = hass.data[DOMAIN][entry.entry_id].hub
+        port = entry.options.get(CONF_SERVER_PORT, 0)
+        _LOGGER.debug("asked to update port event listener port to %s", port)
+        if port != hub.port:
+            _LOGGER.debug("setting event listener port to %s", port)
+            await hub.set_port(port)
