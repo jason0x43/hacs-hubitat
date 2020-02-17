@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Union
 from hubitatmaker import (
     CAP_COLOR_CONTROL,
     CAP_COLOR_TEMP,
+    CAP_LIGHT,
     CAP_SWITCH,
     CAP_SWITCH_LEVEL,
     CMD_ON,
@@ -145,9 +146,14 @@ class HubitatLight(HubitatStatefulDevice, Light):
         await self.send_command("off")
 
 
-LIGHT_CAPABILITIES = (CAP_COLOR_TEMP, CAP_COLOR_CONTROL)
+LIGHT_CAPABILITIES = (CAP_COLOR_TEMP, CAP_COLOR_CONTROL, CAP_LIGHT)
 POSSIBLE_LIGHT_CAPABILITIES = (CAP_SWITCH, CAP_SWITCH_LEVEL)
-MATCH_LIGHT = re.compile(r".*\b(light|lamp|chandelier)s?\b.*", re.IGNORECASE)
+
+# Ideally this would be multi-lingual
+MATCH_LIGHT = re.compile(
+    r".*\b(light|lamp|chandelier|sconce|luminaire|candelabra|candle|lantern)s?\b.*",
+    re.IGNORECASE,
+)
 
 
 def is_light(device: Device) -> bool:
