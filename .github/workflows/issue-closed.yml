@@ -1,0 +1,16 @@
+name: Issue Assigned
+
+on:
+  issues:
+    types: [closed]
+
+jobs:
+  move-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/project-manager
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          project: Development
+          column: Done
