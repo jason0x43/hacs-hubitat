@@ -1,12 +1,14 @@
-const core = require('@actions/core');
-const github = require('@actions/github');
+import core from '@actions/core';
+import github from '@actions/github';
+import { Octokit } from '@octokit/rest';
 
 (async function main() {
   try {
     const token = core.getInput('github-token');
     const projectName = core.getInput('project');
     const columnName = core.getInput('column');
-    const octokit = new github.GitHub(token);
+    const octokit = (new github.GitHub(token)) as unknown as Octokit;
+    const issueInfo = github.context.issue;
 
     // Find the project specified by the user
     const projects = await octokit.paginate(
@@ -30,8 +32,8 @@ const github = require('@actions/github');
     );
 
     // Check for an existing card for the issue
-    let existing;
-    const issueTest = new RegExp(`/issues/${issue.number}$`);
+    let existing: { id: number };
+    const issueTest = new RegExp(`/issues/${issueInfo.number}$`);
     for (const col of columns) {
       const cards = await octokit.paginate(
         octokit.projects.listCards.endpoint.merge({
@@ -53,6 +55,8 @@ const github = require('@actions/github');
         position: 'top'
       });
     } else {
+      const issue = (await octokit.issues.get(github.context.issue)).data;
+
       // A card doesn't exist -- create it
       await octokit.projects.createCard({
         column_id: column.id,

@@ -2,4 +2,4 @@ name: 'Project Manager'
 description: 'Move issues around in projects'
 runs:
     using: 'node12'
-    main: 'index.js'
+    main: 'dist/index.js'

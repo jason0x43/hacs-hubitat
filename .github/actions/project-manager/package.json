@@ -3,13 +3,17 @@
   "version": "0.1.0",
   "description": "Assign issues to projects",
   "main": "dist/index.js",
-  "scripts": {},
+  "scripts": {
+    "build": "ncc build src/index.ts"
+  },
   "keywords": [],
   "author": "j.cheatham@gmail.com",
   "license": "ISC",
   "devDependencies": {
     "@actions/core": "~1.2.2",
     "@actions/github": "~2.1.0",
-    "@zeit/ncc": "~0.21.1"
+    "@zeit/ncc": "~0.21.1",
+    "tslib": "~1.10.0",
+    "typescript": "~3.7.5"
   }
 }
