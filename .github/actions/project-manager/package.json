@@ -2,13 +2,14 @@
   "name": "project-manager",
   "version": "0.1.0",
   "description": "Assign issues to projects",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {},
   "keywords": [],
   "author": "j.cheatham@gmail.com",
   "license": "ISC",
-  "dependencies": {
+  "devDependencies": {
     "@actions/core": "~1.2.2",
-    "@actions/github": "~2.1.0"
+    "@actions/github": "~2.1.0",
+    "@zeit/ncc": "~0.21.1"
   }
 }
