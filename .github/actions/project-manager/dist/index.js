@@ -4163,7 +4163,7 @@ const github = __webpack_require__(469);
                 const cards = yield octokit.paginate(octokit.projects.listCards.endpoint.merge({
                     column_id: col.id
                 }));
-                const card = cards.find(card => issueTest.test(card.content_urL));
+                const card = cards.find(card => issueTest.test(card.content_url));
                 if (card) {
                     existing = card;
                     break;
@@ -4178,7 +4178,11 @@ const github = __webpack_require__(469);
                 });
             }
             else {
-                const issue = (yield octokit.issues.get(github.context.issue)).data;
+                const issue = (yield octokit.issues.get({
+                    owner: issueInfo.owner,
+                    repo: issueInfo.repo,
+                    issue_number: issueInfo.number
+                })).data;
                 // A card doesn't exist -- create it
                 yield octokit.projects.createCard({
                     column_id: column.id,

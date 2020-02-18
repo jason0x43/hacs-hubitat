@@ -40,7 +40,7 @@ import { Octokit } from '@octokit/rest';
           column_id: col.id
         })
       );
-      const card = cards.find(card => issueTest.test(card.content_urL));
+      const card = cards.find(card => issueTest.test(card.content_url));
       if (card) {
         existing = card;
         break;
@@ -55,7 +55,11 @@ import { Octokit } from '@octokit/rest';
         position: 'top'
       });
     } else {
-      const issue = (await octokit.issues.get(github.context.issue)).data;
+      const issue = (await octokit.issues.get({
+        owner: issueInfo.owner,
+        repo: issueInfo.repo,
+        issue_number: issueInfo.number
+      })).data;
 
       // A card doesn't exist -- create it
       await octokit.projects.createCard({
