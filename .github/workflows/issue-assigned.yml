@@ -10,6 +10,6 @@ jobs:
     steps:
       - uses: ./.github/actions/project-manager
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           project: Development
           column: In progress
