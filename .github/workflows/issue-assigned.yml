@@ -1,0 +1,15 @@
+name: Issue Assigned
+
+on:
+  issues:
+    types: [assigned]
+
+jobs:
+  move-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/actions/project-manager
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          project: Development
+          column: In progress
