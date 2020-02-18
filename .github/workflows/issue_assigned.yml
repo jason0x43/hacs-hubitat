@@ -5,11 +5,28 @@ on:
     types: [assigned]
 
 jobs:
-  update:
+  move-issue:
     runs-on: ubuntu-latest
     steps:
-      - uses: alex-page/github-project-automation-plus@v0.1.2
+      - uses: actions/github-script@0.5.0
         with:
-          project: Development
-          column: In progress
-          repo-token: ${{ secrets.PA_TOKEN }}
+          script: |
+            const projectName = 'Development';
+            const columnName = 'To do';
+
+            const projects = (await github.projects.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            })).data;
+            const project = projects.find(proj => proj.name === projectName);
+
+            const columns = (await github.projects.listColumns({
+              project_id: project.id
+            })).data;
+            const column = columns.find(col => col.name === columnName);
+
+            await github.projects.createCard({
+              column_id: column.id,
+              content_id: issue.id,
+              content_type: 'Issue'
+            });
