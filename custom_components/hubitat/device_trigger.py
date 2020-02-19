@@ -23,21 +23,29 @@ from homeassistant.helpers import config_validation as cv, entity_registry
 from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers.typing import ConfigType
 
-from hubitatmaker import Device
-
-
-from . import DOMAIN
-from .const import (
+from hubitatmaker import (
+    Device,
     ATTR_DEVICE_ID,
     ATTR_NAME,
     ATTR_NUM_BUTTONS,
     ATTR_VALUE,
+    CAP_DOUBLE_TAPABLE_BUTTON,
     CAP_PUSHABLE_BUTTON,
     CAP_HOLDABLE_BUTTON,
+)
+
+
+from . import DOMAIN
+from .const import (
     CONF_BUTTON_1,
     CONF_BUTTON_2,
     CONF_BUTTON_3,
     CONF_BUTTON_4,
+    CONF_BUTTON_5,
+    CONF_BUTTON_6,
+    CONF_BUTTON_7,
+    CONF_BUTTON_8,
+    CONF_DOUBLE_TAPPED,
     CONF_HELD,
     CONF_HUBITAT_EVENT,
     CONF_PUSHED,
@@ -45,9 +53,18 @@ from .const import (
     CONF_VALUE,
 )
 
-BUTTONS = (CONF_BUTTON_1, CONF_BUTTON_2, CONF_BUTTON_3, CONF_BUTTON_4)
+BUTTONS = (
+    CONF_BUTTON_1,
+    CONF_BUTTON_2,
+    CONF_BUTTON_3,
+    CONF_BUTTON_4,
+    CONF_BUTTON_5,
+    CONF_BUTTON_6,
+    CONF_BUTTON_7,
+    CONF_BUTTON_8,
+)
 
-TRIGGER_TYPES = (CONF_PUSHED, CONF_HELD)
+TRIGGER_TYPES = (CONF_DOUBLE_TAPPED, CONF_HELD, CONF_PUSHED)
 TRIGGER_SUBTYPES = BUTTONS
 
 TRIGGER_SCHEMA = TRIGGER_BASE_SCHEMA.extend(
@@ -57,7 +74,11 @@ TRIGGER_SCHEMA = TRIGGER_BASE_SCHEMA.extend(
     }
 )
 
-TRIGGER_CAPABILITIES = {CAP_PUSHABLE_BUTTON, CAP_HOLDABLE_BUTTON}
+TRIGGER_CAPABILITIES = {
+    CAP_PUSHABLE_BUTTON,
+    CAP_HOLDABLE_BUTTON,
+    CAP_DOUBLE_TAPABLE_BUTTON,
+}
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -86,34 +107,24 @@ async def async_get_triggers(hass: HomeAssistant, device_id: str) -> List[dict]:
         return []
 
     triggers = []
+    types = []
+    num_buttons = int(device.attributes[ATTR_NUM_BUTTONS].value)
 
-    if CAP_PUSHABLE_BUTTON in device.capabilities:
-        num_buttons = int(device.attributes[ATTR_NUM_BUTTONS].value)
-
-        _LOGGER.debug(
-            "%s is a pushable button controller with %d buttons",
-            device.name,
-            num_buttons,
-        )
-
-        for i in range(0, num_buttons):
-            triggers.append(
-                {
-                    CONF_DEVICE_ID: device_id,
-                    CONF_DOMAIN: DOMAIN,
-                    CONF_PLATFORM: "device",
-                    CONF_TYPE: CONF_PUSHED,
-                    CONF_SUBTYPE: BUTTONS[i],
-                }
-            )
+    if CAP_DOUBLE_TAPABLE_BUTTON in device.capabilities:
+        types.append(CONF_DOUBLE_TAPPED)
 
     if CAP_HOLDABLE_BUTTON in device.capabilities:
-        num_buttons = int(device.attributes[ATTR_NUM_BUTTONS].value)
+        types.append(CONF_HELD)
 
+    if CAP_PUSHABLE_BUTTON in device.capabilities:
+        types.append(CONF_PUSHED)
+
+    for event_type in types:
         _LOGGER.debug(
-            "%s is a holdable button controller with %d buttons",
+            "%s is a button controller with %d buttons that can be %s",
             device.name,
             num_buttons,
+            event_type,
         )
 
         for i in range(0, num_buttons):
@@ -122,7 +133,7 @@ async def async_get_triggers(hass: HomeAssistant, device_id: str) -> List[dict]:
                     CONF_DEVICE_ID: device_id,
                     CONF_DOMAIN: DOMAIN,
                     CONF_PLATFORM: "device",
-                    CONF_TYPE: CONF_HELD,
+                    CONF_TYPE: event_type,
                     CONF_SUBTYPE: BUTTONS[i],
                 }
             )

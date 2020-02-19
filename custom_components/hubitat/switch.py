@@ -5,6 +5,7 @@ import re
 from typing import Any, List, Optional
 
 from hubitatmaker import (
+    CAP_DOUBLE_TAPABLE_BUTTON,
     CAP_POWER_METER,
     CAP_PUSHABLE_BUTTON,
     CAP_HOLDABLE_BUTTON,
@@ -81,6 +82,7 @@ def is_button_controller(device: Device) -> bool:
     return (
         CAP_PUSHABLE_BUTTON in device.capabilities
         or CAP_HOLDABLE_BUTTON in device.capabilities
+        or CAP_DOUBLE_TAPABLE_BUTTON in device.capabilities
     )
 
 

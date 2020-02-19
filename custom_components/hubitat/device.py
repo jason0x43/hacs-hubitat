@@ -4,12 +4,7 @@ from abc import ABC, abstractmethod
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Union
 
-from hubitatmaker import Device, Event, Hub
-
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import Entity
-
-from .const import (
+from hubitatmaker import (
     CAP_COLOR_CONTROL,
     CAP_COLOR_TEMP,
     CAP_CONTACT_SENSOR,
@@ -22,6 +17,15 @@ from .const import (
     CAP_SWITCH,
     CAP_SWITCH_LEVEL,
     CAP_TEMPERATURE_MEASUREMENT,
+    Device,
+    Event,
+    Hub,
+)
+
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity import Entity
+
+from .const import (
     CONF_HUBITAT_EVENT,
     DOMAIN,
 )
