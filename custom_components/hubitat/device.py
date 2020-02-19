@@ -29,6 +29,9 @@ from .const import (
     CONF_HUBITAT_EVENT,
     DOMAIN,
 )
+from .device_trigger import TRIGGER_CAPABILITIES
+
+_TRIGGER_ATTRS = tuple([v["attr"] for v in TRIGGER_CAPABILITIES.values()])
 
 _LOGGER = getLogger(__name__)
 
@@ -146,6 +149,6 @@ class HubitatEventDevice(HubitatDevice):
     def handle_event(self, event: Event):
         """Create a listener for device events."""
         # Only emit HA events for stateless Hubitat events, like button pushes
-        if event.attribute == "pushed":
+        if event.attribute in _TRIGGER_ATTRS:
             self.hass.bus.async_fire(CONF_HUBITAT_EVENT, dict(event))
             _LOGGER.debug("emitted event %s", event)

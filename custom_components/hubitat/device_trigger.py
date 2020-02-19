@@ -26,8 +26,11 @@ from homeassistant.helpers.typing import ConfigType
 from hubitatmaker import (
     Device,
     ATTR_DEVICE_ID,
+    ATTR_DOUBLE_TAPPED,
+    ATTR_HELD,
     ATTR_NAME,
     ATTR_NUM_BUTTONS,
+    ATTR_PUSHED,
     ATTR_VALUE,
     CAP_DOUBLE_TAPABLE_BUTTON,
     CAP_PUSHABLE_BUTTON,
@@ -64,7 +67,15 @@ BUTTONS = (
     CONF_BUTTON_8,
 )
 
-TRIGGER_TYPES = (CONF_DOUBLE_TAPPED, CONF_HELD, CONF_PUSHED)
+# A mapping from capabilities to the associated Hubitat attributes and HA
+# config types
+TRIGGER_CAPABILITIES = {
+    CAP_PUSHABLE_BUTTON: {"attr": ATTR_PUSHED, "conf": CONF_PUSHED},
+    CAP_HOLDABLE_BUTTON: {"attr": ATTR_HELD, "conf": CONF_HELD},
+    CAP_DOUBLE_TAPABLE_BUTTON: {"attr": ATTR_DOUBLE_TAPPED, "conf": CONF_DOUBLE_TAPPED},
+}
+
+TRIGGER_TYPES = tuple([v["conf"] for v in TRIGGER_CAPABILITIES.values()])
 TRIGGER_SUBTYPES = BUTTONS
 
 TRIGGER_SCHEMA = TRIGGER_BASE_SCHEMA.extend(
@@ -73,12 +84,6 @@ TRIGGER_SCHEMA = TRIGGER_BASE_SCHEMA.extend(
         vol.Required(CONF_SUBTYPE): vol.In(TRIGGER_SUBTYPES),
     }
 )
-
-TRIGGER_CAPABILITIES = {
-    CAP_PUSHABLE_BUTTON,
-    CAP_HOLDABLE_BUTTON,
-    CAP_DOUBLE_TAPABLE_BUTTON,
-}
 
 _LOGGER = logging.getLogger(__name__)
 
