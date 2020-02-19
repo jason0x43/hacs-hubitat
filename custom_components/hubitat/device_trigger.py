@@ -86,16 +86,25 @@ _LOGGER = logging.getLogger(__name__)
 async def async_validate_trigger_config(hass: HomeAssistant, config: ConfigType):
     """Validate a trigger config."""
     config = TRIGGER_SCHEMA(config)
+
     device = await get_device(hass, config[CONF_DEVICE_ID])
     trigger = config[CONF_TYPE]
     button = config[CONF_SUBTYPE]
 
-    # Note that the hubitat domain may not be fully initialized when this
-    # function is called, so we can't look use the hub to check actual device
-    # capabilities
-
     if not device or trigger not in TRIGGER_TYPES or button not in TRIGGER_SUBTYPES:
+        _LOGGER.warning("Missing device, invalid trigger, or invalid button")
         raise InvalidDeviceAutomationConfig
+
+    if DOMAIN in hass.config.components:
+        hubitat_device = await get_hubitat_device(hass, device.id)
+        if hubitat_device is None:
+            _LOGGER.warning("Invalid Hubitat device")
+            raise InvalidDeviceAutomationConfig
+
+        types = get_trigger_types(hubitat_device)
+        if trigger not in types:
+            _LOGGER.warning("Device doesn't support '%s'", trigger)
+            raise InvalidDeviceAutomationConfig
 
     return config
 
@@ -107,17 +116,8 @@ async def async_get_triggers(hass: HomeAssistant, device_id: str) -> List[dict]:
         return []
 
     triggers = []
-    types = []
     num_buttons = int(device.attributes[ATTR_NUM_BUTTONS].value)
-
-    if CAP_DOUBLE_TAPABLE_BUTTON in device.capabilities:
-        types.append(CONF_DOUBLE_TAPPED)
-
-    if CAP_HOLDABLE_BUTTON in device.capabilities:
-        types.append(CONF_HELD)
-
-    if CAP_PUSHABLE_BUTTON in device.capabilities:
-        types.append(CONF_PUSHED)
+    types = get_trigger_types(device)
 
     for event_type in types:
         _LOGGER.debug(
@@ -138,7 +138,7 @@ async def async_get_triggers(hass: HomeAssistant, device_id: str) -> List[dict]:
                 }
             )
 
-    _LOGGER.debug("returning triggers: %s", triggers)
+    _LOGGER.debug("Returning triggers: %s", triggers)
     return triggers
 
 
@@ -149,15 +149,14 @@ async def async_attach_trigger(
     automation_info: dict,
 ) -> CALLBACK_TYPE:
     """Attach a trigger."""
-    device = await get_device(hass, config[CONF_DEVICE_ID])
-    if device is None:
-        raise InvalidDeviceAutomationConfig
-
     hubitat_device = await get_hubitat_device(hass, config[CONF_DEVICE_ID])
     if hubitat_device is None:
+        _LOGGER.warning(
+            "Could not find Hubitat device for ID %s", config[CONF_DEVICE_ID]
+        )
         raise InvalidDeviceAutomationConfig
 
-    evt = event.TRIGGER_SCHEMA(
+    trigger = event.TRIGGER_SCHEMA(
         {
             event.CONF_PLATFORM: "event",
             event.CONF_EVENT_TYPE: CONF_HUBITAT_EVENT,
@@ -171,10 +170,10 @@ async def async_attach_trigger(
         }
     )
 
-    _LOGGER.debug("Attaching trigger %s", evt)
+    _LOGGER.debug("Attaching trigger %s", trigger)
 
     return await event.async_attach_trigger(
-        hass, evt, action, automation_info, platform_type="device"
+        hass, trigger, action, automation_info, platform_type="device"
     )
 
 
@@ -205,3 +204,19 @@ async def get_hubitat_device(hass: HomeAssistant, device_id: str) -> Optional[De
 
     _LOGGER.debug("Couldn't find Hubitat device for ID %s", hubitat_id)
     return None
+
+
+def get_trigger_types(device: Device) -> List[str]:
+    """Return the list of trigger types for a device."""
+    types = []
+
+    if CAP_DOUBLE_TAPABLE_BUTTON in device.capabilities:
+        types.append(CONF_DOUBLE_TAPPED)
+
+    if CAP_HOLDABLE_BUTTON in device.capabilities:
+        types.append(CONF_HELD)
+
+    if CAP_PUSHABLE_BUTTON in device.capabilities:
+        types.append(CONF_PUSHED)
+
+    return types
