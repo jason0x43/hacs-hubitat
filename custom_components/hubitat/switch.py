@@ -106,5 +106,5 @@ async def async_setup_entry(
         for i in devices
         if is_button_controller(devices[i])
     ]
-    event_emitters.append(*button_controllers)
+    event_emitters.extend(button_controllers)
     _LOGGER.debug("Added entities for pushbutton controllers: %s", button_controllers)
