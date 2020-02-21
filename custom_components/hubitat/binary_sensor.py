@@ -2,7 +2,7 @@
 
 from logging import getLogger
 import re
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from hubitatmaker import (
     ATTR_ACCELERATION,
@@ -12,7 +12,6 @@ from hubitatmaker import (
     ATTR_SMOKE,
     ATTR_WATER,
     Device,
-    Hub,
 )
 
 from homeassistant.components.binary_sensor import (
@@ -29,8 +28,7 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN
-from .device import HubitatStatefulDevice
+from .device import Hub, HubitatEntity, get_hub
 
 _LOGGER = getLogger(__name__)
 
@@ -40,26 +38,30 @@ _CONTACT_MATCHERS = (
 )
 
 
-class HubitatBinarySensor(HubitatStatefulDevice, BinarySensorDevice):
+class HubitatBinarySensor(HubitatEntity, BinarySensorDevice):
     """A generic Hubitat sensor."""
 
+    _active_state: str
+    _attribute: str
+    _device_class: str
+
     @property
-    def is_on(self):
+    def is_on(self) -> bool:
         """Return True if this sensor is on/active."""
         return self.get_str_attr(self._attribute) == self._active_state
 
     @property
-    def name(self):
+    def name(self) -> str:
         """Return the display name for this sensor."""
         return f"{super().name} {self._attribute}"
 
     @property
-    def unique_id(self):
+    def unique_id(self) -> str:
         """Return a unique ID for this sensor."""
         return f"{super().unique_id}::{self._attribute}"
 
     @property
-    def device_class(self):
+    def device_class(self) -> Optional[str]:
         """Return the class of this device."""
         try:
             return self._device_class
@@ -131,9 +133,9 @@ _SENSOR_ATTRS = (
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
-):
+) -> None:
     """Initialize light devices."""
-    hub: Hub = hass.data[DOMAIN][entry.entry_id].hub
+    hub = get_hub(hass, entry.entry_id)
     devices = hub.devices
     for attr in _SENSOR_ATTRS:
         Sensor = attr[1]
@@ -146,7 +148,7 @@ async def async_setup_entry(
         _LOGGER.debug(f"Added entities for binary sensors: {sensors}")
 
 
-def _get_contact_device_class(device: Device):
+def _get_contact_device_class(device: Device) -> str:
     """Guess the type of contact sensor from the device's label."""
     name = device.name
 

@@ -13,7 +13,6 @@ from hubitatmaker import (
     CMD_OFF,
     CMD_ON,
     Device,
-    Hub,
 )
 
 from homeassistant.components.switch import (
@@ -25,8 +24,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import color as color_util
 
-from .const import DOMAIN
-from .device import HubitatStatefulDevice, HubitatEventDevice
+from .device import Hub, HubitatEntity, HubitatEventEmitter, get_hub
 from .light import is_light
 
 _LOGGER = getLogger(__name__)
@@ -34,7 +32,7 @@ _LOGGER = getLogger(__name__)
 _NAME_TEST = re.compile(r"\bswitch\b", re.IGNORECASE)
 
 
-class HubitatSwitch(HubitatStatefulDevice, SwitchDevice):
+class HubitatSwitch(HubitatEntity, SwitchDevice):
     """Representation of a Hubitat switch."""
 
     @property
@@ -90,7 +88,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
 ) -> None:
     """Initialize switch devices."""
-    hub: Hub = hass.data[DOMAIN][entry.entry_id].hub
+    hub = get_hub(hass, entry.entry_id)
     devices = hub.devices
     switch_devs = [devices[i] for i in devices if is_switch(devices[i])]
     switches: List[HubitatSwitch] = []
@@ -102,11 +100,12 @@ async def async_setup_entry(
     async_add_entities(switches)
     _LOGGER.debug("Added entities for switches: %s", switches)
 
-    event_emitters = hass.data[DOMAIN][entry.entry_id].event_emitters
     button_controllers = [
-        HubitatEventDevice(hass=hass, hub=hub, device=devices[i])
+        HubitatEventEmitter(hub=hub, device=devices[i])
         for i in devices
         if is_button_controller(devices[i])
     ]
-    event_emitters.extend(button_controllers)
+    for bc in button_controllers:
+        hass.async_create_task(bc.update_device_registry())
+        hub.add_event_emitter(bc)
     _LOGGER.debug("Added entities for pushbutton controllers: %s", button_controllers)

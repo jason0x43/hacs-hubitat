@@ -17,7 +17,6 @@ from hubitatmaker import (
     CMD_SET_LEVEL,
     CMD_SET_SAT,
     Device,
-    Hub,
 )
 
 from homeassistant.components.light import (
@@ -34,13 +33,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import color as color_util
 
-from .const import DOMAIN
-from .device import HubitatStatefulDevice
+from .device import Hub, HubitatEntity, get_hub
 
 _LOGGER = getLogger(__name__)
 
 
-class HubitatLight(HubitatStatefulDevice, Light):
+class HubitatLight(HubitatEntity, Light):
     """Representation of a Hubitat light."""
 
     @property
@@ -169,9 +167,9 @@ def is_light(device: Device) -> bool:
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
-):
+) -> None:
     """Initialize light devices."""
-    hub: Hub = hass.data[DOMAIN][entry.entry_id].hub
+    hub = get_hub(hass, entry.entry_id)
     devices = hub.devices
     lights = [
         HubitatLight(hub=hub, device=devices[i])

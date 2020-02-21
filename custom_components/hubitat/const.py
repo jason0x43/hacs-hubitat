@@ -1,5 +1,14 @@
 """Constants for the Hubitat integration."""
 
+from hubitatmaker import (
+    ATTR_DOUBLE_TAPPED,
+    ATTR_HELD,
+    ATTR_PUSHED,
+    CAP_DOUBLE_TAPABLE_BUTTON,
+    CAP_PUSHABLE_BUTTON,
+    CAP_HOLDABLE_BUTTON,
+)
+
 DOMAIN = "hubitat"
 
 CONF_APP_ID = "app_id"
@@ -25,3 +34,13 @@ CONF_VALUE = "value"
 
 EVENT_DEVICE = "hubitat.device"
 EVENT_READY = "hubitat.ready"
+
+PLATFORMS = ["light", "switch", "sensor", "binary_sensor", "climate"]
+
+# A mapping from capabilities to the associated Hubitat attributes and HA
+# config types
+TRIGGER_CAPABILITIES = {
+    CAP_PUSHABLE_BUTTON: {"attr": ATTR_PUSHED, "conf": CONF_PUSHED},
+    CAP_HOLDABLE_BUTTON: {"attr": ATTR_HELD, "conf": CONF_HELD},
+    CAP_DOUBLE_TAPABLE_BUTTON: {"attr": ATTR_DOUBLE_TAPPED, "conf": CONF_DOUBLE_TAPPED},
+}

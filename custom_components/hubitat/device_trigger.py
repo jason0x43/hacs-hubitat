@@ -54,7 +54,9 @@ from .const import (
     CONF_PUSHED,
     CONF_SUBTYPE,
     CONF_VALUE,
+    TRIGGER_CAPABILITIES,
 )
+from .device import get_hub
 
 BUTTONS = (
     CONF_BUTTON_1,
@@ -66,14 +68,6 @@ BUTTONS = (
     CONF_BUTTON_7,
     CONF_BUTTON_8,
 )
-
-# A mapping from capabilities to the associated Hubitat attributes and HA
-# config types
-TRIGGER_CAPABILITIES = {
-    CAP_PUSHABLE_BUTTON: {"attr": ATTR_PUSHED, "conf": CONF_PUSHED},
-    CAP_HOLDABLE_BUTTON: {"attr": ATTR_HELD, "conf": CONF_HELD},
-    CAP_DOUBLE_TAPABLE_BUTTON: {"attr": ATTR_DOUBLE_TAPPED, "conf": CONF_DOUBLE_TAPPED},
-}
 
 TRIGGER_TYPES = tuple([v["conf"] for v in TRIGGER_CAPABILITIES.values()])
 TRIGGER_SUBTYPES = BUTTONS
@@ -88,7 +82,9 @@ TRIGGER_SCHEMA = TRIGGER_BASE_SCHEMA.extend(
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_validate_trigger_config(hass: HomeAssistant, config: ConfigType):
+async def async_validate_trigger_config(
+    hass: HomeAssistant, config: ConfigType
+) -> Dict[str, Any]:
     """Validate a trigger config."""
     config = TRIGGER_SCHEMA(config)
 
@@ -202,8 +198,8 @@ async def get_hubitat_device(hass: HomeAssistant, device_id: str) -> Optional[De
         _LOGGER.debug("Couldn't find Hubitat ID for device %s", device_id)
         return None
 
-    for entry in device.config_entries:
-        hub = hass.data[DOMAIN][entry].hub
+    for entry_id in device.config_entries:
+        hub = get_hub(hass, entry_id)
         if hubitat_id in hub.devices:
             return hub.devices[hubitat_id]
 

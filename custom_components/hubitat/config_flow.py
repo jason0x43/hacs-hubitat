@@ -5,7 +5,6 @@ from typing import Any, Dict, Optional, Union
 
 from hubitatmaker import (
     ConnectionError,
-    Hub,
     InvalidConfig,
     InvalidInfo,
     InvalidToken,
@@ -23,6 +22,7 @@ from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_PORT, CONF_WE
 from homeassistant.core import HomeAssistant, callback
 
 from .const import CONF_APP_ID, CONF_SERVER_PORT, DOMAIN
+from .device import Hub
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(data: Dict[str, Any]):
+async def validate_input(data: Dict[str, Any]) -> Dict[str, Any]:
     """Validate the user input allows us to connect."""
 
     # data has the keys from OPTIONS_SCHEMA with values provided by the user.
@@ -60,7 +60,9 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(config_entry: ConfigEntry):
         return HubitatOptionsFlow(config_entry)
 
-    async def async_step_user(self, user_input: Dict[str, Any] = None):
+    async def async_step_user(
+        self, user_input: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
         """Handle the user step."""
         errors: Dict[str, str] = {}
 
@@ -117,11 +119,11 @@ class HubitatOptionsFlow(OptionsFlow):
         self.config_entry = config_entry
         self.options = dict(config_entry.options)
 
-    async def async_step_init(self, user_input=None):
+    async def async_step_init(self, user_input=None) -> Dict[str, Any]:
         """Handle integration options."""
         return await self.async_step_user()
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_user(self, user_input=None) -> Dict[str, Any]:
         """Handle integration options."""
         errors: Dict[str, str] = {}
 

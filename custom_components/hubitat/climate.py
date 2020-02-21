@@ -20,7 +20,6 @@ from hubitatmaker import (
     CMD_SET_HEATING_SETPOINT,
     CMD_SET_THERMOSTAT_MODE,
     Device,
-    Hub,
 )
 
 from homeassistant.components.climate import ClimateDevice
@@ -54,8 +53,7 @@ from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS, TEMP_FAHRENHEIT
 from homeassistant.core import HomeAssistant
 from homeassistant.util import color as color_util
 
-from .const import DOMAIN
-from .device import HubitatStatefulDevice
+from .device import Hub, HubitatEntity, get_hub
 
 _LOGGER = getLogger(__name__)
 
@@ -111,7 +109,7 @@ FAN_MODE_CIRCULATE = "circulate"
 HASS_FAN_MODES = [FAN_ON, FAN_AUTO]
 
 
-class HubitatThermostat(HubitatStatefulDevice, ClimateDevice):
+class HubitatThermostat(HubitatEntity, ClimateDevice):
     """Representation of a Hubitat switch."""
 
     @property
@@ -296,7 +294,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
 ) -> None:
     """Initialize thermostat devices."""
-    hub: Hub = hass.data[DOMAIN][entry.entry_id].hub
+    hub = get_hub(hass, entry.entry_id)
     devices = hub.devices
     therms = [
         HubitatThermostat(hub=hub, device=devices[i])

@@ -11,7 +11,6 @@ from hubitatmaker import (
     ATTR_POWER,
     ATTR_TEMPERATURE,
     ATTR_VOLTAGE,
-    Hub,
 )
 
 from homeassistant.components.sensor import (
@@ -26,13 +25,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import POWER_WATT, TEMP_FAHRENHEIT
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN
-from .device import HubitatStatefulDevice
+from .device import Hub, HubitatEntity, get_hub
 
 _LOGGER = getLogger(__name__)
 
 
-class HubitatSensor(HubitatStatefulDevice):
+class HubitatSensor(HubitatEntity):
     """A generic Hubitat sensor."""
 
     _attribute: str
@@ -148,7 +146,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
 ) -> None:
     """Initialize sensor devices."""
-    hub: Hub = hass.data[DOMAIN][entry.entry_id].hub
+    hub = get_hub(hass, entry.entry_id)
     devices = hub.devices
     for attr in _SENSOR_ATTRS:
         Sensor = attr[1]
