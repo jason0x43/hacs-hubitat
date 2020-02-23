@@ -40,6 +40,7 @@ PLATFORMS = [
     "climate",
     "cover",
     "light",
+    "lock",
     "sensor",
     "switch",
 ]
