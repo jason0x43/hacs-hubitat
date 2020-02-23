@@ -13,11 +13,13 @@ The following device types (platforms) are currently supported:
   - moisture
   - motion
   - smoke
-- climate (thermostats)
+- climate
+  - thermostat
+  - fan
 - cover
-  - door controllers
-  - garage door controllers
-  - window shades
+  - door controller
+  - garage door controller
+  - window shade
 - light
 - sensor
   - battery
