@@ -2,7 +2,9 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
 
-This is an integration for Hubitat that uses Hubitat’s Maker API. It currently supports the following device types (platforms) to varying degrees:
+This integration uses [Hubitat’s](hubitat.com) [Maker API](https://docs.hubitat.com/index.php?title=Hubitat™_Maker_API) to make Hubitat devices available for use with Home Assistant.
+
+The following device types (platforms) are currently supported:
 
 - binary_sensor
   - acceleration
