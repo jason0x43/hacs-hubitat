@@ -35,7 +35,14 @@ CONF_VALUE = "value"
 EVENT_DEVICE = "hubitat.device"
 EVENT_READY = "hubitat.ready"
 
-PLATFORMS = ["light", "switch", "sensor", "binary_sensor", "climate"]
+PLATFORMS = [
+    "binary_sensor",
+    "climate",
+    "cover",
+    "light",
+    "sensor",
+    "switch",
+]
 
 # A mapping from capabilities to the associated Hubitat attributes and HA
 # config types
