@@ -1,6 +1,7 @@
 """Classes for managing Hubitat devices."""
 
 from abc import ABC, abstractmethod
+from json import loads
 from logging import getLogger
 from typing import Any, Callable, Dict, List, Mapping, Optional, Union, cast
 
@@ -246,6 +247,14 @@ class HubitatBase(ABC):
         if val is None:
             return None
         return round(val)
+
+    @callback
+    def get_json_attr(self, attr: str) -> Optional[Dict[str, Any]]:
+        """Get the current value of an attribute."""
+        val = self.get_str_attr(attr)
+        if val is None:
+            return None
+        return loads(val)
 
     @callback
     def get_str_attr(self, attr: str) -> Optional[str]:
