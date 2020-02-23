@@ -117,7 +117,20 @@ async def async_get_triggers(hass: HomeAssistant, device_id: str) -> List[dict]:
         return []
 
     triggers = []
-    num_buttons = int(device.attributes[ATTR_NUM_BUTTONS].value)
+
+    try:
+        num_buttons = int(device.attributes[ATTR_NUM_BUTTONS].value)
+    except:
+        # There was a bug in Hubitat's Iris driver that prevented the
+        # numberOfButtons attribute from being set. This may still be the case
+        # for users who haven't manually fixed the issue. Assume a single
+        # button by default.
+        # See https://community.hubitat.com/t/button-controller-bug-v3-only-with-iris-button-controller/18415/9
+        _LOGGER.warning(
+            "Number of buttons not available for %s; defaulting to 1", device.id
+        )
+        num_buttons = 1
+
     types = get_trigger_types(device)
 
     for event_type in types:
