@@ -9,6 +9,7 @@ from hubitatmaker import (
     ATTR_CARBON_MONOXIDE,
     ATTR_CONTACT,
     ATTR_MOTION,
+    ATTR_PRESENCE,
     ATTR_SMOKE,
     ATTR_WATER,
     Device,
@@ -21,6 +22,7 @@ from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_MOISTURE,
     DEVICE_CLASS_MOTION,
     DEVICE_CLASS_MOVING,
+    DEVICE_CLASS_PRESENCE,
     DEVICE_CLASS_SMOKE,
     DEVICE_CLASS_WINDOW,
     BinarySensorDevice,
@@ -113,6 +115,14 @@ class HubitatMotionSensor(HubitatBinarySensor):
     _device_class = DEVICE_CLASS_MOTION
 
 
+class HubitatPresenceSensor(HubitatBinarySensor):
+    """A presence sensor."""
+
+    _active_state = "present"
+    _attribute = ATTR_PRESENCE
+    _device_class = DEVICE_CLASS_PRESENCE
+
+
 class HubitatSmokeSensor(HubitatBinarySensor):
     """A smoke sensor."""
 
@@ -126,6 +136,7 @@ _SENSOR_ATTRS = (
     (ATTR_CARBON_MONOXIDE, HubitatCoSensor),
     (ATTR_CONTACT, HubitatContactSensor),
     (ATTR_MOTION, HubitatMotionSensor),
+    (ATTR_PRESENCE, HubitatPresenceSensor),
     (ATTR_SMOKE, HubitatSmokeSensor),
     (ATTR_WATER, HubitatMoistureSensor),
 )
