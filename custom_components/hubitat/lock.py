@@ -61,15 +61,12 @@ SET_CODE_LENGTH_SCHEMA = vol.Schema(
 class HubitatLock(HubitatEntity, LockDevice):
     """Representation of a Hubitat lock."""
 
-    def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__(*args, **kwargs)
-        self._code_length = self.get_attr(ATTR_CODE_LENGTH)
-
     @property
     def code_format(self) -> Optional[str]:
         """Regex for code format or None if no code is required."""
-        if self._code_length is not None:
-            return f"^\\d{self._code_length}$"
+        code_length = self.get_attr(ATTR_CODE_LENGTH)
+        if code_length is not None:
+            return f"^\\d{code_length}$"
         return None
 
     @property
