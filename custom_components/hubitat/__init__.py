@@ -7,16 +7,11 @@ from typing import Any, List, Optional, cast
 from aiohttp.web import Request
 import voluptuous as vol
 
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import (
-    ATTR_ENTITY_ID,
-    CONF_ACCESS_TOKEN,
-    CONF_HOST,
-    EVENT_HOMEASSISTANT_STOP,
-)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant
 
-from .const import CONF_APP_ID, CONF_SERVER_PORT, DOMAIN, EVENT_READY, PLATFORMS
+from .const import DOMAIN, EVENT_READY, PLATFORMS
 from .device import Hub
 
 _LOGGER = getLogger(__name__)
