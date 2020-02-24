@@ -22,9 +22,10 @@ from homeassistant.components.sensor import (
 )
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import POWER_WATT, TEMP_FAHRENHEIT
+from homeassistant.const import POWER_WATT, TEMP_CELSIUS, TEMP_FAHRENHEIT
 from homeassistant.core import HomeAssistant
 
+from .const import TEMP_F
 from .device import Hub, HubitatEntity, get_hub
 
 _LOGGER = getLogger(__name__)
@@ -117,8 +118,12 @@ class HubitatTemperatureSensor(HubitatSensor):
         """Initialize a temperature sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = ATTR_TEMPERATURE
-        self._units = TEMP_FAHRENHEIT
         self._device_class = DEVICE_CLASS_TEMPERATURE
+
+    @property
+    def unit_of_measurement(self) -> Optional[str]:
+        """Return the units for this sensor's value."""
+        return TEMP_FAHRENHEIT if self._hub.temperature_unit == TEMP_F else TEMP_CELSIUS
 
 
 class HubitatVoltageSensor(HubitatSensor):

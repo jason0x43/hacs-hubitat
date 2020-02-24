@@ -25,8 +25,11 @@ from hubitatmaker import (
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
+    ATTR_HIDDEN,
     CONF_ACCESS_TOKEN,
     CONF_HOST,
+    CONF_ID,
+    CONF_TEMPERATURE_UNIT,
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry
@@ -38,6 +41,7 @@ from .const import (
     CONF_SERVER_PORT,
     DOMAIN,
     PLATFORMS,
+    TEMP_F,
     TRIGGER_CAPABILITIES,
 )
 
@@ -81,6 +85,10 @@ class Hub:
         return self._hub.devices
 
     @property
+    def entity_id(self) -> str:
+        return self._hub_entity_id
+
+    @property
     def host(self) -> str:
         return cast(str, self.config_entry.data.get(CONF_HOST))
 
@@ -95,6 +103,16 @@ class Hub:
     @property
     def token(self) -> str:
         return cast(str, self.config_entry.data.get(CONF_ACCESS_TOKEN))
+
+    @property
+    def temperature_unit(self) -> str:
+        entry = self.config_entry
+        return (
+            entry.options.get(
+                CONF_TEMPERATURE_UNIT, entry.data.get(CONF_TEMPERATURE_UNIT)
+            )
+            or TEMP_F
+        )
 
     def add_device_listener(self, device_id: str, listener: Listener):
         return self._hub.add_device_listener(device_id, listener)
@@ -113,11 +131,12 @@ class Hub:
             emitter.async_will_remove_from_hass()
 
     async def async_setup(self) -> bool:
-        options_port = self.config_entry.options.get(CONF_SERVER_PORT)
-        config_port = self.config_entry.data.get(CONF_SERVER_PORT)
-        port = options_port if options_port is not None else config_port
+        entry = self.config_entry
+        port = (
+            entry.options.get(CONF_SERVER_PORT, entry.data.get(CONF_SERVER_PORT)) or 0
+        )
 
-        _LOGGER.debug("initializing Hubitat hub with event server on port %s", port)
+        _LOGGER.debug("Initializing Hubitat hub with event server on port %s", port)
         self._hub = HubitatHub(self.host, self.app_id, self.token, port)
 
         await self._hub.start()
@@ -134,9 +153,14 @@ class Hub:
 
         # Create an entity for the Hubitat hub with basic hub information
         hass.states.async_set(
-            self._hub_entity_id,
+            self.entity_id,
             "connected",
-            {"id": f"{hub.host}::{hub.app_id}", "host": hub.host, "hidden": True,},
+            {
+                CONF_ID: f"{hub.host}::{hub.app_id}",
+                CONF_HOST: hub.host,
+                ATTR_HIDDEN: True,
+                CONF_TEMPERATURE_UNIT: self.temperature_unit,
+            },
         )
 
         return True
@@ -156,11 +180,16 @@ class Hub:
     async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
         """Handle options update."""
         hub = get_hub(hass, entry.entry_id)
-        port = entry.options.get(CONF_SERVER_PORT, 0)
-        _LOGGER.debug("asked to update port event listener port to %s", port)
+        port = (
+            entry.options.get(CONF_SERVER_PORT, entry.data.get(CONF_SERVER_PORT)) or 0
+        )
         if port != hub.port:
-            _LOGGER.debug("setting event listener port to %s", port)
+            _LOGGER.debug("Setting event listener port to %s", port)
             await hub.set_port(port)
+
+        hass.states.async_set(
+            hub.entity_id, "connected", {CONF_TEMPERATURE_UNIT: hub.temperature_unit}
+        )
 
     async def check_config(self) -> None:
         """Verify that the hub is accessible."""

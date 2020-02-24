@@ -45,6 +45,9 @@ PLATFORMS = [
     "switch",
 ]
 
+TEMP_F = "F"
+TEMP_C = "C"
+
 # A mapping from capabilities to the associated Hubitat attributes and HA
 # config types
 TRIGGER_CAPABILITIES = {
