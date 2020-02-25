@@ -68,7 +68,7 @@ class HubitatPowerMeterSwitch(HubitatSwitch):
 
 def is_switch(device: Device) -> bool:
     """Return True if device looks like a switch."""
-    return CAP_SWITCH in device["capabilities"] and not is_light(device) and not is_fan(device)
+    return CAP_SWITCH in device.capabilities and not is_light(device) and not is_fan(device)
 
 
 def is_energy_meter(device: Device) -> bool:
