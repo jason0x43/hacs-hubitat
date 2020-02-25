@@ -7,7 +7,6 @@ from typing import Any, List, Optional
 from hubitatmaker import (
     ATTR_SWITCH,
     ATTR_SPEED,
-    ATTR_VALUES,
     CAP_FAN_CONTROL,
     CMD_SET_LEVEL,
     CMD_OFF, 
