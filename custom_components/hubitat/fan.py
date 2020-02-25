@@ -54,7 +54,7 @@ class HubitatFan(HubitatEntity, FanEntity):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the switch."""
-        _LOGGER.debug(f"Turning off {self.name}")
+        _LOGGER.debug("Turning off %s", self.name)
         await self.send_command(CMD_OFF)
 
 
