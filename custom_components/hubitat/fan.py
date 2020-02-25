@@ -7,12 +7,14 @@ from typing import Any, List, Optional
 from hubitatmaker import (
     ATTR_SWITCH,
     ATTR_SPEED,
+    ATTR_VALUES,
     CAP_FAN_CONTROL,
     CMD_SET_LEVEL,
     CMD_OFF, 
     CMD_ON, 
     CMD_CYCLE_SPEED, 
     CMD_SET_SPEED,
+    DEFAULT_SPEEDS,
     Device
 )
 
@@ -41,8 +43,8 @@ class HubitatFan(HubitatEntity, FanEntity):
 
     @property
     def speed_list(self) -> str:
-        """Return the list of speeds for this fan. (MakerAPI isn't sending the list of speeds)"""
-        return ["off", "low", "medium-low", "medium", "high", "auto"]
+        """Return the list of speeds for this fan."""
+        return self._device.attributes[ATTR_SPEED].values or DEFAULT_SPEEDS
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""
