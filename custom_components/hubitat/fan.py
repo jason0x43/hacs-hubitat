@@ -33,14 +33,6 @@ class HubitatFan(HubitatEntity, FanEntity):
         """Return True if the switch is on."""
         return self.get_str_attr("switch") == "on"
 
-    # @property
-    # def brightness(self) -> Optional[int]:
-    #     """Return the level of this fan."""
-    #     level = self.get_int_attr("level")
-    #     if level is None:
-    #         return None
-    #     return int(255 * level / 100)
-
     @property
     def speed(self) -> str:
         """Return the speed of this fan."""
