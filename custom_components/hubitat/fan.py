@@ -61,7 +61,7 @@ class HubitatFan(HubitatEntity, FanEntity):
 
 def is_fan(device) -> bool:
     """Return True if device looks like a fan."""
-    return  CAP_FAN_CONTROL in device["capabilities"]
+    return CAP_FAN_CONTROL in device["capabilities"]
 
 
 async def async_setup_entry(
