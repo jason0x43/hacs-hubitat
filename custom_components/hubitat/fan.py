@@ -5,7 +5,7 @@ import re
 from typing import Any, List, Optional
 
 from hubitatmaker import (
-	ATTR_SPEED,
+    ATTR_SPEED,
     CAP_FAN_CONTROL,
     CMD_SET_LEVEL,
     CMD_OFF, 
