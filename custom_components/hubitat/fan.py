@@ -5,6 +5,7 @@ import re
 from typing import Any, List, Optional
 
 from hubitatmaker import (
+    ATTR_SWITCH,
     ATTR_SPEED,
     CAP_FAN_CONTROL,
     CMD_SET_LEVEL,
@@ -31,7 +32,7 @@ class HubitatFan(HubitatEntity, FanEntity):
     @property
     def is_on(self) -> bool:
         """Return True if the switch is on."""
-        return self.get_str_attr("switch") == "on"
+        return self.get_str_attr(ATTR_SWITCH) == "on"
 
     @property
     def speed(self) -> str:
