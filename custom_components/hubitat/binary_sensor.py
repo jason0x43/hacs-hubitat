@@ -156,6 +156,7 @@ async def async_setup_entry(
             if attr[0] in devices[i].attributes
         ]
         async_add_entities(sensors)
+        hub.add_entities(sensors)
         _LOGGER.debug(f"Added entities for binary sensors: {sensors}")
 
 

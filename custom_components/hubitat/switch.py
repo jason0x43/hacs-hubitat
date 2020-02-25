@@ -98,6 +98,7 @@ async def async_setup_entry(
         else:
             switches.append(HubitatSwitch(hub=hub, device=s))
     async_add_entities(switches)
+    hub.add_entities(switches)
     _LOGGER.debug("Added entities for switches: %s", switches)
 
     button_controllers = [
@@ -107,5 +108,5 @@ async def async_setup_entry(
     ]
     for bc in button_controllers:
         hass.async_create_task(bc.update_device_registry())
-        hub.add_event_emitter(bc)
+    hub.add_event_emitters(button_controllers)
     _LOGGER.debug("Added entities for pushbutton controllers: %s", button_controllers)

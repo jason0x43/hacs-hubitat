@@ -44,6 +44,22 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
+async def validate_input(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Validate that the user input allows us to connect."""
+
+    # data has the keys from CONFIG_SCHEMA with values provided by the user.
+    host: str = data[CONF_HOST]
+    app_id: str = data[CONF_APP_ID]
+    token: str = data[CONF_ACCESS_TOKEN]
+
+    hub = HubitatHub(host, app_id, token)
+    await hub.check_config()
+
+    return {
+        "label": f"Hubitat ({hub.mac})",
+    }
+
+
 class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Hubitat."""
 
@@ -63,7 +79,7 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                info = await self.async_validate_input(user_input)
+                info = await validate_input(user_input)
                 entry_data = deepcopy(user_input)
 
                 placeholders: Dict[str, str] = {}
@@ -103,21 +119,6 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user", data_schema=CONFIG_SCHEMA, errors=form_errors,
         )
-
-    async def async_validate_input(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate that the user input allows us to connect."""
-
-        # data has the keys from CONFIG_SCHEMA with values provided by the user.
-        host: str = data[CONF_HOST]
-        app_id: str = data[CONF_APP_ID]
-        token: str = data[CONF_ACCESS_TOKEN]
-
-        hub = HubitatHub(host, app_id, token)
-        await hub.check_config()
-
-        return {
-            "label": f"Hubitat ({hub.mac})",
-        }
 
 
 class HubitatOptionsFlow(OptionsFlow):

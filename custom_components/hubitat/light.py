@@ -177,4 +177,5 @@ async def async_setup_entry(
         if is_light(devices[i])
     ]
     async_add_entities(lights)
+    hub.add_entities(lights)
     _LOGGER.debug(f"Added entities for lights: {lights}")

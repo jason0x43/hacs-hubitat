@@ -145,4 +145,5 @@ async def async_setup_entry(
             if cap in devices[i].capabilities
         ]
         async_add_entities(covers)
+        hub.add_entities(covers)
         _LOGGER.debug(f"Added entities for covers: {covers}")

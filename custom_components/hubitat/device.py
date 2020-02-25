@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from json import loads
 from logging import getLogger
-from typing import Any, Callable, Dict, List, Mapping, Optional, Union, cast
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Union, cast
 
 from hubitatmaker import (
     CAP_COLOR_CONTROL,
@@ -23,6 +23,7 @@ from hubitatmaker import (
     Hub as HubitatHub,
 )
 
+from homeassistant.components.sensor import DEVICE_CLASS_TEMPERATURE
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_HIDDEN,
@@ -66,8 +67,15 @@ class Hub:
 
         self.hass = hass
         self.config_entry = entry
-        self.entity_ids: List[int] = []
+        self.entities: List["HubitatEntity"] = []
         self.event_emitters: List["HubitatEventEmitter"] = []
+
+        self._temperature_unit = (
+            entry.options.get(
+                CONF_TEMPERATURE_UNIT, entry.data.get(CONF_TEMPERATURE_UNIT)
+            )
+            or TEMP_F
+        )
 
         if index == 1:
             self._hub_entity_id = "hubitat.hub"
@@ -106,22 +114,24 @@ class Hub:
 
     @property
     def temperature_unit(self) -> str:
-        entry = self.config_entry
-        return (
-            entry.options.get(
-                CONF_TEMPERATURE_UNIT, entry.data.get(CONF_TEMPERATURE_UNIT)
-            )
-            or TEMP_F
-        )
+        return self._temperature_unit
 
     def add_device_listener(self, device_id: str, listener: Listener):
         return self._hub.add_device_listener(device_id, listener)
 
-    def add_event_emitter(self, emitter: "HubitatEventEmitter") -> None:
-        self.event_emitters.append(emitter)
+    def add_entities(self, entities: Sequence["HubitatEntity"]) -> None:
+        self.entities.extend(entities)
+
+    def add_event_emitters(self, emitters: Sequence["HubitatEventEmitter"]) -> None:
+        self.event_emitters.extend(emitters)
 
     def remove_device_listeners(self, device_id: str) -> None:
         self._hub.remove_device_listeners(device_id)
+
+    def set_temperature_unit(self, temp_unit: str) -> None:
+        """Set the hub's temperature units."""
+        _LOGGER.debug("Setting hub temperature unit to %s", temp_unit)
+        self._temperature_unit = temp_unit
 
     def stop(self) -> None:
         self._hub.stop()
@@ -180,12 +190,24 @@ class Hub:
     async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
         """Handle options update."""
         hub = get_hub(hass, entry.entry_id)
+
         port = (
             entry.options.get(CONF_SERVER_PORT, entry.data.get(CONF_SERVER_PORT)) or 0
         )
         if port != hub.port:
-            _LOGGER.debug("Setting event listener port to %s", port)
             await hub.set_port(port)
+
+        temp_unit = (
+            entry.options.get(
+                CONF_TEMPERATURE_UNIT, entry.data.get(CONF_TEMPERATURE_UNIT)
+            )
+            or TEMP_F
+        )
+        if temp_unit != hub.temperature_unit:
+            hub.set_temperature_unit(temp_unit)
+            for entity in hub.entities:
+                if entity.device_class == DEVICE_CLASS_TEMPERATURE:
+                    entity.async_schedule_update_ha_state()
 
         hass.states.async_set(
             hub.entity_id, "connected", {CONF_TEMPERATURE_UNIT: hub.temperature_unit}
@@ -206,7 +228,8 @@ class Hub:
 
     async def set_port(self, port: int) -> None:
         """Set the port that the event listener server will listen on."""
-        return await self._hub.set_port(port)
+        _LOGGER.debug("Setting event listener port to %s", port)
+        await self._hub.set_port(port)
 
 
 class HubitatBase(ABC):

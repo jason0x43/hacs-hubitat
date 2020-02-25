@@ -302,3 +302,4 @@ async def async_setup_entry(
         if is_thermostat(devices[i])
     ]
     async_add_entities(therms)
+    hub.add_entities(therms)

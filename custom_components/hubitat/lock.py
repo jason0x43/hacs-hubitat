@@ -118,6 +118,7 @@ async def async_setup_entry(
         if CAP_LOCK in devices[i].capabilities
     ]
     async_add_entities(locks)
+    hub.add_entities(locks)
     _LOGGER.debug(f"Added entities for locks: %s", locks)
 
     if len(locks) > 0:
