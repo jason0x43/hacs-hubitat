@@ -29,6 +29,7 @@ The following device types (platforms) are currently supported:
   - temperature
   - voltage
 - switch
+- fan
 
 ## Installation
 
