@@ -13,7 +13,7 @@ from hubitatmaker import (
     CMD_ON, 
     CMD_CYCLE_SPEED, 
     CMD_SET_SPEED,
-    DEFAULT_SPEEDS,
+    DEFAULT_FAN_SPEEDS,
     Device
 )
 
@@ -43,7 +43,7 @@ class HubitatFan(HubitatEntity, FanEntity):
     @property
     def speed_list(self) -> str:
         """Return the list of speeds for this fan."""
-        return self._device.attributes[ATTR_SPEED].values or DEFAULT_SPEEDS
+        return self._device.attributes[ATTR_SPEED].values or DEFAULT_FAN_SPEEDS
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""
