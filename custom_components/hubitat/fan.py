@@ -69,6 +69,7 @@ async def async_setup_entry(
 ) -> None:
     """Initialize fan devices."""
     hub = get_hub(hass, entry.entry_id)
+    devices = hub.devices
     fans = [HubitatFan(hub=hub, device=devices[i]) for i in devices if is_fan(devices[i])]
     async_add_entities(fans)
     _LOGGER.debug(f"Added entities for fans: {fans}")
