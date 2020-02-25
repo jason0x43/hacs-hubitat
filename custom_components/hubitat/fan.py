@@ -46,7 +46,7 @@ class HubitatFan(HubitatEntity, FanEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""
-        _LOGGER.debug(f"Turning on {self.name} with {kwargs}")
+        _LOGGER.debug("Turning on %s with %s", self.name, kwargs)
         if ATTR_SPEED in kwargs:
             await self.send_command(CMD_SET_SPEED, kwargs[ATTR_SPEED])
         else:
