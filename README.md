@@ -2,12 +2,32 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
 
-This is an integration for Hubitat that uses Hubitat’s Maker API. It currently supports the following device types (platforms) to varying degrees:
+This integration uses [Hubitat’s](hubitat.com) [Maker API](https://docs.hubitat.com/index.php?title=Hubitat™_Maker_API) to make Hubitat devices available for use with Home Assistant.
+
+The following device types (platforms) are currently supported:
 
 - binary_sensor
+  - acceleration
+  - carbon monoxide
+  - contact
+  - moisture
+  - motion
+  - smoke
 - climate
+  - thermostat
+  - fan
+- cover
+  - door controller
+  - garage door controller
+  - window shade
 - light
 - sensor
+  - battery
+  - humidity
+  - illuminance
+  - power (watts)
+  - temperature
+  - voltage
 - switch
 
 ## Installation
@@ -26,15 +46,14 @@ First, create a Maker API instance in the Hubitat UI. Add whatever devices you'd
 
 To configure the hubitat integration, go to Configuration -> Integrations in the Home Assistant UI and click the “+” button to add a new integration. Pick “Hubitat”, then provide:
 
-- The address of the hub (e.g., `http://10.0.1.99` or just `10.0.1.99` if you’re
-  not using https)
-- The app ID of the Maker API instance (the 3 or 4 digit number after
-  `/apps/api/` in any of the Maker API URLs)
+- The address of the hub (e.g., `http://10.0.1.99` or just `10.0.1.99` if you’re not using https)
+- The app ID of the Maker API instance (the 3 or 4 digit number after `/apps/api/` in any of the Maker API URLs)
 - The API access token
+- Optionally a port for the event listener server to listen on (this will be chosen automatically by default)
 
 ## Network setup
 
-Note that Hubitat must be able to see your Home Assistant server on the network to be able to push device events to it. Currently the integration uses HA’s webhook system as the destination for Hubitat messages, so it tells Hubitat to push events to whatever your HA instance's public address is.
+Hubitat must be able to see your Home Assistant server on your local network to be able to push device events to it. The integration will start its own web server on a random port on whatever device Home Assistant is running on to listen for these events.
 
 ## Device types
 

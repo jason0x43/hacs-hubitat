@@ -4,7 +4,16 @@ from logging import getLogger
 import re
 from typing import Any, List, Optional
 
-from hubitatmaker import CAP_POWER_METER, CAP_SWITCH, CMD_OFF, CMD_ON, Hub as HubitatHub
+from hubitatmaker import (
+    CAP_DOUBLE_TAPABLE_BUTTON,
+    CAP_POWER_METER,
+    CAP_PUSHABLE_BUTTON,
+    CAP_HOLDABLE_BUTTON,
+    CAP_SWITCH,
+    CMD_OFF,
+    CMD_ON,
+    Device,
+)
 
 from homeassistant.components.switch import (
     DEVICE_CLASS_OUTLET,
@@ -15,8 +24,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import color as color_util
 
-from .const import DOMAIN
-from .device import HubitatDevice
+from .device import Hub, HubitatEntity, HubitatEventEmitter, get_hub
 from .light import is_light
 from .fan import is_fan
 
@@ -25,7 +33,7 @@ _LOGGER = getLogger(__name__)
 _NAME_TEST = re.compile(r"\bswitch\b", re.IGNORECASE)
 
 
-class HubitatSwitch(HubitatDevice, SwitchDevice):
+class HubitatSwitch(HubitatEntity, SwitchDevice):
     """Representation of a Hubitat switch."""
 
     @property
@@ -36,7 +44,7 @@ class HubitatSwitch(HubitatDevice, SwitchDevice):
     @property
     def device_class(self) -> str:
         """Return the class of this device, from component DEVICE_CLASSES."""
-        if _NAME_TEST.match(self._device["label"]):
+        if _NAME_TEST.match(self._device.name):
             return DEVICE_CLASS_SWITCH
         return DEVICE_CLASS_OUTLET
 
@@ -58,26 +66,32 @@ class HubitatPowerMeterSwitch(HubitatSwitch):
         return self.get_float_attr("power")
 
 
-def is_switch(device) -> bool:
+def is_switch(device: Device) -> bool:
     """Return True if device looks like a switch."""
-    if CAP_SWITCH in device["capabilities"] and not is_light(device) and not is_fan(device):
-        return True
-    return False
+    return CAP_SWITCH in device["capabilities"] and not is_light(device) and not is_fan(device)
 
 
-def is_energy_meter(device) -> bool:
+def is_energy_meter(device: Device) -> bool:
     """Return True if device can measure power."""
-    if CAP_POWER_METER in device["capabilities"]:
-        return True
-    return False
+    return CAP_POWER_METER in device.capabilities
+
+
+def is_button_controller(device: Device) -> bool:
+    """Return true if the device is a stateless button controller."""
+    return (
+        CAP_PUSHABLE_BUTTON in device.capabilities
+        or CAP_HOLDABLE_BUTTON in device.capabilities
+        or CAP_DOUBLE_TAPABLE_BUTTON in device.capabilities
+    )
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
 ) -> None:
     """Initialize switch devices."""
-    hub: HubitatHub = hass.data[DOMAIN][entry.entry_id].hub
-    switch_devs = [d for d in hub.devices if is_switch(d)]
+    hub = get_hub(hass, entry.entry_id)
+    devices = hub.devices
+    switch_devs = [devices[i] for i in devices if is_switch(devices[i])]
     switches: List[HubitatSwitch] = []
     for s in switch_devs:
         if is_energy_meter(s):
@@ -85,4 +99,14 @@ async def async_setup_entry(
         else:
             switches.append(HubitatSwitch(hub=hub, device=s))
     async_add_entities(switches)
-    _LOGGER.debug(f"Added entities for switches: {switches}")
+    _LOGGER.debug("Added entities for switches: %s", switches)
+
+    button_controllers = [
+        HubitatEventEmitter(hub=hub, device=devices[i])
+        for i in devices
+        if is_button_controller(devices[i])
+    ]
+    for bc in button_controllers:
+        hass.async_create_task(bc.update_device_registry())
+        hub.add_event_emitter(bc)
+    _LOGGER.debug("Added entities for pushbutton controllers: %s", button_controllers)

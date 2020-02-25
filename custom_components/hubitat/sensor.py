@@ -11,7 +11,6 @@ from hubitatmaker import (
     ATTR_POWER,
     ATTR_TEMPERATURE,
     ATTR_VOLTAGE,
-    Hub as HubitatHub,
 )
 
 from homeassistant.components.sensor import (
@@ -23,16 +22,16 @@ from homeassistant.components.sensor import (
 )
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import POWER_WATT, TEMP_FAHRENHEIT
+from homeassistant.const import POWER_WATT, TEMP_CELSIUS, TEMP_FAHRENHEIT
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN
-from .device import HubitatDevice
+from .const import TEMP_F
+from .device import Hub, HubitatEntity, get_hub
 
 _LOGGER = getLogger(__name__)
 
 
-class HubitatSensor(HubitatDevice):
+class HubitatSensor(HubitatEntity):
     """A generic Hubitat sensor."""
 
     _attribute: str
@@ -119,8 +118,12 @@ class HubitatTemperatureSensor(HubitatSensor):
         """Initialize a temperature sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = ATTR_TEMPERATURE
-        self._units = TEMP_FAHRENHEIT
         self._device_class = DEVICE_CLASS_TEMPERATURE
+
+    @property
+    def unit_of_measurement(self) -> Optional[str]:
+        """Return the units for this sensor's value."""
+        return TEMP_FAHRENHEIT if self._hub.temperature_unit == TEMP_F else TEMP_CELSIUS
 
 
 class HubitatVoltageSensor(HubitatSensor):
@@ -147,14 +150,15 @@ _SENSOR_ATTRS = (
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
 ) -> None:
-    """Initialize light devices."""
-    hub: HubitatHub = hass.data[DOMAIN][entry.entry_id].hub
+    """Initialize sensor devices."""
+    hub = get_hub(hass, entry.entry_id)
+    devices = hub.devices
     for attr in _SENSOR_ATTRS:
         Sensor = attr[1]
         sensors = [
-            Sensor(hub=hub, device=d)
-            for d in hub.devices
-            if hub.device_has_attribute(d["id"], attr[0])
+            Sensor(hub=hub, device=devices[i])
+            for i in devices
+            if attr[0] in devices[i].attributes
         ]
         async_add_entities(sensors)
         _LOGGER.debug(f"Added entities for sensors: {sensors}")

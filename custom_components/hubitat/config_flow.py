@@ -19,10 +19,17 @@ from homeassistant.config_entries import (
     ConfigFlow,
     OptionsFlow,
 )
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_PORT, CONF_WEBHOOK_ID
+from homeassistant.const import (
+    CONF_ACCESS_TOKEN,
+    CONF_HOST,
+    CONF_PORT,
+    CONF_TEMPERATURE_UNIT,
+)
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import config_validation as cv
 
-from .const import CONF_APP_ID, CONF_SERVER_PORT, DOMAIN
+from .const import CONF_APP_ID, CONF_SERVER_PORT, DOMAIN, TEMP_C, TEMP_F
+from .device import Hub
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,22 +38,10 @@ CONFIG_SCHEMA = vol.Schema(
         vol.Required(CONF_HOST): str,
         vol.Required(CONF_APP_ID): str,
         vol.Required(CONF_ACCESS_TOKEN): str,
-        vol.Optional(CONF_SERVER_PORT): str,
+        vol.Optional(CONF_SERVER_PORT, default=0): int,
+        vol.Optional(CONF_TEMPERATURE_UNIT, default=TEMP_F): vol.In([TEMP_F, TEMP_C]),
     }
 )
-
-
-async def validate_input(data: Dict[str, Any]):
-    """Validate the user input allows us to connect."""
-
-    # data has the keys from OPTIONS_SCHEMA with values provided by the user.
-    hub = HubitatHub(data[CONF_HOST], data[CONF_APP_ID], data[CONF_ACCESS_TOKEN])
-
-    await hub.check_config()
-
-    return {
-        "label": f"Hubitat ({hub.mac})",
-    }
 
 
 class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -60,13 +55,15 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(config_entry: ConfigEntry):
         return HubitatOptionsFlow(config_entry)
 
-    async def async_step_user(self, user_input: Dict[str, Any] = None):
+    async def async_step_user(
+        self, user_input: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
         """Handle the user step."""
         errors: Dict[str, str] = {}
 
         if user_input is not None:
             try:
-                info = await validate_input(user_input)
+                info = await self.async_validate_input(user_input)
                 entry_data = deepcopy(user_input)
 
                 placeholders: Dict[str, str] = {}
@@ -107,6 +104,21 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="user", data_schema=CONFIG_SCHEMA, errors=form_errors,
         )
 
+    async def async_validate_input(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate that the user input allows us to connect."""
+
+        # data has the keys from CONFIG_SCHEMA with values provided by the user.
+        host: str = data[CONF_HOST]
+        app_id: str = data[CONF_APP_ID]
+        token: str = data[CONF_ACCESS_TOKEN]
+
+        hub = HubitatHub(host, app_id, token)
+        await hub.check_config()
+
+        return {
+            "label": f"Hubitat ({hub.mac})",
+        }
+
 
 class HubitatOptionsFlow(OptionsFlow):
     """Handle an options flow for Hubitat."""
@@ -117,17 +129,29 @@ class HubitatOptionsFlow(OptionsFlow):
         self.config_entry = config_entry
         self.options = dict(config_entry.options)
 
-    async def async_step_init(self, user_input=None):
+    async def async_step_init(self, user_input=None) -> Dict[str, Any]:
         """Handle integration options."""
         return await self.async_step_user()
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_user(self, user_input=None) -> Dict[str, Any]:
         """Handle integration options."""
         errors: Dict[str, str] = {}
 
         if user_input is not None:
-            self.options[CONF_SERVER_PORT] = user_input[CONF_SERVER_PORT]
-            return self.async_create_entry(title="", data=self.options)
+            try:
+                self.options[CONF_SERVER_PORT] = user_input[CONF_SERVER_PORT]
+                self.options[CONF_TEMPERATURE_UNIT] = user_input[CONF_TEMPERATURE_UNIT]
+                return self.async_create_entry(title="", data=self.options)
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception")
+                errors["base"] = "unknown"
+
+        if len(errors) == 0:
+            form_errors = None
+        else:
+            form_errors = errors
+
+        entry = self.config_entry
 
         return self.async_show_form(
             step_id="user",
@@ -135,8 +159,19 @@ class HubitatOptionsFlow(OptionsFlow):
                 {
                     vol.Optional(
                         CONF_SERVER_PORT,
-                        default=self.config_entry.options.get(CONF_SERVER_PORT),
-                    ): str
+                        default=entry.options.get(
+                            CONF_SERVER_PORT, entry.data.get(CONF_SERVER_PORT)
+                        )
+                        or 0,
+                    ): int,
+                    vol.Optional(
+                        CONF_TEMPERATURE_UNIT,
+                        default=entry.options.get(
+                            CONF_TEMPERATURE_UNIT, entry.data.get(CONF_TEMPERATURE_UNIT)
+                        )
+                        or TEMP_F,
+                    ): vol.In([TEMP_F, TEMP_C]),
                 }
             ),
+            errors=form_errors,
         )
