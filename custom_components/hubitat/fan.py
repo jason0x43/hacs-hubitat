@@ -18,6 +18,7 @@ from hubitatmaker import (
 )
 
 from homeassistant.components.fan import (
+    SPEED_OFF,
     FanEntity
 )
 from homeassistant.config_entries import ConfigEntry
@@ -36,20 +37,20 @@ class HubitatFan(HubitatEntity, FanEntity):
         return self.get_str_attr(ATTR_SWITCH) == "on"
 
     @property
-    def speed(self) -> str:
+    def speed(self) -> Optional[str]:
         """Return the speed of this fan."""
         return self.get_str_attr(ATTR_SPEED)
 
     @property
-    def speed_list(self) -> str:
+    def speed_list(self) -> List[Any]:
         """Return the list of speeds for this fan."""
         return self._device.attributes[ATTR_SPEED].values or DEFAULT_FAN_SPEEDS
 
-    async def async_turn_on(self, **kwargs: Any) -> None:
+    async def async_turn_on(self, speed: Optional[str] = None, **kwargs):
         """Turn on the switch."""
-        _LOGGER.debug("Turning on %s with %s", self.name, kwargs)
-        if ATTR_SPEED in kwargs:
-            await self.send_command(CMD_SET_SPEED, kwargs[ATTR_SPEED])
+        _LOGGER.debug("Turning on %s with speed [%s]", self.name, speed)
+        if speed is not None:
+            await self.async_set_speed(speed)
         else:
             await self.send_command(CMD_ON)
 
@@ -57,6 +58,13 @@ class HubitatFan(HubitatEntity, FanEntity):
         """Turn off the switch."""
         _LOGGER.debug("Turning off %s", self.name)
         await self.send_command(CMD_OFF)
+
+    async def async_set_speed(self, speed: str):
+        """Set the speed of the fan."""
+        if speed is SPEED_OFF:
+            await self.async_turn_off()
+        else:
+            await self.send_command(CMD_SET_SPEED, speed)
 
 
 
