@@ -1,9 +1,0 @@
-pytest
-pytest-asyncio
-pytest-mock
-hubitatmaker
-homeassistant
-black
-flake8
-mypy
-isort

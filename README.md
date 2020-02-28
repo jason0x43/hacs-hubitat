@@ -58,5 +58,8 @@ Hubitat must be able to see your Home Assistant server on your local network to 
 
 ## Device types
 
-The integration assigns Home Assistant device classes based on the capabilities reported by Hubitat. Sometimes the device type is ambiguous; a switchable outlet and a light switch both look like simple switches. In these cases, the
-integration guesses the device class based on the device's label (e.g., a switch named "Office Lamp" would be setup as a light in Home Assistant). This heuristic behavior is currently only used for lights and switches.
+The integration assigns Home Assistant device classes based on the capabilities reported by Hubitat. Sometimes the device type is ambiguous; a switchable outlet and a light switch both look like simple switches. In these cases, the integration guesses the device class based on the device's label (e.g., a switch named "Office Lamp" would be setup as a light in Home Assistant). This heuristic behavior is currently only used for lights and switches.
+
+## Developing
+
+To get setup for development, run `init.sh`. This will setup the tools needed to validate typings and code style. Validators will be automatically run for every commit, and they can be run manually with pipenv (e.g., `pipenv run black hubitatmaker`).

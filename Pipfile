@@ -1,0 +1,21 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+pytest = "*"
+pytest-asyncio = "*"
+pytest-mock = "*"
+hubitatmaker = "*"
+homeassistant = "*"
+black = "==19.10b0"
+flake8 = "*"
+mypy = "*"
+isort = "*"
+pre-commit = "*"
+
+[packages]
+
+[requires]
+python_version = "3.7"
