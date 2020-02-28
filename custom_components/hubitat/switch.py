@@ -26,6 +26,7 @@ from homeassistant.util import color as color_util
 
 from .device import Hub, HubitatEntity, HubitatEventEmitter, get_hub
 from .light import is_light
+from .fan import is_fan
 
 _LOGGER = getLogger(__name__)
 
@@ -67,7 +68,7 @@ class HubitatPowerMeterSwitch(HubitatSwitch):
 
 def is_switch(device: Device) -> bool:
     """Return True if device looks like a switch."""
-    return CAP_SWITCH in device.capabilities and not is_light(device)
+    return CAP_SWITCH in device.capabilities and not is_light(device) and not is_fan(device)
 
 
 def is_energy_meter(device: Device) -> bool:
