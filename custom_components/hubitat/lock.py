@@ -1,28 +1,25 @@
 from logging import getLogger
 from typing import Any, Optional, cast
 
+from hubitatmaker import (
+    ATTR_CODE_LENGTH,
+    ATTR_LOCK,
+    ATTR_LOCK_CODES,
+    CAP_LOCK,
+    CMD_DELETE_CODE,
+    CMD_GET_CODES,
+    CMD_LOCK,
+    CMD_SET_CODE,
+    CMD_SET_CODE_LENGTH,
+    CMD_UNLOCK,
+    STATE_LOCKED,
+)
 import voluptuous as vol
 
 from homeassistant.components.lock import LockDevice
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant, ServiceCall
-
-from hubitatmaker import (
-    ATTR_CODE_LENGTH,
-    ATTR_LOCK,
-    ATTR_LOCK_CODES,
-    CAP_LOCK,
-    CAP_LOCK_CODES,
-    CMD_DELETE_CODE,
-    CMD_GET_CODES,
-    CMD_SET_CODE,
-    CMD_SET_CODE_LENGTH,
-    CMD_LOCK,
-    CMD_UNLOCK,
-    Device,
-    STATE_LOCKED,
-)
 
 from .const import DOMAIN
 from .device import HubitatEntity, get_hub
@@ -48,13 +45,13 @@ SET_CODE_SCHEMA = vol.Schema(
     }
 )
 GET_CODE_SCHEMA = vol.Schema(
-    {vol.Required(ATTR_ENTITY_ID): str, vol.Required(ATTR_POSITION): vol.Coerce(int),}
+    {vol.Required(ATTR_ENTITY_ID): str, vol.Required(ATTR_POSITION): vol.Coerce(int)}
 )
 CLEAR_CODE_SCHEMA = vol.Schema(
-    {vol.Required(ATTR_ENTITY_ID): str, vol.Required(ATTR_POSITION): vol.Coerce(int),}
+    {vol.Required(ATTR_ENTITY_ID): str, vol.Required(ATTR_POSITION): vol.Coerce(int)}
 )
 SET_CODE_LENGTH_SCHEMA = vol.Schema(
-    {vol.Required(ATTR_ENTITY_ID): str, vol.Required(ATTR_LENGTH): vol.Coerce(int),}
+    {vol.Required(ATTR_ENTITY_ID): str, vol.Required(ATTR_LENGTH): vol.Coerce(int)}
 )
 
 

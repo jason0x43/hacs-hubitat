@@ -6,11 +6,10 @@ from typing import Any, List, Optional
 
 from hubitatmaker import (
     CAP_DOUBLE_TAPABLE_BUTTON,
+    CAP_HOLDABLE_BUTTON,
     CAP_POWER_METER,
     CAP_PUSHABLE_BUTTON,
-    CAP_HOLDABLE_BUTTON,
     CAP_SWITCH,
-    CMD_OFF,
     CMD_ON,
     Device,
 )
@@ -22,11 +21,10 @@ from homeassistant.components.switch import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.util import color as color_util
 
-from .device import Hub, HubitatEntity, HubitatEventEmitter, get_hub
-from .light import is_light
+from .device import HubitatEntity, HubitatEventEmitter, get_hub
 from .fan import is_fan
+from .light import is_light
 
 _LOGGER = getLogger(__name__)
 
@@ -68,7 +66,11 @@ class HubitatPowerMeterSwitch(HubitatSwitch):
 
 def is_switch(device: Device) -> bool:
     """Return True if device looks like a switch."""
-    return CAP_SWITCH in device.capabilities and not is_light(device) and not is_fan(device)
+    return (
+        CAP_SWITCH in device.capabilities
+        and not is_light(device)
+        and not is_fan(device)
+    )
 
 
 def is_energy_meter(device: Device) -> bool:

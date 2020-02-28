@@ -1,13 +1,12 @@
 """Config flow for Hubitat integration."""
 from copy import deepcopy
 import logging
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict
 
 from hubitatmaker import (
     ConnectionError,
     Hub as HubitatHub,
     InvalidConfig,
-    InvalidInfo,
     InvalidToken,
     RequestError,
 )
@@ -19,17 +18,10 @@ from homeassistant.config_entries import (
     ConfigFlow,
     OptionsFlow,
 )
-from homeassistant.const import (
-    CONF_ACCESS_TOKEN,
-    CONF_HOST,
-    CONF_PORT,
-    CONF_TEMPERATURE_UNIT,
-)
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
+from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_TEMPERATURE_UNIT
+from homeassistant.core import callback
 
 from .const import CONF_APP_ID, CONF_SERVER_PORT, DOMAIN, TEMP_C, TEMP_F
-from .device import Hub
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,7 +52,7 @@ async def validate_input(data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):
+class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
     """Handle a config flow for Hubitat."""
 
     VERSION = 1
@@ -98,9 +90,6 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):
             except InvalidToken:
                 _LOGGER.exception("Invalid access token")
                 errors["base"] = "invalid_access_token"
-            except InvalidInfo:
-                _LOGGER.exception("Invalid info")
-                errors["base"] = "invalid_hub_info"
             except InvalidConfig:
                 _LOGGER.exception("Invalid config")
                 errors["base"] = "invalid_hub_config"

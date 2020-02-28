@@ -2,6 +2,16 @@
 import logging
 from typing import Any, Dict, List, Optional
 
+from hubitatmaker import (
+    ATTR_DEVICE_ID,
+    ATTR_NAME,
+    ATTR_NUM_BUTTONS,
+    ATTR_VALUE,
+    CAP_DOUBLE_TAPABLE_BUTTON,
+    CAP_HOLDABLE_BUTTON,
+    CAP_PUSHABLE_BUTTON,
+    Device,
+)
 import voluptuous as vol
 
 from homeassistant.components.automation import AutomationActionType, event
@@ -9,34 +19,10 @@ from homeassistant.components.device_automation import TRIGGER_BASE_SCHEMA
 from homeassistant.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
 )
-from homeassistant.const import (
-    CONF_DEVICE_ID,
-    CONF_DOMAIN,
-    CONF_ENTITY_ID,
-    CONF_PLATFORM,
-    CONF_TYPE,
-    STATE_OFF,
-    STATE_ON,
-)
+from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_registry
 from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers.typing import ConfigType
-
-from hubitatmaker import (
-    Device,
-    ATTR_DEVICE_ID,
-    ATTR_DOUBLE_TAPPED,
-    ATTR_HELD,
-    ATTR_NAME,
-    ATTR_NUM_BUTTONS,
-    ATTR_PUSHED,
-    ATTR_VALUE,
-    CAP_DOUBLE_TAPABLE_BUTTON,
-    CAP_PUSHABLE_BUTTON,
-    CAP_HOLDABLE_BUTTON,
-)
-
 
 from . import DOMAIN
 from .const import (
@@ -53,7 +39,6 @@ from .const import (
     CONF_HUBITAT_EVENT,
     CONF_PUSHED,
     CONF_SUBTYPE,
-    CONF_VALUE,
     TRIGGER_CAPABILITIES,
 )
 from .device import get_hub
@@ -120,7 +105,7 @@ async def async_get_triggers(hass: HomeAssistant, device_id: str) -> List[dict]:
 
     try:
         num_buttons = int(device.attributes[ATTR_NUM_BUTTONS].value)
-    except:
+    except Exception:
         # There was a bug in Hubitat's Iris driver that prevented the
         # numberOfButtons attribute from being set. This may still be the case
         # for users who haven't manually fixed the issue. Assume a single

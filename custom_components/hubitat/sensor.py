@@ -1,11 +1,10 @@
 """Hubitat sensor entities."""
 
 from logging import getLogger
-from typing import Any, Optional, Union
+from typing import Any, Optional, Tuple, Type, Union
 
 from hubitatmaker import (
     ATTR_BATTERY,
-    ATTR_CURRENT,
     ATTR_HUMIDITY,
     ATTR_ILLUMINANCE,
     ATTR_POWER,
@@ -14,19 +13,18 @@ from hubitatmaker import (
 )
 
 from homeassistant.components.sensor import (
-    DEVICE_CLASS_POWER,
     DEVICE_CLASS_BATTERY,
     DEVICE_CLASS_HUMIDITY,
     DEVICE_CLASS_ILLUMINANCE,
+    DEVICE_CLASS_POWER,
     DEVICE_CLASS_TEMPERATURE,
 )
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import POWER_WATT, TEMP_CELSIUS, TEMP_FAHRENHEIT
 from homeassistant.core import HomeAssistant
 
 from .const import TEMP_F
-from .device import Hub, HubitatEntity, get_hub
+from .device import HubitatEntity, get_hub
 
 _LOGGER = getLogger(__name__)
 
@@ -137,7 +135,7 @@ class HubitatVoltageSensor(HubitatSensor):
         self._device_class = DEVICE_CLASS_POWER
 
 
-_SENSOR_ATTRS = (
+_SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatSensor]], ...] = (
     (ATTR_BATTERY, HubitatBatterySensor),
     (ATTR_HUMIDITY, HubitatHumiditySensor),
     (ATTR_ILLUMINANCE, HubitatIlluminanceSensor),

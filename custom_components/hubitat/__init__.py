@@ -1,10 +1,7 @@
 """The Hubitat integration."""
 from asyncio import gather
-from copy import deepcopy
 from logging import getLogger
-from typing import Any, List, Optional, cast
 
-from aiohttp.web import Request
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry

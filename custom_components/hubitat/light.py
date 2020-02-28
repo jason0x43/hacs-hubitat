@@ -33,7 +33,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import color as color_util
 
-from .device import Hub, HubitatEntity, get_hub
+from .device import HubitatEntity, get_hub
 
 _LOGGER = getLogger(__name__)
 

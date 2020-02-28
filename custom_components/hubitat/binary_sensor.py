@@ -2,7 +2,7 @@
 
 from logging import getLogger
 import re
-from typing import Any, Dict, Optional
+from typing import Optional, Tuple, Type
 
 from hubitatmaker import (
     ATTR_ACCELERATION,
@@ -131,7 +131,7 @@ class HubitatSmokeSensor(HubitatBinarySensor):
     _device_class = DEVICE_CLASS_SMOKE
 
 
-_SENSOR_ATTRS = (
+_SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatBinarySensor]], ...] = (
     (ATTR_ACCELERATION, HubitatAccelerationSensor),
     (ATTR_CARBON_MONOXIDE, HubitatCoSensor),
     (ATTR_CONTACT, HubitatContactSensor),

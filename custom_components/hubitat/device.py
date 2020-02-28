@@ -5,23 +5,7 @@ from json import loads
 from logging import getLogger
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Union, cast
 
-from hubitatmaker import (
-    CAP_COLOR_CONTROL,
-    CAP_COLOR_TEMP,
-    CAP_CONTACT_SENSOR,
-    CAP_ILLUMINANCE_MEASUREMENT,
-    CAP_MOTION_SENSOR,
-    CAP_MUSIC_PLAYER,
-    CAP_POWER_METER,
-    CAP_PUSHABLE_BUTTON,
-    CAP_RELATIVE_HUMIDITY_MEASUREMENT,
-    CAP_SWITCH,
-    CAP_SWITCH_LEVEL,
-    CAP_TEMPERATURE_MEASUREMENT,
-    Device,
-    Event,
-    Hub as HubitatHub,
-)
+from hubitatmaker import Device, Event, Hub as HubitatHub
 
 from homeassistant.components.sensor import DEVICE_CLASS_TEMPERATURE
 from homeassistant.config_entries import ConfigEntry
@@ -58,11 +42,11 @@ class Hub:
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry, index: int):
         """Initialize a Hubitat manager."""
-        if not CONF_HOST in entry.data:
+        if CONF_HOST not in entry.data:
             raise ValueError(f"Missing host in config entry")
-        if not CONF_APP_ID in entry.data:
+        if CONF_APP_ID not in entry.data:
             raise ValueError(f"Missing app ID in config entry")
-        if not CONF_ACCESS_TOKEN in entry.data:
+        if CONF_ACCESS_TOKEN not in entry.data:
             raise ValueError(f"Missing access token in config entry")
 
         self.hass = hass
@@ -101,7 +85,7 @@ class Hub:
         return cast(str, self.config_entry.data.get(CONF_HOST))
 
     @property
-    def mac(self) -> str:
+    def mac(self) -> Optional[str]:
         return self._hub.mac
 
     @property

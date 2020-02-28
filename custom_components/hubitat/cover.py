@@ -1,19 +1,5 @@
 from logging import getLogger
-from typing import Any, Optional
-
-from homeassistant.components.cover import (
-    ATTR_POSITION as HA_ATTR_POSITION,
-    DEVICE_CLASS_DOOR,
-    DEVICE_CLASS_GARAGE,
-    DEVICE_CLASS_SHADE,
-    SUPPORT_CLOSE,
-    SUPPORT_OPEN,
-    SUPPORT_SET_POSITION,
-    SUPPORT_STOP,
-    CoverDevice,
-)
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from typing import Any, Optional, Tuple, Type
 
 from hubitatmaker import (
     ATTR_DOOR,
@@ -25,12 +11,24 @@ from hubitatmaker import (
     CMD_CLOSE,
     CMD_OPEN,
     CMD_SET_POSITION,
-    Device,
     STATE_CLOSED,
     STATE_CLOSING,
     STATE_OPEN,
     STATE_OPENING,
 )
+
+from homeassistant.components.cover import (
+    ATTR_POSITION as HA_ATTR_POSITION,
+    DEVICE_CLASS_DOOR,
+    DEVICE_CLASS_GARAGE,
+    DEVICE_CLASS_SHADE,
+    SUPPORT_CLOSE,
+    SUPPORT_OPEN,
+    SUPPORT_SET_POSITION,
+    CoverDevice,
+)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
 
 from .device import HubitatEntity, get_hub
 
@@ -124,7 +122,7 @@ class HubitatWindowShade(HubitatCover):
         self._features = SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_SET_POSITION
 
 
-_COVER_CAPS = (
+_COVER_CAPS: Tuple[Tuple[str, Type[HubitatCover]], ...] = (
     (CAP_DOOR_CONTROL, HubitatDoorControl),
     (CAP_GARAGE_DOOR_CONTROL, HubitatGarageDoorControl),
     (CAP_WINDOW_SHADE, HubitatWindowShade),

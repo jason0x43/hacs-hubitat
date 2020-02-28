@@ -1,7 +1,7 @@
 """Support for Hubitat thermostats."""
 
 from logging import getLogger
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from hubitatmaker import (
     CAP_THERMOSTAT,
@@ -9,16 +9,13 @@ from hubitatmaker import (
     CMD_AWAY,
     CMD_COOL,
     CMD_ECO,
-    CMD_EMERGENCY_HEAT,
     CMD_FAN_AUTO,
     CMD_FAN_ON,
     CMD_HEAT,
     CMD_OFF,
     CMD_PRESENT,
     CMD_SET_COOLING_SETPOINT,
-    CMD_SET_FAN_MODE,
     CMD_SET_HEATING_SETPOINT,
-    CMD_SET_THERMOSTAT_MODE,
     Device,
 )
 
@@ -27,7 +24,6 @@ from homeassistant.components.climate.const import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
     CURRENT_HVAC_COOL,
-    CURRENT_HVAC_DRY,
     CURRENT_HVAC_FAN,
     CURRENT_HVAC_HEAT,
     CURRENT_HVAC_IDLE,
@@ -42,7 +38,6 @@ from homeassistant.components.climate.const import (
     PRESET_AWAY,
     PRESET_ECO,
     PRESET_HOME,
-    PRESET_NONE,
     SUPPORT_FAN_MODE,
     SUPPORT_PRESET_MODE,
     SUPPORT_TARGET_TEMPERATURE,
@@ -51,9 +46,8 @@ from homeassistant.components.climate.const import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS, TEMP_FAHRENHEIT
 from homeassistant.core import HomeAssistant
-from homeassistant.util import color as color_util
 
-from .device import Hub, HubitatEntity, get_hub
+from .device import HubitatEntity, get_hub
 
 _LOGGER = getLogger(__name__)
 
