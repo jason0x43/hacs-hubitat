@@ -8,8 +8,7 @@ from hubitatmaker import (
     ATTR_SWITCH,
     ATTR_SPEED,
     CAP_FAN_CONTROL,
-    CMD_SET_LEVEL,
-    CMD_OFF, 
+    CAP_SWITCH,
     CMD_ON, 
     CMD_CYCLE_SPEED, 
     CMD_SET_SPEED,
@@ -18,7 +17,6 @@ from hubitatmaker import (
 )
 
 from homeassistant.components.fan import (
-    SPEED_OFF,
     FanEntity
 )
 from homeassistant.config_entries import ConfigEntry
@@ -33,13 +31,12 @@ class HubitatFan(HubitatEntity, FanEntity):
 
     @property
     def is_on(self) -> bool:
-         if CAP_SWITCH in self._device.capabilities:
-             return self.get_str_attr(ATTR_SWITCH) == "on"
-         return super().is_on
-        return self.get_str_attr(ATTR_SWITCH) == "on"
+        if CAP_SWITCH in self._device.capabilities:
+            return self.get_str_attr(ATTR_SWITCH) == "on"
+        return self.get_str_attr(ATTR_SPEED) != "off"
 
     @property
-    def speed(self) -> str:
+    def speed(self) -> Optional[str]:
         """Return the speed of this fan."""
         return self.get_str_attr(ATTR_SPEED)
 
@@ -52,29 +49,26 @@ class HubitatFan(HubitatEntity, FanEntity):
         """Turn on the switch."""
         _LOGGER.debug("Turning on %s with speed [%s]", self.name, speed)
         if speed is not None:
-            await self.send_command(CMD_SET_SPEED, speed)
+            await self.async_set_speed(speed)
         elif CAP_SWITCH in self._device.capabilities:
             await self.send_command(CMD_ON)
         else:
-            await self.send_command(CMD_SET_SPEED, "low")
+            await self.async_set_speed("low")
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the switch."""
         _LOGGER.debug("Turning off %s", self.name)
-        await self.send_command(CMD_OFF)
+        await self.async_set_speed("off")
 
     async def async_set_speed(self, speed: str):
         """Set the speed of the fan."""
-        if speed is SPEED_OFF:
-            await self.async_turn_off()
-        else:
-            await self.send_command(CMD_SET_SPEED, speed)
+        await self.send_command(CMD_SET_SPEED, speed)
 
 
 
-def is_fan(device) -> bool:
+def is_fan(device: Device) -> bool:
     """Return True if device looks like a fan."""
-    return CAP_FAN_CONTROL in device["capabilities"]
+    return CAP_FAN_CONTROL in device.capabilities
 
 
 async def async_setup_entry(
