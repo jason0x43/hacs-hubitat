@@ -52,9 +52,11 @@ class HubitatFan(HubitatEntity, FanEntity):
         """Turn on the switch."""
         _LOGGER.debug("Turning on %s with speed [%s]", self.name, speed)
         if speed is not None:
-            await self.async_set_speed(speed)
-        else:
+            await self.send_command(CMD_SET_SPEED, speed)
+        elif CAP_SWITCH in self._device.capabilities:
             await self.send_command(CMD_ON)
+        else:
+            await self.send_command(CMD_SET_SPEED, "low")
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the switch."""
