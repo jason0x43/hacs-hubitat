@@ -43,6 +43,7 @@ PLATFORMS = [
     "lock",
     "sensor",
     "switch",
+    "fan"
 ]
 
 TEMP_F = "F"
