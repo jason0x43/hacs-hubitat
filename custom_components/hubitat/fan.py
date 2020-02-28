@@ -33,7 +33,9 @@ class HubitatFan(HubitatEntity, FanEntity):
 
     @property
     def is_on(self) -> bool:
-        """Return True if the switch is on."""
+         if CAP_SWITCH in self._device.capabilities:
+             return self.get_str_attr(ATTR_SWITCH) == "on"
+         return super().is_on
         return self.get_str_attr(ATTR_SWITCH) == "on"
 
     @property
