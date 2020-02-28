@@ -39,12 +39,12 @@ class HubitatFan(HubitatEntity, FanEntity):
         return self.get_str_attr(ATTR_SWITCH) == "on"
 
     @property
-    def speed(self) -> Optional[str]:
+    def speed(self) -> str:
         """Return the speed of this fan."""
         return self.get_str_attr(ATTR_SPEED)
 
     @property
-    def speed_list(self) -> List[Any]:
+    def speed_list(self) -> List[str]:
         """Return the list of speeds for this fan."""
         return self._device.attributes[ATTR_SPEED].values or DEFAULT_FAN_SPEEDS
 
