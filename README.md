@@ -4,6 +4,21 @@
 
 This integration uses [Hubitat’s](hubitat.com) [Maker API](https://docs.hubitat.com/index.php?title=Hubitat™_Maker_API) to make Hubitat devices available for use with Home Assistant.
 
+<!-- vim-markdown-toc GFM -->
+
+* [Features](#features)
+* [Installation](#installation)
+  * [HACS](#hacs)
+  * [Manually](#manually)
+* [Setup](#setup)
+* [Network setup](#network-setup)
+* [Device types](#device-types)
+* [Developing](#developing)
+
+<!-- vim-markdown-toc -->
+
+## Features
+
 The following device types (platforms) are currently supported:
 
 - binary_sensor
