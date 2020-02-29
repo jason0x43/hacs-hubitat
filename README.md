@@ -11,15 +11,15 @@ This integration uses [Hubitat’s](hubitat.com) [Maker API](https://docs.hubita
   * [HACS](#hacs)
   * [Manually](#manually)
 * [Setup](#setup)
-* [Network setup](#network-setup)
-* [Device types](#device-types)
+  * [Event server](#event-server)
+  * [Device types](#device-types)
 * [Developing](#developing)
 
 <!-- vim-markdown-toc -->
 
 ## Features
 
-The following device types (platforms) are currently supported:
+The following device types are currently supported. The first level bullets are Home Assistant platforms, while the sub-bullets are specific device classes.
 
 - binary_sensor
   - acceleration
@@ -35,6 +35,7 @@ The following device types (platforms) are currently supported:
   - door controller
   - garage door controller
   - window shade
+- fan
 - light
 - sensor
   - battery
@@ -44,7 +45,6 @@ The following device types (platforms) are currently supported:
   - temperature
   - voltage
 - switch
-- fan
 
 ## Installation
 
@@ -58,23 +58,29 @@ Clone this repository and copy the `hubitat` folder into your `<config>/custom_c
 
 ## Setup
 
-First, create a Maker API instance in the Hubitat UI. Add whatever devices you'd like to make available to Home Assistant.
+First, create a Maker API instance in the Hubitat UI. Add whatever devices you’d like to make available to Home Assistant.
 
 To configure the hubitat integration, go to Configuration -> Integrations in the Home Assistant UI and click the “+” button to add a new integration. Pick “Hubitat”, then provide:
 
 - The address of the hub (e.g., `http://10.0.1.99` or just `10.0.1.99` if you’re not using https)
 - The app ID of the Maker API instance (the 3 or 4 digit number after `/apps/api/` in any of the Maker API URLs)
 - The API access token
-- Optionally a port for the event listener server to listen on (this will be chosen automatically by default)
+- A port for the event server to listen on (more about this below); this will be chosen automatically by default
 
-## Network setup
+### Event server
 
-Hubitat must be able to see your Home Assistant server on your local network to be able to push device events to it. The integration will start its own web server on a random port on whatever device Home Assistant is running on to listen for these events.
+Hubitat’s official way to push events to receivers is via HTTP POST requests. Every time a device event occurs, the Maker API will make an HTTP POST request to the address set in its “URL to send device events to by POST” setting.
 
-## Device types
+To receive these events, the integration starts up a Python-based web server and updates the POST URL setting in the Maker API instance. Note that for this to work, Hubitat must be able to see your Home Assistant server on your local network.
 
-The integration assigns Home Assistant device classes based on the capabilities reported by Hubitat. Sometimes the device type is ambiguous; a switchable outlet and a light switch both look like simple switches. In these cases, the integration guesses the device class based on the device's label (e.g., a switch named "Office Lamp" would be setup as a light in Home Assistant). This heuristic behavior is currently only used for lights and switches.
+### Device types
+
+The integration assigns Home Assistant device classes based on the capabilities reported by Hubitat. Sometimes the device type is ambiguous; a switchable outlet and a light switch may both only implement Hubitat’s [Switch](https://docs.hubitat.com/index.php?title=Driver_Capability_List#Switch) capability, and will therefore look like the same type of device to the integration. In some of these cases, the integration guesses the device class based on the device’s label (e.g., a switch named “Office Lamp” would be setup as a light in Home Assistant). This heuristic behavior is currently only used for lights and switches.
 
 ## Developing
 
-To get setup for development, run `init.sh`. This will setup the tools needed to validate typings and code style. Validators will be automatically run for every commit, and they can be run manually with pipenv (e.g., `pipenv run black hubitatmaker`).
+To get setup for development, clone this repo and run `init.sh`. This script will setup the tools needed to validate typings and code style. Whenever you make a commit to the repo, validators will be automatically run. You can also run validators manually with pipenv:
+
+- `pipenv run black` - formatting
+- `pipenv run flake8` - linting
+- `pipenv run mypy` - type checking
