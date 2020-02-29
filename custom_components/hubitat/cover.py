@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import Any, Optional, Tuple, Type
+from typing import Any, List, Optional
 
 from hubitatmaker import (
     ATTR_DOOR,
@@ -72,6 +72,11 @@ class HubitatCover(HubitatEntity, CoverDevice):
         """Flag supported features."""
         return self._features
 
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID for this sensor."""
+        return f"{super().unique_id}::{self._attribute}"
+
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close the cover."""
         _LOGGER.debug("Closing %s", self.name)
@@ -122,26 +127,22 @@ class HubitatWindowShade(HubitatCover):
         self._features = SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_SET_POSITION
 
 
-_COVER_CAPS: Tuple[Tuple[str, Type[HubitatCover]], ...] = (
-    (CAP_DOOR_CONTROL, HubitatDoorControl),
-    (CAP_GARAGE_DOOR_CONTROL, HubitatGarageDoorControl),
-    (CAP_WINDOW_SHADE, HubitatWindowShade),
-)
-
-
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
 ) -> None:
     """Initialize cover devices."""
     hub = get_hub(hass, entry.entry_id)
-    devices = hub.devices
+    covers: List[HubitatCover] = []
 
-    for (cap, Cover) in _COVER_CAPS:
-        covers = [
-            Cover(hub=hub, device=devices[i])
-            for i in devices
-            if cap in devices[i].capabilities
-        ]
+    for dev in hub.devices.values():
+        if CAP_WINDOW_SHADE in dev.capabilities:
+            covers.append(HubitatWindowShade(hub=hub, device=dev))
+        elif CAP_GARAGE_DOOR_CONTROL in dev.capabilities:
+            covers.append(HubitatGarageDoorControl(hub=hub, device=dev))
+        elif CAP_DOOR_CONTROL in dev.capabilities:
+            covers.append(HubitatDoorControl(hub=hub, device=dev))
+
+    if len(covers) > 0:
         async_add_entities(covers)
         hub.add_entities(covers)
         _LOGGER.debug(f"Added entities for covers: {covers}")
