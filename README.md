@@ -13,6 +13,7 @@ This integration uses [Hubitat’s](hubitat.com) [Maker API](https://docs.hubita
 * [Setup](#setup)
   * [Event server](#event-server)
   * [Device types](#device-types)
+* [Updating](#updating)
 * [Developing](#developing)
 
 <!-- vim-markdown-toc -->
@@ -48,13 +49,15 @@ The following device types are currently supported. The first level bullets are 
 
 ## Installation
 
+Note that you will need to restart Home Assistant after installion, whichever method is used.
+
 ### HACS
 
 Add this repository as a custom repository in HACS (Marketplace -> Settings).
 
 ### Manually
 
-Clone this repository and copy the `hubitat` folder into your `<config>/custom_components/` directory. Be sure to copy the entire directory, including the (possibly hidden) `.translations` subdirectory.
+Clone this repository and copy the `custom_components/hubitat` folder into your `<config>/custom_components/` directory (so you end up with `<config>/custom_components/hubitat`). Be sure to copy the entire directory, including the (possibly hidden) `.translations` subdirectory.
 
 ## Setup
 
@@ -76,6 +79,12 @@ To receive these events, the integration starts up a Python-based web server and
 ### Device types
 
 The integration assigns Home Assistant device classes based on the capabilities reported by Hubitat. Sometimes the device type is ambiguous; a switchable outlet and a light switch may both only implement Hubitat’s [Switch](https://docs.hubitat.com/index.php?title=Driver_Capability_List#Switch) capability, and will therefore look like the same type of device to the integration. In some of these cases, the integration guesses the device class based on the device’s label (e.g., a switch named “Office Lamp” would be setup as a light in Home Assistant). This heuristic behavior is currently only used for lights and switches.
+
+## Updating
+
+The update process depends on how the integration was installed. If it was installed with HACS, open the integration in HACS and click the “Upgrade” link. The process for manually updating is the same as for manual installation.
+
+Note that you will need to restart Home Assistant after updating, whichever method is used.
 
 ## Developing
 
