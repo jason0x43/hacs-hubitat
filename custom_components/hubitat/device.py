@@ -1,6 +1,5 @@
 """Classes for managing Hubitat devices."""
 
-from abc import ABC, abstractmethod
 from json import loads
 from logging import getLogger
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Union, cast
@@ -30,7 +29,11 @@ from .const import (
     TRIGGER_CAPABILITIES,
 )
 
-_TRIGGER_ATTRS = tuple([v["attr"] for v in TRIGGER_CAPABILITIES.values()])
+# Hubitat attributes that should be emitted as HA events
+_TRIGGER_ATTRS = tuple([v.attr for v in TRIGGER_CAPABILITIES.values()])
+# A mapping from Hubitat attribute names to the attribute names that should be
+# used for HA events
+_TRIGGER_ATTR_MAP = {v.attr: v.event for v in TRIGGER_CAPABILITIES.values()}
 
 _LOGGER = getLogger(__name__)
 
@@ -216,7 +219,7 @@ class Hub:
         await self._hub.set_port(port)
 
 
-class HubitatBase(ABC):
+class HubitatBase:
     """Base class for Hubitat entities and event emitters."""
 
     def __init__(self, hub: Hub, device: Device):
@@ -300,9 +303,12 @@ class HubitatBase(ABC):
             return None
         return str(val)
 
-    @abstractmethod
     def handle_event(self, event: Event) -> None:
-        ...
+        """Handle an event received from the Hubitat hub."""
+        if event.attribute in _TRIGGER_ATTRS:
+            evt = to_event_dict(event)
+            self._hub.hass.bus.async_fire(CONF_HUBITAT_EVENT, evt)
+            _LOGGER.debug("Emitted event %s", evt)
 
 
 class HubitatEntity(HubitatBase, Entity):
@@ -324,6 +330,7 @@ class HubitatEntity(HubitatBase, Entity):
     def handle_event(self, event: Event) -> None:
         """Handle a device event."""
         self.async_schedule_update_ha_state()
+        super().handle_event(event)
 
 
 class HubitatEventEmitter(HubitatBase):
@@ -338,14 +345,13 @@ class HubitatEventEmitter(HubitatBase):
         dreg.async_get_or_create(config_entry_id=entry.entry_id, **self.device_info)
         _LOGGER.debug("Created device for %s", self)
 
-    def handle_event(self, event: Event) -> None:
-        """Create a listener for device events."""
-        # Only emit HA events for stateless Hubitat events, like button pushes
-        if event.attribute in _TRIGGER_ATTRS:
-            self._hub.hass.bus.async_fire(CONF_HUBITAT_EVENT, dict(event))
-            _LOGGER.debug("emitted event %s", event)
-
 
 def get_hub(hass: HomeAssistant, entry_id: str) -> Hub:
     """Get the Hub device associated with a given config entry."""
     return hass.data[DOMAIN][entry_id]
+
+
+def to_event_dict(event: Event) -> Dict[str, Any]:
+    evt = dict(event)
+    evt["attribute"] = _TRIGGER_ATTR_MAP[event.attribute]
+    return evt

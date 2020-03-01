@@ -1,6 +1,7 @@
 """Provide automation triggers for certain types of Hubitat device."""
+from itertools import chain
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from hubitatmaker import (
     ATTR_DEVICE_ID,
@@ -9,6 +10,7 @@ from hubitatmaker import (
     ATTR_VALUE,
     CAP_DOUBLE_TAPABLE_BUTTON,
     CAP_HOLDABLE_BUTTON,
+    CAP_LOCK,
     CAP_PUSHABLE_BUTTON,
     Device,
 )
@@ -26,36 +28,23 @@ from homeassistant.helpers.typing import ConfigType
 
 from . import DOMAIN
 from .const import (
-    CONF_BUTTON_1,
-    CONF_BUTTON_2,
-    CONF_BUTTON_3,
-    CONF_BUTTON_4,
-    CONF_BUTTON_5,
-    CONF_BUTTON_6,
-    CONF_BUTTON_7,
-    CONF_BUTTON_8,
+    CONF_BUTTONS,
     CONF_DOUBLE_TAPPED,
     CONF_HELD,
     CONF_HUBITAT_EVENT,
     CONF_PUSHED,
     CONF_SUBTYPE,
+    CONF_UNLOCKED_WITH_CODE,
     TRIGGER_CAPABILITIES,
 )
 from .device import get_hub
 
-BUTTONS = (
-    CONF_BUTTON_1,
-    CONF_BUTTON_2,
-    CONF_BUTTON_3,
-    CONF_BUTTON_4,
-    CONF_BUTTON_5,
-    CONF_BUTTON_6,
-    CONF_BUTTON_7,
-    CONF_BUTTON_8,
+TRIGGER_TYPES = tuple([v.conf for v in TRIGGER_CAPABILITIES.values()])
+TRIGGER_SUBTYPES = set(
+    chain.from_iterable(
+        [v.subconfs for v in TRIGGER_CAPABILITIES.values() if v.subconfs]
+    )
 )
-
-TRIGGER_TYPES = tuple([v["conf"] for v in TRIGGER_CAPABILITIES.values()])
-TRIGGER_SUBTYPES = BUTTONS
 
 TRIGGER_SCHEMA = TRIGGER_BASE_SCHEMA.extend(
     {
@@ -74,12 +63,21 @@ async def async_validate_trigger_config(
     config = TRIGGER_SCHEMA(config)
 
     device = await get_device(hass, config[CONF_DEVICE_ID])
-    trigger = config[CONF_TYPE]
-    button = config[CONF_SUBTYPE]
-
-    if not device or trigger not in TRIGGER_TYPES or button not in TRIGGER_SUBTYPES:
-        _LOGGER.warning("Missing device, invalid trigger, or invalid button")
+    if not device:
+        _LOGGER.warning("Missing device")
         raise InvalidDeviceAutomationConfig
+
+    trigger_type = config[CONF_TYPE]
+    if trigger_type not in TRIGGER_TYPES:
+        _LOGGER.warning("Invalid trigger type '%s'", trigger_type)
+        raise InvalidDeviceAutomationConfig
+
+    trigger_subtype = config.get(CONF_SUBTYPE)
+    if trigger_subtype:
+        valid_subtypes = get_valid_subtypes(trigger_type)
+        if not valid_subtypes or trigger_subtype not in valid_subtypes:
+            _LOGGER.warning("Invalid trigger subtype '%s'", trigger_subtype)
+            raise InvalidDeviceAutomationConfig
 
     if DOMAIN in hass.config.components:
         hubitat_device = await get_hubitat_device(hass, device.id)
@@ -88,52 +86,48 @@ async def async_validate_trigger_config(
             raise InvalidDeviceAutomationConfig
 
         types = get_trigger_types(hubitat_device)
-        if trigger not in types:
-            _LOGGER.warning("Device doesn't support '%s'", trigger)
+        if trigger_type not in types:
+            _LOGGER.warning("Device doesn't support '%s'", trigger_type)
             raise InvalidDeviceAutomationConfig
+
+        if trigger_subtype:
+            subtypes = get_trigger_subtypes(hubitat_device, trigger_type)
+            if not subtypes or trigger_subtype not in subtypes:
+                _LOGGER.warning("Device doesn't support '%s'", trigger_subtype)
 
     return config
 
 
-async def async_get_triggers(hass: HomeAssistant, device_id: str) -> List[dict]:
-    """List device triggers for Hubitat pushbutton devices."""
+async def async_get_triggers(hass: HomeAssistant, device_id: str) -> Sequence[dict]:
+    """List device triggers for Hubitat devices."""
     device = await get_hubitat_device(hass, device_id)
     if device is None:
         return []
 
     triggers = []
+    trigger_types = get_trigger_types(device)
 
-    try:
-        num_buttons = int(device.attributes[ATTR_NUM_BUTTONS].value)
-    except Exception:
-        # There was a bug in Hubitat's Iris driver that prevented the
-        # numberOfButtons attribute from being set. This may still be the case
-        # for users who haven't manually fixed the issue. Assume a single
-        # button by default.
-        # See https://community.hubitat.com/t/button-controller-bug-v3-only-with-iris-button-controller/18415/9
-        _LOGGER.warning(
-            "Number of buttons not available for %s; defaulting to 1", device.id
-        )
-        num_buttons = 1
+    for trigger_type in trigger_types:
+        trigger_subtypes = get_trigger_subtypes(device, trigger_type)
 
-    types = get_trigger_types(device)
-
-    for event_type in types:
-        _LOGGER.debug(
-            "%s is a button controller with %d buttons that can be %s",
-            device.name,
-            num_buttons,
-            event_type,
-        )
-
-        for i in range(0, num_buttons):
+        if trigger_subtypes:
+            for trigger_subtype in trigger_subtypes:
+                triggers.append(
+                    {
+                        CONF_DEVICE_ID: device_id,
+                        CONF_DOMAIN: DOMAIN,
+                        CONF_PLATFORM: "device",
+                        CONF_TYPE: trigger_type,
+                        CONF_SUBTYPE: trigger_subtype,
+                    }
+                )
+        else:
             triggers.append(
                 {
                     CONF_DEVICE_ID: device_id,
                     CONF_DOMAIN: DOMAIN,
                     CONF_PLATFORM: "device",
-                    CONF_TYPE: event_type,
-                    CONF_SUBTYPE: BUTTONS[i],
+                    CONF_TYPE: trigger_type,
                 }
             )
 
@@ -155,17 +149,20 @@ async def async_attach_trigger(
         )
         raise InvalidDeviceAutomationConfig
 
+    # Event data should match up to the data a hubitat_event event would
+    # contain
+    event_data = {
+        ATTR_DEVICE_ID: hubitat_device.id,
+        ATTR_NAME: config[CONF_TYPE],
+    }
+    if CONF_SUBTYPE in config:
+        event_data[ATTR_VALUE] = config[CONF_SUBTYPE]
+
     trigger = event.TRIGGER_SCHEMA(
         {
             event.CONF_PLATFORM: "event",
             event.CONF_EVENT_TYPE: CONF_HUBITAT_EVENT,
-            # Event data should match up to what a real event from the hub will
-            # contain
-            event.CONF_EVENT_DATA: {
-                ATTR_DEVICE_ID: hubitat_device.id,
-                ATTR_NAME: config[CONF_TYPE],
-                ATTR_VALUE: config[CONF_SUBTYPE],
-            },
+            event.CONF_EVENT_DATA: event_data,
         }
     )
 
@@ -205,7 +202,7 @@ async def get_hubitat_device(hass: HomeAssistant, device_id: str) -> Optional[De
     return None
 
 
-def get_trigger_types(device: Device) -> List[str]:
+def get_trigger_types(device: Device) -> Sequence[str]:
     """Return the list of trigger types for a device."""
     types = []
 
@@ -218,4 +215,28 @@ def get_trigger_types(device: Device) -> List[str]:
     if CAP_PUSHABLE_BUTTON in device.capabilities:
         types.append(CONF_PUSHED)
 
+    if CAP_LOCK in device.capabilities:
+        types.append(CONF_UNLOCKED_WITH_CODE)
+
     return types
+
+
+def get_trigger_subtypes(device: Device, trigger_type: str) -> Sequence[str]:
+    """Return the list of trigger subtypes for a device and a trigger type."""
+    subtypes: List[str] = []
+
+    if trigger_type in (CONF_DOUBLE_TAPPED, CONF_HELD, CONF_PUSHED):
+        num_buttons = 1
+        if ATTR_NUM_BUTTONS in device.attributes:
+            num_buttons = int(device.attributes[ATTR_NUM_BUTTONS].value)
+        subtypes.extend(CONF_BUTTONS[0:num_buttons])
+
+    return subtypes
+
+
+def get_valid_subtypes(trigger_type: str) -> Optional[Sequence[str]]:
+    """Return the list of valid trigger subtypes for a given type."""
+    for trigger_info in TRIGGER_CAPABILITIES.values():
+        if trigger_info.conf == trigger_type:
+            return trigger_info.subconfs
+    return None

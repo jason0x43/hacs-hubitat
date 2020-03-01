@@ -41,7 +41,8 @@
         "trigger_type": {
             "double_tapped": "Button {subtype} double-tapped",
             "held": "Button {subtype} held",
-            "pushed": "Button {subtype} pushed"
+            "pushed": "Button {subtype} pushed",
+            "unlocked_with_code": "Unlocked with code"
         }
     },
     "options": {

@@ -1,35 +1,32 @@
-clear_code:
+clear_lock_code:
   description: Delete a user code from a lock
   fields:
     entity_id:
-      description: Entity ID of of a lock
+      description: Entity ID of a lock
     position:
       description: Index of code to delete
+      example: 1
  
-get_code:
-  description: Get a user code from a lock
-  fields:
-    entity_id:
-      description: Entity ID of of a lock
-    position:
-      description: Index of code to retrieve
- 
-set_code:
+set_lock_code:
   description: Set a user code for a lock
   fields:
     entity_id:
-      description: Entity ID of of a lock
+      description: Entity ID of a lock
     position:
       description: Index of code to set
+      example: 1
     code:
-      description: Index of code to retrieve
+      description: Code
+      example: 5213
     name:
       description: Friendly name for code
+      example: Family
  
-set_code_length:
+set_lock_code_length:
   description: Set the length of user codes for a lock
   fields:
     entity_id:
-      description: Entity ID of of a lock
+      description: Entity ID of a lock
     length:
       description: Length of acceptable codes
+      example: 4
