@@ -8,7 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant
 
-from .const import DOMAIN, EVENT_READY, PLATFORMS
+from .const import CONF_HUBITAT_EVENT, DOMAIN, PLATFORMS
 from .device import Hub
 
 _LOGGER = getLogger(__name__)
@@ -40,7 +40,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_hub)
 
-    hass.bus.fire(EVENT_READY)
+    hass.bus.fire(CONF_HUBITAT_EVENT, {"name": "ready"})
     _LOGGER.info("Hubitat is ready")
 
     return True
