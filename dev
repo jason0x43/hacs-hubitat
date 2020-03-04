@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+set -e
+
+op=$1
+if [[ -z $op ]]; then
+	op=help
+fi
+
+case $op in
+	init)
+		pip3 install pipenv
+		pipenv install --dev
+		pipenv run pre-commit install
+		;;
+	
+	publish)
+		latest_tag=$(git describe --tags --abbrev=0)
+		package_version=v$(python -c "import pkg_resources; print(pkg_resources.get_distribution('hubitatmaker').version)")
+		if [[ $latest_tag == $package_version ]]; then
+			echo "Update the package version before publishing"
+			exit 1
+		fi
+		rm -rf build dist
+		pipenv run python setup.py sdist bdist_wheel
+		twine upload dist/*
+		git tag $package_version
+		git push --tags
+		;;
+
+	test)
+		pipenv run mypy custom_components/hubitat
+		pipenv run python -m pytest
+		;;
+
+	help)
+		echo "$0 COMMAND"
+		echo
+		echo "Commands:"
+		echo "  init - initialize for development"
+		echo "  publish - build and publish to PyPi"
+		echo "  test - run type checker and unit tests"
+		echo
+esac

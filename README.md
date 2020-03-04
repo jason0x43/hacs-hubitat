@@ -88,8 +88,16 @@ Note that you will need to restart Home Assistant after updating, whichever meth
 
 ## Developing
 
-To get setup for development, clone this repo and run `init.sh`. This script will setup the tools needed to validate typings and code style. Whenever you make a commit to the repo, validators will be automatically run. You can also run validators manually with pipenv:
+To get setup for development, clone this repo and run
 
-- `pipenv run black` - formatting
-- `pipenv run flake8` - linting
-- `pipenv run mypy` - type checking
+```
+$ ./dev init
+```
+
+This script will setup the tools needed to validate typings and code style. Whenever you make a commit to the repo, validators will be automatically run.
+
+To run the type checker and unit tests, run
+
+```
+$ ./dev test
+```
