@@ -14,12 +14,20 @@ from hubitatmaker import (
 
 DOMAIN = "hubitat"
 
+ATTR_ALARM = "alarm"
+ATTR_CODE = "code"
 ATTR_CODES = "codes"
 ATTR_CODE_LENGTH = "code_length"
 ATTR_CODE_NAME = "code_name"
-ATTR_LAST_CODE_NAME = "last_code_name"
+ATTR_DELAY = "delay"
 ATTR_DOUBLE_TAPPED = "double_tapped"
+ATTR_ENTRY_DELAY = "entry_delay"
+ATTR_EXIT_DELAY = "exit_delay"
+ATTR_LAST_CODE_NAME = "last_code_name"
+ATTR_LENGTH = "length"
 ATTR_MAX_CODES = "max_codes"
+ATTR_NAME = "name"
+ATTR_POSITION = "position"
 
 CONF_APP_ID = "app_id"
 CONF_HUB = "hub"
@@ -36,7 +44,10 @@ CONF_UNLOCKED_WITH_CODE = "unlocked_with_code"
 CONF_SUBTYPE = "subtype"
 CONF_VALUE = "value"
 
+ICON_ALARM = "mdi:alarm-bell"
+
 PLATFORMS = [
+    "alarm_control_panel",
     "binary_sensor",
     "climate",
     "cover",
@@ -46,6 +57,14 @@ PLATFORMS = [
     "switch",
     "fan",
 ]
+
+SERVICE_CLEAR_CODE = "clear_code"
+SERVICE_SET_CODE = "set_code"
+SERVICE_SET_CODE_LENGTH = "set_code_length"
+SERVICE_SET_ENTRY_DELAY = "set_entry_delay"
+SERVICE_SET_EXIT_DELAY = "set_exit_delay"
+SERVICE_ALARM_SIREN_ON = "alarm_siren_on"
+SERVICE_ALARM_STROBE_ON = "alarm_strobe_on"
 
 TEMP_F = "F"
 TEMP_C = "C"

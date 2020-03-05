@@ -1,47 +1,47 @@
 from logging import getLogger
 from typing import Any, Dict, Optional, cast
 
-import hubitatmaker
+import hubitatmaker as hm
 import voluptuous as vol
 
 from homeassistant.components.lock import LockDevice
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.helpers import config_validation as cv
 
 from .const import (
+    ATTR_CODE,
     ATTR_CODE_LENGTH,
     ATTR_CODES,
     ATTR_LAST_CODE_NAME,
+    ATTR_LENGTH,
     ATTR_MAX_CODES,
+    ATTR_NAME,
+    ATTR_POSITION,
     DOMAIN,
+    SERVICE_CLEAR_CODE,
+    SERVICE_SET_CODE,
+    SERVICE_SET_CODE_LENGTH,
 )
 from .device import HubitatEntity, get_hub
 
-SERVICE_CLEAR_CODE = "clear_lock_code"
-SERVICE_SET_CODE = "set_lock_code"
-SERVICE_SET_CODE_LENGTH = "set_lock_code_length"
-
 _LOGGER = getLogger(__name__)
 
-ATTR_CODE = "code"
-ATTR_LENGTH = "length"
-ATTR_POSITION = "position"
-ATTR_NAME = "name"
 
 SET_CODE_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_ENTITY_ID): str,
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
         vol.Required(ATTR_POSITION): vol.Coerce(int),
         vol.Required(ATTR_CODE): vol.Coerce(str),
         vol.Optional(ATTR_NAME): str,
     }
 )
 CLEAR_CODE_SCHEMA = vol.Schema(
-    {vol.Required(ATTR_ENTITY_ID): str, vol.Required(ATTR_POSITION): vol.Coerce(int)}
+    {vol.Required(ATTR_ENTITY_ID): cv.entity_id, vol.Required(ATTR_POSITION): int}
 )
 SET_CODE_LENGTH_SCHEMA = vol.Schema(
-    {vol.Required(ATTR_ENTITY_ID): str, vol.Required(ATTR_LENGTH): vol.Coerce(int)}
+    {vol.Required(ATTR_ENTITY_ID): cv.entity_id, vol.Required(ATTR_LENGTH): int}
 )
 
 
@@ -51,7 +51,7 @@ class HubitatLock(HubitatEntity, LockDevice):
     @property
     def code_format(self) -> Optional[str]:
         """Regex for code format or None if no code is required."""
-        code_length = self.get_attr(hubitatmaker.ATTR_CODE_LENGTH)
+        code_length = self.get_attr(hm.ATTR_CODE_LENGTH)
         if code_length is not None:
             return f"^\\d{code_length}$"
         return None
@@ -59,26 +59,26 @@ class HubitatLock(HubitatEntity, LockDevice):
     @property
     def is_locked(self) -> bool:
         """Return True if the lock is locked."""
-        return self.get_attr(hubitatmaker.ATTR_LOCK) == hubitatmaker.STATE_LOCKED
+        return self.get_attr(hm.ATTR_LOCK) == hm.STATE_LOCKED
 
     @property
     def code_length(self) -> Optional[int]:
-        return self.get_int_attr(hubitatmaker.ATTR_CODE_LENGTH)
+        return self.get_int_attr(hm.ATTR_CODE_LENGTH)
 
     @property
     def codes(self) -> Optional[Dict[str, Dict[str, str]]]:
-        return self.get_json_attr(hubitatmaker.ATTR_LOCK_CODES)
+        return self.get_json_attr(hm.ATTR_LOCK_CODES)
 
     @property
     def last_code_name(self) -> Optional[str]:
-        return self.get_attr(hubitatmaker.ATTR_LAST_CODE_NAME)
+        return self.get_attr(hm.ATTR_LAST_CODE_NAME)
 
     @property
     def max_codes(self) -> Optional[int]:
-        return self.get_int_attr(hubitatmaker.ATTR_MAX_CODES)
+        return self.get_int_attr(hm.ATTR_MAX_CODES)
 
     @property
-    def device_state_attributes(self):
+    def device_state_attributes(self) -> Dict[str, Any]:
         """Return the state attributes."""
         return {
             ATTR_CODES: self.codes,
@@ -89,23 +89,23 @@ class HubitatLock(HubitatEntity, LockDevice):
 
     async def async_lock(self, **kwargs: Any) -> None:
         """Lock the lock."""
-        await self.send_command(hubitatmaker.CMD_LOCK)
+        await self.send_command(hm.CMD_LOCK)
 
     async def async_unlock(self, **kwargs: Any) -> None:
         """Unlock the lock."""
-        await self.send_command(hubitatmaker.CMD_UNLOCK)
+        await self.send_command(hm.CMD_UNLOCK)
 
     async def clear_code(self, position: int) -> None:
-        await self.send_command(hubitatmaker.CMD_DELETE_CODE, position)
+        await self.send_command(hm.CMD_DELETE_CODE, position)
 
     async def set_code(self, position: int, code: str, name: Optional[str]) -> None:
         arg = f"{position},{code}"
         if name is not None:
             arg = f"{arg},{name}"
-        await self.send_command(hubitatmaker.CMD_SET_CODE, arg)
+        await self.send_command(hm.CMD_SET_CODE, arg)
 
     async def set_code_length(self, length: int) -> None:
-        await self.send_command(hubitatmaker.CMD_SET_CODE_LENGTH, length)
+        await self.send_command(hm.CMD_SET_CODE_LENGTH, length)
 
 
 async def async_setup_entry(
@@ -118,7 +118,7 @@ async def async_setup_entry(
     locks = [
         HubitatLock(hub=hub, device=devices[i])
         for i in devices
-        if hubitatmaker.CAP_LOCK in devices[i].capabilities
+        if hm.CAP_LOCK in devices[i].capabilities
     ]
     async_add_entities(locks)
     hub.add_entities(locks)
@@ -126,7 +126,7 @@ async def async_setup_entry(
 
     if len(locks) > 0:
 
-        def find(entity_id: str):
+        def get_entity(entity_id: str) -> Optional[HubitatLock]:
             for lock in locks:
                 if lock.entity_id == entity_id:
                     return lock
@@ -134,14 +134,14 @@ async def async_setup_entry(
 
         async def clear_code(service: ServiceCall):
             entity_id = cast(str, service.data.get(ATTR_ENTITY_ID))
-            lock = find(entity_id)
+            lock = get_entity(entity_id)
             if lock:
                 pos = service.data.get(ATTR_POSITION)
                 await lock.clear_code(pos)
 
         async def set_code(service: ServiceCall):
             entity_id = cast(str, service.data.get(ATTR_ENTITY_ID))
-            lock = find(entity_id)
+            lock = get_entity(entity_id)
             if not lock:
                 raise ValueError(f"Invalid or unknown entity '{entity_id}'")
 
@@ -153,7 +153,7 @@ async def async_setup_entry(
 
         async def set_code_length(service: ServiceCall):
             entity_id = cast(str, service.data.get(ATTR_ENTITY_ID))
-            lock = find(entity_id)
+            lock = get_entity(entity_id)
             if lock:
                 length = service.data.get(ATTR_LENGTH)
                 await lock.set_code_length(length)

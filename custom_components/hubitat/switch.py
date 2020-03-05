@@ -4,15 +4,8 @@ from logging import getLogger
 import re
 from typing import Any, List, Optional
 
-from hubitatmaker import (
-    CAP_DOUBLE_TAPABLE_BUTTON,
-    CAP_HOLDABLE_BUTTON,
-    CAP_POWER_METER,
-    CAP_PUSHABLE_BUTTON,
-    CAP_SWITCH,
-    CMD_ON,
-    Device,
-)
+import hubitatmaker as hm
+import voluptuous as vol
 
 from homeassistant.components.switch import (
     DEVICE_CLASS_OUTLET,
@@ -20,8 +13,11 @@ from homeassistant.components.switch import (
     SwitchDevice,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.const import ATTR_ENTITY_ID
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.helpers import config_validation as cv
 
+from .const import DOMAIN, ICON_ALARM, SERVICE_ALARM_SIREN_ON, SERVICE_ALARM_STROBE_ON
 from .device import HubitatEntity, HubitatEventEmitter, get_hub
 from .fan import is_fan
 from .light import is_light
@@ -29,6 +25,8 @@ from .light import is_light
 _LOGGER = getLogger(__name__)
 
 _NAME_TEST = re.compile(r"\bswitch\b", re.IGNORECASE)
+
+ENTITY_SCHEMA = vol.Schema({vol.Required(ATTR_ENTITY_ID): cv.entity_id})
 
 
 class HubitatSwitch(HubitatEntity, SwitchDevice):
@@ -49,7 +47,7 @@ class HubitatSwitch(HubitatEntity, SwitchDevice):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""
         _LOGGER.debug(f"Turning on {self.name} with {kwargs}")
-        await self.send_command(CMD_ON)
+        await self.send_command(hm.CMD_ON)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the switch."""
@@ -64,26 +62,58 @@ class HubitatPowerMeterSwitch(HubitatSwitch):
         return self.get_float_attr("power")
 
 
-def is_switch(device: Device) -> bool:
+class HubitatAlarm(HubitatSwitch):
+    @property
+    def icon(self) -> str:
+        """Return the icon."""
+        return ICON_ALARM
+
+    @property
+    def name(self) -> str:
+        """Return this alarm's display name."""
+        return f"{super().name} alarm"
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn on the alarm."""
+        _LOGGER.debug(f"Activating alarm %s", self.name)
+        await self.send_command(hm.CMD_BOTH)
+
+    async def siren_on(self) -> None:
+        """Turn on the siren."""
+        _LOGGER.debug(f"Turning on siren for %s", self.name)
+        await self.send_command(hm.CMD_SIREN)
+
+    async def strobe_on(self) -> None:
+        """Turn on the strobe."""
+        _LOGGER.debug(f"Turning on strobe for %s", self.name)
+        await self.send_command(hm.CMD_STROBE)
+
+
+def is_switch(device: hm.Device) -> bool:
     """Return True if device looks like a switch."""
     return (
-        CAP_SWITCH in device.capabilities
+        hm.CAP_SWITCH in device.capabilities
         and not is_light(device)
         and not is_fan(device)
     )
 
 
-def is_energy_meter(device: Device) -> bool:
+def is_energy_meter(device: hm.Device) -> bool:
     """Return True if device can measure power."""
-    return CAP_POWER_METER in device.capabilities
+    return hm.CAP_POWER_METER in device.capabilities
 
 
-def is_button_controller(device: Device) -> bool:
+def is_alarm(device: hm.Device) -> bool:
+    """Return True if the device is an alarm."""
+    return hm.CAP_ALARM in device.capabilities
+
+
+def is_button_controller(device: hm.Device) -> bool:
     """Return true if the device is a stateless button controller."""
     return (
-        CAP_PUSHABLE_BUTTON in device.capabilities
-        or CAP_HOLDABLE_BUTTON in device.capabilities
-        or CAP_DOUBLE_TAPABLE_BUTTON in device.capabilities
+        hm.CAP_PUSHABLE_BUTTON in device.capabilities
+        or hm.CAP_HOLDABLE_BUTTON in device.capabilities
+        or hm.CAP_DOUBLE_TAPABLE_BUTTON in device.capabilities
     )
 
 
@@ -113,3 +143,39 @@ async def async_setup_entry(
         hass.async_create_task(bc.update_device_registry())
     hub.add_event_emitters(button_controllers)
     _LOGGER.debug("Added entities for pushbutton controllers: %s", button_controllers)
+
+    alarms = [
+        HubitatAlarm(hub=hub, device=devices[i])
+        for i in devices
+        if is_alarm(devices[i])
+    ]
+    async_add_entities(alarms)
+    hub.add_entities(alarms)
+    _LOGGER.debug("Added entities for alarms: %s", alarms)
+
+    if len(alarms) > 0:
+
+        def get_entity(service: ServiceCall) -> Optional[HubitatAlarm]:
+            entity_id = service.data.get(ATTR_ENTITY_ID)
+            for alarm in alarms:
+                if alarm.entity_id == entity_id:
+                    return alarm
+            _LOGGER.warning("No alarm for ID %s", entity_id)
+            return None
+
+        async def siren_on(service: ServiceCall) -> None:
+            alarm = get_entity(service)
+            if alarm:
+                await alarm.siren_on()
+
+        async def strobe_on(service: ServiceCall) -> None:
+            alarm = get_entity(service)
+            if alarm is not None:
+                await alarm.strobe_on()
+
+        hass.services.async_register(
+            DOMAIN, SERVICE_ALARM_SIREN_ON, siren_on, schema=ENTITY_SCHEMA
+        )
+        hass.services.async_register(
+            DOMAIN, SERVICE_ALARM_STROBE_ON, strobe_on, schema=ENTITY_SCHEMA
+        )

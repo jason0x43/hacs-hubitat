@@ -1,17 +1,17 @@
-clear_lock_code:
-  description: Delete a user code from a lock
+clear_code:
+  description: Delete a user code from a lock or keypad
   fields:
     entity_id:
-      description: Entity ID of a lock
+      description: Entity ID of a lock or keypad
     position:
       description: Index of code to delete
       example: 1
  
-set_lock_code:
-  description: Set a user code for a lock
+set_code:
+  description: Set a user code for a lock or keypad
   fields:
     entity_id:
-      description: Entity ID of a lock
+      description: Entity ID of a lock or keypad
     position:
       description: Index of code to set
       example: 1
@@ -22,11 +22,41 @@ set_lock_code:
       description: Friendly name for code
       example: Family
  
-set_lock_code_length:
-  description: Set the length of user codes for a lock
+set_code_length:
+  description: Set the length of user codes for a lock or keypad
   fields:
     entity_id:
-      description: Entity ID of a lock
+      description: Entity ID of a lock or keypad
     length:
       description: Length of acceptable codes
       example: 4
+
+set_entry_delay:
+  description: Set the entry delay for a keypad in seconds
+  fields:
+    entity_id:
+      description: Entity ID of a keypad
+    delay:
+      description: Delay in seconds
+      example: 30
+
+set_exit_delay:
+  description: Set the exit delay for a keypad in seconds
+  fields:
+    entity_id:
+      description: Entity ID of a keypad
+    delay:
+      description: Delay in seconds
+      example: 30
+
+alarm_siren_on:
+  description: Activate an alarm siren
+  fields:
+    entity_id:
+      description: Entity ID of an alarm
+
+alarm_strobe_on:
+  description: Activate an alarm strobe light
+  fields:
+    entity_id:
+      description: Entity ID of an alarm
