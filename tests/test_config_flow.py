@@ -1,5 +1,5 @@
-import pytest
 import hubitatmaker
+import pytest
 
 
 @pytest.mark.asyncio
@@ -11,7 +11,7 @@ async def test_validate_input(mocker) -> None:
         check_called = True
 
     FakeHub = mocker.patch.object(hubitatmaker, "Hub")
-    checker = mocker.patch.object(FakeHub.return_value, "check_config", check_config)
+    mocker.patch.object(FakeHub.return_value, "check_config", check_config)
 
     from custom_components.hubitat import config_flow
 

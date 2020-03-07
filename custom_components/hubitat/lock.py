@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, Optional, Union, cast
 
 import hubitatmaker as hm
 import voluptuous as vol
@@ -66,8 +66,11 @@ class HubitatLock(HubitatEntity, LockDevice):
         return self.get_int_attr(hm.ATTR_CODE_LENGTH)
 
     @property
-    def codes(self) -> Optional[Dict[str, Dict[str, str]]]:
-        return self.get_json_attr(hm.ATTR_LOCK_CODES)
+    def codes(self) -> Union[str, Dict[str, Dict[str, str]], None]:
+        try:
+            return self.get_json_attr(hm.ATTR_LOCK_CODES)
+        except Exception:
+            return self.get_str_attr(hm.ATTR_LOCK_CODES)
 
     @property
     def last_code_name(self) -> Optional[str]:
