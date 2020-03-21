@@ -194,7 +194,7 @@ class Hub:
             hub.set_temperature_unit(temp_unit)
             for entity in hub.entities:
                 if entity.device_class == DEVICE_CLASS_TEMPERATURE:
-                    entity.async_schedule_update_ha_state()
+                    entity.update_state()
 
         hass.states.async_set(
             hub.entity_id, "connected", {CONF_TEMPERATURE_UNIT: hub.temperature_unit}
@@ -317,6 +317,11 @@ class HubitatEntity(HubitatBase, Entity):
     # Hubitat will push device updates
     should_poll = False
 
+    @property
+    def is_disabled(self) -> bool:
+        """Indicate whether this device is currently disabled."""
+        return self.registry_entry and self.registry_entry.disabled_by
+
     async def async_update(self) -> None:
         """Fetch new data for this device."""
         await self._hub.refresh_device(self.device_id)
@@ -329,8 +334,13 @@ class HubitatEntity(HubitatBase, Entity):
 
     def handle_event(self, event: Event) -> None:
         """Handle a device event."""
-        self.async_schedule_update_ha_state()
+        self.update_state()
         super().handle_event(event)
+
+    def update_state(self) -> None:
+        """Request that Home Assistant update this device's state."""
+        if not self.is_disabled:
+            self.async_schedule_update_ha_state()
 
 
 class HubitatEventEmitter(HubitatBase):
