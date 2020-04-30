@@ -149,7 +149,7 @@ POSSIBLE_LIGHT_CAPABILITIES = CAP_SWITCH
 
 # Ideally this would be multi-lingual
 MATCH_LIGHT = re.compile(
-    r".*\b(light|lamp|chandelier|sconce|luminaire|candelabra|candle|lantern)s?\b.*",
+    r".*\b(light|lamp|chandelier|sconce|luminaire|lumière|candelabra|candle|lantern)s?\b.*",
     re.IGNORECASE,
 )
 
