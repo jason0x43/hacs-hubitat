@@ -1,0 +1,66 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Le hub est déjà configuré"
+        },
+        "error": {
+            "cannot_connect": "Impossible de se connecter, veuillez réessayer",
+            "invalid_access_token": "Le jeton d'accès n'est pas valide",
+            "invalid_hub_config": "Configuration du hub non valide",
+            "invalid_hub_info": "Impossible d'analyser les détails du hub",
+            "request_error": "Erreur de communication avec le hub",
+            "unknown": "Erreur inattendue"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "access_token": "Jeton d'accès 'Maker API' d'Hubitat",
+                    "app_id": "Maker API app ID",
+                    "host": "L'adresse du Hub",
+                    "server_addr": "Adresse du serveur d'événements (facultatif)",
+                    "server_port": "Port du serveur d'événements (facultatif)",
+                    "temperature_unit": "Unités de température (optionnel)"
+                },
+                "description": "Indiquez l'adresse IP ou le nom d'hôte de votre hub Hubitat, ainsi que l'ID d'application de son instance API Maker. En option, un numéro de port et une adresse pour le serveur d'événements de l'intégration à l'écoute sur, et les unités utilisées pour les capteurs de température (F par défaut).",
+                "title": "Connectez-vous à votre hub Hubitat"
+            }
+        },
+        "title": "Hubitat"
+    },
+    "device_automation": {
+        "trigger_subtype": {
+            "1": "1",
+            "2": "2",
+            "3": "3",
+            "4": "4",
+            "5": "5",
+            "6": "6",
+            "7": "7",
+            "8": "8"
+        },
+        "trigger_type": {
+            "double_tapped": "Boutton {subtype} tapé deux fois",
+            "held": "Boutton {subtype} tenu",
+            "pushed": "Boutton {subtype} poussé",
+            "unlocked_with_code": "Déverrouillé avec code"
+        }
+    },
+    "options": {
+        "error": {
+            "unknown": "Erreur inattendue"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "host": "L'adresse du Hub",
+                    "app_id": "Maker API app ID",
+                    "access_token": "'Maker API' jeton d'accès",
+                    "server_port": "Port du serveur d'événements (facultatif)",
+                    "temperature_unit": "Unités de température (optionnel)"
+                },
+                "description": "Configurez les options pour Hubitat. Notez que la modification de l'adresse du Hub ou du 'Maker API app ID' provoquera la redécouverte vos appareils.",
+                "title": "Options d'Hubitat"
+            }
+        }
+    }
+}
