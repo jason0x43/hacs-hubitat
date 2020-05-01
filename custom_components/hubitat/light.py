@@ -145,7 +145,7 @@ class HubitatLight(HubitatEntity, Light):
 
 
 LIGHT_CAPABILITIES = (CAP_COLOR_TEMP, CAP_COLOR_CONTROL, CAP_LIGHT, CAP_SWITCH_LEVEL)
-POSSIBLE_LIGHT_CAPABILITIES = CAP_SWITCH
+POSSIBLE_LIGHT_CAPABILITIES = (CAP_SWITCH,)
 
 # Ideally this would be multi-lingual
 MATCH_LIGHT = re.compile(
@@ -157,14 +157,11 @@ MATCH_LIGHT = re.compile(
 def is_light(device: Device) -> bool:
     """Return True if device looks like a light."""
     if any(cap in device.capabilities for cap in LIGHT_CAPABILITIES):
-        _LOGGER.debug(f"{device.name} has a light capability")
         return True
     if any(
         cap in device.capabilities for cap in POSSIBLE_LIGHT_CAPABILITIES
     ) and MATCH_LIGHT.match(device.name):
-        _LOGGER.debug(f"{device.name} has a light name")
         return True
-    _LOGGER.debug(f"{device.name} is not a light")
     return False
 
 
