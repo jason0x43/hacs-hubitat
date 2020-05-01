@@ -157,11 +157,14 @@ MATCH_LIGHT = re.compile(
 def is_light(device: Device) -> bool:
     """Return True if device looks like a light."""
     if any(cap in device.capabilities for cap in LIGHT_CAPABILITIES):
+        _LOGGER.debug(f"{device.name} has a light capability")
         return True
     if any(
         cap in device.capabilities for cap in POSSIBLE_LIGHT_CAPABILITIES
     ) and MATCH_LIGHT.match(device.name):
+        _LOGGER.debug(f"{device.name} has a light name")
         return True
+    _LOGGER.debug(f"{device.name} is not a light")
     return False
 
 
