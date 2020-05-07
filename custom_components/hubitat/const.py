@@ -36,7 +36,7 @@ CONF_SERVER_ADDR = "server_addr"
 CONF_SERVER_PORT = "server_port"
 
 CONF_BUTTON = "button"
-CONF_BUTTONS = ("1", "2", "3", "4", "5", "6", "7", "8")
+CONF_BUTTONS = ("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")
 CONF_DOUBLE_TAPPED = "double_tapped"
 CONF_HELD = "held"
 CONF_PUSHED = "pushed"
