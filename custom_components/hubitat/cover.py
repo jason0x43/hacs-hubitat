@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import Any, List, Optional
+from typing import Any, Optional, Tuple, Type
 
 from hubitatmaker import (
     ATTR_DOOR,
@@ -15,6 +15,7 @@ from hubitatmaker import (
     STATE_CLOSING,
     STATE_OPEN,
     STATE_OPENING,
+    Device,
 )
 
 from homeassistant.components.cover import (
@@ -30,7 +31,9 @@ from homeassistant.components.cover import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .device import HubitatEntity, get_hub
+from .device import HubitatEntity
+from .entities import create_and_add_entities
+from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
@@ -74,8 +77,13 @@ class HubitatCover(HubitatEntity, CoverDevice):
 
     @property
     def unique_id(self) -> str:
-        """Return a unique ID for this sensor."""
+        """Return a unique ID for this cover."""
         return f"{super().unique_id}::{self._attribute}"
+
+    @property
+    def old_unique_id(self) -> str:
+        """Return the legacy unique ID for this cover."""
+        return f"{super().old_unique_id}::{self._attribute}"
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close the cover."""
@@ -127,22 +135,39 @@ class HubitatWindowShade(HubitatCover):
         self._features = SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_SET_POSITION
 
 
+_COVER_CAPS: Tuple[Tuple[str, Type[HubitatCover]], ...] = (
+    (CAP_WINDOW_SHADE, HubitatWindowShade),
+    (CAP_GARAGE_DOOR_CONTROL, HubitatGarageDoorControl),
+    (CAP_DOOR_CONTROL, HubitatGarageDoorControl),
+)
+
+
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder,
 ) -> None:
     """Initialize cover devices."""
-    hub = get_hub(hass, entry.entry_id)
-    covers: List[HubitatCover] = []
+    for cap in _COVER_CAPS:
+        await create_and_add_entities(
+            hass,
+            entry,
+            async_add_entities,
+            "binary_sensor",
+            cap[1],
+            lambda dev: is_cover_type(dev, cap[0]),
+        )
 
-    for dev in hub.devices.values():
-        if CAP_WINDOW_SHADE in dev.capabilities:
-            covers.append(HubitatWindowShade(hub=hub, device=dev))
-        elif CAP_GARAGE_DOOR_CONTROL in dev.capabilities:
-            covers.append(HubitatGarageDoorControl(hub=hub, device=dev))
-        elif CAP_DOOR_CONTROL in dev.capabilities:
-            covers.append(HubitatDoorControl(hub=hub, device=dev))
 
-    if len(covers) > 0:
-        async_add_entities(covers)
-        hub.add_entities(covers)
-        _LOGGER.debug(f"Added entities for covers: {covers}")
+def is_cover_type(dev: Device, cap: str) -> bool:
+    cover_type = None
+
+    if CAP_WINDOW_SHADE in dev.capabilities:
+        cover_type = CAP_WINDOW_SHADE
+    elif CAP_GARAGE_DOOR_CONTROL in dev.capabilities:
+        cover_type = CAP_GARAGE_DOOR_CONTROL
+    elif CAP_DOOR_CONTROL in dev.capabilities:
+        cover_type = CAP_DOOR_CONTROL
+
+    if cover_type is None:
+        return False
+
+    return cap == cover_type

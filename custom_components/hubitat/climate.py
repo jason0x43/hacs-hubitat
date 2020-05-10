@@ -47,7 +47,9 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS, TEMP_FAHRENHEIT
 from homeassistant.core import HomeAssistant
 
-from .device import HubitatEntity, get_hub
+from .device import HubitatEntity
+from .entities import create_and_add_entities
+from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
@@ -285,15 +287,9 @@ def is_thermostat(device: Device) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder,
 ) -> None:
     """Initialize thermostat devices."""
-    hub = get_hub(hass, entry.entry_id)
-    devices = hub.devices
-    therms = [
-        HubitatThermostat(hub=hub, device=devices[i])
-        for i in devices
-        if is_thermostat(devices[i])
-    ]
-    async_add_entities(therms)
-    hub.add_entities(therms)
+    await create_and_add_entities(
+        hass, entry, async_add_entities, "climate", HubitatThermostat, is_thermostat
+    )

@@ -24,7 +24,9 @@ from .const import (
     SERVICE_SET_CODE,
     SERVICE_SET_CODE_LENGTH,
 )
-from .device import HubitatEntity, get_hub
+from .device import HubitatEntity
+from .entities import create_and_add_entities
+from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
@@ -111,21 +113,18 @@ class HubitatLock(HubitatEntity, LockDevice):
         await self.send_command(hm.CMD_SET_CODE_LENGTH, length)
 
 
+def is_lock(device: hm.Device) -> bool:
+    """Return True if device looks like a fan."""
+    return hm.CAP_LOCK in device.capabilities
+
+
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder,
 ) -> None:
     """Initialize lock devices."""
-    hub = get_hub(hass, entry.entry_id)
-    devices = hub.devices
-
-    locks = [
-        HubitatLock(hub=hub, device=devices[i])
-        for i in devices
-        if hm.CAP_LOCK in devices[i].capabilities
-    ]
-    async_add_entities(locks)
-    hub.add_entities(locks)
-    _LOGGER.debug(f"Added entities for locks: %s", locks)
+    locks = await create_and_add_entities(
+        hass, entry, async_add_entities, "lock", HubitatLock, is_lock
+    )
 
     if len(locks) > 0:
 

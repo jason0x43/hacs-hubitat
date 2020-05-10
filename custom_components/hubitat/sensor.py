@@ -24,7 +24,9 @@ from homeassistant.const import POWER_WATT, TEMP_CELSIUS, TEMP_FAHRENHEIT
 from homeassistant.core import HomeAssistant
 
 from .const import TEMP_F
-from .device import HubitatEntity, get_hub
+from .device import HubitatEntity
+from .entities import create_and_add_entities
+from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
@@ -50,6 +52,11 @@ class HubitatSensor(HubitatEntity):
     def state(self) -> Union[float, int, str, None]:
         """Return this sensor's current state."""
         return self.get_attr(self._attribute)
+
+    @property
+    def old_unique_id(self) -> str:
+        """Return the legacy unique ID for this sensor."""
+        return f"{super().old_unique_id}::{self._attribute}"
 
     @property
     def unique_id(self) -> str:
@@ -146,18 +153,15 @@ _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatSensor]], ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder,
 ) -> None:
     """Initialize sensor devices."""
-    hub = get_hub(hass, entry.entry_id)
-    devices = hub.devices
     for attr in _SENSOR_ATTRS:
-        Sensor = attr[1]
-        sensors = [
-            Sensor(hub=hub, device=devices[i])
-            for i in devices
-            if attr[0] in devices[i].attributes
-        ]
-        async_add_entities(sensors)
-        hub.add_entities(sensors)
-        _LOGGER.debug(f"Added entities for sensors: {sensors}")
+        await create_and_add_entities(
+            hass,
+            entry,
+            async_add_entities,
+            "sensor",
+            attr[1],
+            lambda dev: attr[0] in dev.attributes,
+        )
