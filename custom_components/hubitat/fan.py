@@ -22,7 +22,9 @@ from homeassistant.components.fan import FanEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .device import HubitatEntity, get_hub
+from .device import HubitatEntity
+from .entities import create_and_add_entities
+from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
@@ -75,13 +77,9 @@ def is_fan(device: Device) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder
 ) -> None:
     """Initialize fan devices."""
-    hub = get_hub(hass, entry.entry_id)
-    devices = hub.devices
-    fans = [
-        HubitatFan(hub=hub, device=devices[i]) for i in devices if is_fan(devices[i])
-    ]
-    async_add_entities(fans)
-    _LOGGER.debug(f"Added entities for fans: {fans}")
+    await create_and_add_entities(
+        hass, entry, async_add_entities, "fan", HubitatFan, is_fan
+    )

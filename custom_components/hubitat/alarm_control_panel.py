@@ -43,7 +43,9 @@ from .const import (
     SERVICE_SET_ENTRY_DELAY,
     SERVICE_SET_EXIT_DELAY,
 )
-from .device import HubitatEntity, get_hub
+from .device import HubitatEntity
+from .entities import create_and_add_entities
+from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
@@ -194,19 +196,17 @@ def is_alarm(device: hm.Device) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder,
 ) -> None:
     """Initialize security keypad devices."""
-    hub = get_hub(hass, entry.entry_id)
-    devices = hub.devices
-    keypads = [
-        HubitatSecurityKeypad(hub=hub, device=devices[i])
-        for i in devices
-        if is_security_keypad(devices[i])
-    ]
-    async_add_entities(keypads)
-    hub.add_entities(keypads)
-    _LOGGER.debug(f"Added entities for keypads: {keypads}")
+    keypads = await create_and_add_entities(
+        hass,
+        entry,
+        async_add_entities,
+        "alarm_control_panel",
+        HubitatSecurityKeypad,
+        is_security_keypad,
+    )
 
     if len(keypads) > 0:
 

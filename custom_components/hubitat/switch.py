@@ -2,7 +2,7 @@
 
 from logging import getLogger
 import re
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 import hubitatmaker as hm
 import voluptuous as vol
@@ -18,9 +18,11 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN, ICON_ALARM, SERVICE_ALARM_SIREN_ON, SERVICE_ALARM_STROBE_ON
-from .device import HubitatEntity, HubitatEventEmitter, get_hub
+from .device import HubitatEntity
+from .entities import create_and_add_entities, create_and_add_event_emitters
 from .fan import is_fan
 from .light import is_light
+from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
@@ -118,40 +120,32 @@ def is_button_controller(device: hm.Device) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder,
 ) -> None:
     """Initialize switch devices."""
-    hub = get_hub(hass, entry.entry_id)
-    devices = hub.devices
-    switch_devs = [devices[i] for i in devices if is_switch(devices[i])]
-    switches: List[HubitatSwitch] = []
-    for s in switch_devs:
-        if is_energy_meter(s):
-            switches.append(HubitatPowerMeterSwitch(hub=hub, device=s))
-        else:
-            switches.append(HubitatSwitch(hub=hub, device=s))
-    async_add_entities(switches)
-    hub.add_entities(switches)
-    _LOGGER.debug("Added entities for switches: %s", switches)
+    await create_and_add_entities(
+        hass,
+        entry,
+        async_add_entities,
+        "switch",
+        HubitatSwitch,
+        lambda dev: is_switch(dev) and not is_energy_meter(dev),
+    )
 
-    button_controllers = [
-        HubitatEventEmitter(hub=hub, device=devices[i])
-        for i in devices
-        if is_button_controller(devices[i])
-    ]
-    for bc in button_controllers:
-        hass.async_create_task(bc.update_device_registry())
-    hub.add_event_emitters(button_controllers)
-    _LOGGER.debug("Added entities for pushbutton controllers: %s", button_controllers)
+    await create_and_add_entities(
+        hass,
+        entry,
+        async_add_entities,
+        "switch",
+        HubitatPowerMeterSwitch,
+        lambda dev: is_switch(dev) and is_energy_meter(dev),
+    )
 
-    alarms = [
-        HubitatAlarm(hub=hub, device=devices[i])
-        for i in devices
-        if is_alarm(devices[i])
-    ]
-    async_add_entities(alarms)
-    hub.add_entities(alarms)
-    _LOGGER.debug("Added entities for alarms: %s", alarms)
+    create_and_add_event_emitters(hass, entry, is_button_controller)
+
+    alarms = await create_and_add_entities(
+        hass, entry, async_add_entities, "switch", HubitatAlarm, is_alarm
+    )
 
     if len(alarms) > 0:
 
