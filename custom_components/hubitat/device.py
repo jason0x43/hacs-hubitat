@@ -89,7 +89,12 @@ class Hub:
     @property
     def host(self) -> str:
         """The IP address of the  associated Hubitat hub."""
-        return cast(str, self.config_entry.data.get(CONF_HOST))
+        return cast(
+            str,
+            self.config_entry.options.get(
+                CONF_HOST, self.config_entry.data.get(CONF_HOST)
+            ),
+        )
 
     @property
     def mac(self) -> Optional[str]:
@@ -221,7 +226,9 @@ class Hub:
             _LOGGER.debug("Set temperature units to %s", temp_unit)
 
         hass.states.async_set(
-            hub.entity_id, "connected", {CONF_TEMPERATURE_UNIT: hub.temperature_unit}
+            hub.entity_id,
+            "connected",
+            {CONF_HOST: hub.host, CONF_TEMPERATURE_UNIT: hub.temperature_unit},
         )
 
     async def check_config(self) -> None:
