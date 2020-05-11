@@ -194,6 +194,10 @@ class Hub:
         """Handle options update."""
         hub = get_hub(hass, entry.entry_id)
 
+        host = entry.options.get(CONF_HOST, entry.data.get(CONF_HOST))
+        if host != hub.host:
+            await hub.set_host(host)
+
         port = (
             entry.options.get(CONF_SERVER_PORT, entry.data.get(CONF_SERVER_PORT)) or 0
         )
@@ -229,6 +233,11 @@ class Hub:
     ) -> None:
         """Send a device command to Hubitat."""
         await self._hub.send_command(device_id, command, arg)
+
+    async def set_host(self, host: str) -> None:
+        """Set the host address that the Hubitat hub is accessible at."""
+        _LOGGER.debug("Setting Hubitat host to %s", host)
+        self._hub.set_host(host)
 
     async def set_port(self, port: int) -> None:
         """Set the port that the event listener server will listen on."""

@@ -7,7 +7,6 @@
             "cannot_connect": "Impossible de se connecter, veuillez réessayer",
             "invalid_access_token": "Le jeton d'accès n'est pas valide",
             "invalid_hub_config": "Configuration du hub non valide",
-            "invalid_hub_info": "Impossible d'analyser les détails du hub",
             "request_error": "Erreur de communication avec le hub",
             "unknown": "Erreur inattendue"
         },
@@ -47,6 +46,10 @@
     },
     "options": {
         "error": {
+            "cannot_connect": "Impossible de se connecter, veuillez réessayer",
+            "invalid_access_token": "Le jeton d'accès n'est pas valide",
+            "invalid_hub_config": "Configuration du hub non valide",
+            "request_error": "Erreur de communication avec le hub",
             "unknown": "Erreur inattendue"
         },
         "step": {
@@ -58,7 +61,7 @@
                     "server_port": "Port du serveur d'événements (facultatif)",
                     "temperature_unit": "Unités de température (optionnel)"
                 },
-                "description": "Configurez les options pour Hubitat. Notez que la modification de l'adresse du Hub ou du 'Maker API app ID' provoquera la redécouverte vos appareils.",
+                "description": "Configurez les options pour Hubitat. Notez que la modification du 'Maker API app ID' provoquera la redécouverte vos appareils.",
                 "title": "Options d'Hubitat"
             }
         }

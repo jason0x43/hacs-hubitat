@@ -7,7 +7,6 @@
             "cannot_connect": "Failed to connect, please try again",
             "invalid_access_token": "Access token is invalid",
             "invalid_hub_config": "Invalid hub config",
-            "invalid_hub_info": "Could not parse hub details",
             "request_error": "Error communicating with the hub",
             "unknown": "Unexpected error"
         },
@@ -47,6 +46,10 @@
     },
     "options": {
         "error": {
+            "cannot_connect": "Failed to connect, please try again",
+            "invalid_access_token": "Access token is invalid",
+            "invalid_hub_config": "Invalid hub config",
+            "request_error": "Error communicating with the hub",
             "unknown": "Unexpected error"
         },
         "step": {
@@ -58,7 +61,7 @@
                     "server_port": "Event server port (optional)",
                     "temperature_unit": "Temperature units (optional)"
                 },
-                "description": "Configure options for Hubitat. Note that changing the hub address or the Maker API app ID will cause the integration to rediscover your devices.",
+                "description": "Configure options for Hubitat. Note that changing the Maker API app ID will cause the integration to rediscover your devices.",
                 "title": "Hubitat options"
             }
         }

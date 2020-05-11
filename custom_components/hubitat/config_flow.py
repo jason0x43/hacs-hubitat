@@ -125,13 +125,34 @@ class HubitatOptionsFlow(OptionsFlow):
 
     async def async_step_user(self, user_input=None) -> Dict[str, Any]:
         """Handle integration options."""
+        entry = self.config_entry
         errors: Dict[str, str] = {}
 
         if user_input is not None:
             try:
+                check_input = {
+                    CONF_HOST: user_input[CONF_HOST],
+                    CONF_APP_ID: entry.data.get(CONF_APP_ID),
+                    CONF_ACCESS_TOKEN: entry.data.get(CONF_ACCESS_TOKEN),
+                }
+                await validate_input(check_input)
+
+                self.options[CONF_HOST] = user_input[CONF_HOST]
                 self.options[CONF_SERVER_PORT] = user_input[CONF_SERVER_PORT]
                 self.options[CONF_TEMPERATURE_UNIT] = user_input[CONF_TEMPERATURE_UNIT]
                 return self.async_create_entry(title="", data=self.options)
+            except ConnectionError:
+                _LOGGER.exception("Connection error")
+                errors["base"] = "cannot_connect"
+            except InvalidToken:
+                _LOGGER.exception("Invalid access token")
+                errors["base"] = "invalid_access_token"
+            except InvalidConfig:
+                _LOGGER.exception("Invalid config")
+                errors["base"] = "invalid_hub_config"
+            except RequestError:
+                _LOGGER.exception("Request error")
+                errors["base"] = "request_error"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
@@ -141,12 +162,14 @@ class HubitatOptionsFlow(OptionsFlow):
         else:
             form_errors = errors
 
-        entry = self.config_entry
-
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
                 {
+                    vol.Optional(
+                        CONF_HOST,
+                        default=entry.options.get(CONF_HOST, entry.data.get(CONF_HOST)),
+                    ): str,
                     vol.Optional(
                         CONF_SERVER_PORT,
                         default=entry.options.get(
