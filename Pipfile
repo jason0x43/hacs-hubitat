@@ -7,7 +7,7 @@ verify_ssl = true
 pytest = "*"
 pytest-asyncio = "*"
 pytest-mock = "*"
-hubitatmaker = "*"
+hubitatmaker = "==0.3.7"
 homeassistant = "*"
 black = "==19.10b0"
 flake8 = "*"
