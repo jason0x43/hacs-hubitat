@@ -192,17 +192,20 @@ class Hub:
     @staticmethod
     async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
         """Handle options update."""
+        _LOGGER.debug("Handling options update...")
         hub = get_hub(hass, entry.entry_id)
 
         host = entry.options.get(CONF_HOST, entry.data.get(CONF_HOST))
         if host != hub.host:
             await hub.set_host(host)
+            _LOGGER.debug("Set hub host to %s", host)
 
         port = (
             entry.options.get(CONF_SERVER_PORT, entry.data.get(CONF_SERVER_PORT)) or 0
         )
         if port != hub.port:
             await hub.set_port(port)
+            _LOGGER.debug("Set event server port to %s", port)
 
         temp_unit = (
             entry.options.get(
@@ -215,6 +218,7 @@ class Hub:
             for entity in hub.entities:
                 if entity.device_class == DEVICE_CLASS_TEMPERATURE:
                     entity.update_state()
+            _LOGGER.debug("Set temperature units to %s", temp_unit)
 
         hass.states.async_set(
             hub.entity_id, "connected", {CONF_TEMPERATURE_UNIT: hub.temperature_unit}
