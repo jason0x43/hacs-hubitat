@@ -1,5 +1,6 @@
 """Support for Hubitat lights."""
 
+import json
 from logging import getLogger
 import re
 from typing import Any, Dict, List, Optional, Union
@@ -13,9 +14,7 @@ from hubitatmaker import (
     CMD_ON,
     CMD_SET_COLOR,
     CMD_SET_COLOR_TEMP,
-    CMD_SET_HUE,
     CMD_SET_LEVEL,
-    CMD_SET_SAT,
     Device,
 )
 
@@ -117,9 +116,14 @@ class HubitatLight(HubitatEntity, Light):
                 await self.send_command(CMD_SET_LEVEL, props["level"], props["time"])
                 del props["time"]
             elif "hue" in props:
-                await self.send_command(
-                    CMD_SET_COLOR, props["hue"], props["sat"], props["level"]
+                arg = json.dumps(
+                    {
+                        "hue": props["hue"],
+                        "saturation": props["sat"],
+                        "level": props["level"],
+                    }
                 )
+                await self.send_command(CMD_SET_COLOR, arg)
                 del props["hue"]
                 del props["sat"]
             else:
@@ -130,8 +134,8 @@ class HubitatLight(HubitatEntity, Light):
             await self.send_command(CMD_ON)
 
         if "hue" in props:
-            await self.send_command(CMD_SET_HUE, props["hue"])
-            await self.send_command(CMD_SET_SAT, props["sat"])
+            arg = json.dumps({"hue": props["hue"], "saturation": props["sat"]})
+            await self.send_command(CMD_SET_COLOR, arg)
             del props["hue"]
             del props["sat"]
 
