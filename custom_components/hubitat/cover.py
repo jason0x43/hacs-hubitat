@@ -171,3 +171,11 @@ def is_cover_type(dev: Device, cap: str) -> bool:
         return False
 
     return cap == cover_type
+
+
+def is_cover(dev: Device) -> bool:
+    return (
+        CAP_WINDOW_SHADE in dev.capabilities
+        or CAP_GARAGE_DOOR_CONTROL in dev.capabilities
+        or CAP_DOOR_CONTROL in dev.capabilities
+    )

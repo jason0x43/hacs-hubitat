@@ -32,6 +32,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import color as color_util
 
+from .cover import is_cover
 from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .types import EntityAdder
@@ -150,8 +151,7 @@ class HubitatLight(HubitatEntity, Light):
         await self.send_command("off")
 
 
-LIGHT_CAPABILITIES = (CAP_COLOR_TEMP, CAP_COLOR_CONTROL, CAP_LIGHT, CAP_SWITCH_LEVEL)
-POSSIBLE_LIGHT_CAPABILITIES = (CAP_SWITCH,)
+LIGHT_CAPABILITIES = (CAP_COLOR_TEMP, CAP_COLOR_CONTROL, CAP_LIGHT)
 
 # Ideally this would be multi-lingual
 MATCH_LIGHT = re.compile(
@@ -164,10 +164,11 @@ def is_light(device: Device) -> bool:
     """Return True if device looks like a light."""
     if any(cap in device.capabilities for cap in LIGHT_CAPABILITIES):
         return True
-    if any(
-        cap in device.capabilities for cap in POSSIBLE_LIGHT_CAPABILITIES
-    ) and MATCH_LIGHT.match(device.name):
+    if CAP_SWITCH in device.capabilities and MATCH_LIGHT.match(device.name):
         return True
+    if CAP_SWITCH_LEVEL in device.capabilities and not is_cover(device):
+        return True
+
     return False
 
 
