@@ -151,7 +151,7 @@ async def async_setup_entry(
             hass,
             entry,
             async_add_entities,
-            "binary_sensor",
+            "cover",
             cap[1],
             lambda dev: is_cover_type(dev, cap[0]),
         )
