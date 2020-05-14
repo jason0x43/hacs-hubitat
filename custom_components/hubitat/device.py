@@ -16,7 +16,7 @@ from homeassistant.const import (
     CONF_TEMPERATURE_UNIT,
 )
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry, entity_registry
+from homeassistant.helpers import device_registry
 from homeassistant.helpers.entity import Entity
 
 from .const import (
@@ -120,9 +120,8 @@ class Hub:
         """Add a listener for events for a specific device."""
         return self._hub.add_device_listener(device_id, listener)
 
-    async def add_entities(self, entities: Sequence["HubitatEntity"]) -> None:
+    def add_entities(self, entities: Sequence["HubitatEntity"]) -> None:
         """Add entities to this hub."""
-        await self._migrate_old_unique_ids(entities)
         self.entities.extend(entities)
 
     def add_event_emitters(self, emitters: Sequence["HubitatEventEmitter"]) -> None:
@@ -254,19 +253,6 @@ class Hub:
         """Set the port that the event listener server will listen on."""
         _LOGGER.debug("Setting event listener port to %s", port)
         await self._hub.set_port(port)
-
-    async def _migrate_old_unique_ids(
-        self, entities: Sequence["HubitatEntity"]
-    ) -> None:
-        """Migrate legacy unique IDs to the current format."""
-        ereg = await entity_registry.async_get_registry(self.hass)
-        for entity in entities:
-            old_entity_id = ereg.async_get_entity_id(
-                "sensor", DOMAIN, entity.old_unique_id
-            )
-            if old_entity_id is not None:
-                _LOGGER.debug("Migrating unique_id for %s", entity.entity_id)
-                ereg.async_update_entity(old_entity_id, new_unique_id=entity.unique_id)
 
 
 class HubitatBase:

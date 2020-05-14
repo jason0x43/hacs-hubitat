@@ -33,7 +33,7 @@ async def create_and_add_entities(
 
     if len(entities) > 0:
         await _migrate_old_unique_ids(hass, entities, platform)
-        await hub.add_entities(entities)
+        hub.add_entities(entities)
         async_add_entities(entities)
         _LOGGER.debug(f"Added {EntityClass.__name__} entities: {entities}")
 
