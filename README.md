@@ -14,6 +14,7 @@ This integration uses [Hubitat’s](hubitat.com) [Maker API](https://docs.hubita
   * [Event server](#event-server)
   * [Device types](#device-types)
 * [Updating](#updating)
+* [Debugging](#debugging)
 * [Developing](#developing)
 
 <!-- vim-markdown-toc -->
@@ -85,6 +86,49 @@ The integration assigns Home Assistant device classes based on the capabilities 
 The update process depends on how the integration was installed. If it was installed with HACS, open the integration in HACS and click the “Upgrade” link. The process for manually updating is the same as for manual installation.
 
 Note that you will need to restart Home Assistant after updating, whichever method is used.
+
+## Debugging
+
+If you run into problems, one of the first steps to take is to enable debug logging for the Hubitat integration. This will provide more insight into what the integration is doing, and may help track down problems. To enable debug logging:
+
+1. Open your Home Assistant `configuration.yaml` file in an editor
+2. Add the following content. If you already have a `logger` section, add the `hubitatmaker` and `custom_components.hubitat` lines to it.
+   ```yaml
+   logger:
+     default: info
+     logs:
+       hubitatmaker: debug
+       custom_components.hubitat: debug
+   ```
+3. Restart Home Assistant
+
+If you open Home Assistant's log file (`config/home-assistant.log`) after HA restarts, you should see quite a few messages related to hubitat (mixed in with messages for other components), like:
+
+```
+2020-05-19 08:28:07 DEBUG (MainThread) [hubitatmaker.hub] Setting host to 10.0.1.99
+2020-05-19 08:28:07 DEBUG (MainThread) [hubitatmaker.hub] Set mac to ab:cd:ef:12:34:56
+2020-05-19 08:28:07 INFO (MainThread) [hubitatmaker.hub] Created hub <Hub host=10.0.1.99 app_id=2269>
+2020-05-19 08:28:07 DEBUG (MainThread) [hubitatmaker.hub] Listening on 10.0.1.206:39513
+2020-05-19 08:28:07 INFO (MainThread) [hubitatmaker.hub] Setting event update URL to http://10.0.1.206:39513
+...
+2020-05-19 08:28:08 DEBUG (MainThread) [hubitatmaker.hub] Loaded device list
+2020-05-19 08:28:08 DEBUG (MainThread) [hubitatmaker.hub] Loading device 6
+2020-05-19 08:28:08 DEBUG (MainThread) [hubitatmaker.hub] Loaded device 6
+2020-05-19 08:28:08 DEBUG (MainThread) [hubitatmaker.hub] Loading device 14
+...
+2020-05-19 08:28:14 DEBUG (MainThread) [custom_components.hubitat.entities] Migrating unique_ids for binary_sensor...
+2020-05-19 08:28:14 DEBUG (MainThread) [custom_components.hubitat.entities] Checking for existence of entity 10.0.1.99::2269::14::acceleration...
+2020-05-19 08:28:14 DEBUG (MainThread) [custom_components.hubitat.entities] Checking for existence of entity 10.0.1.99::2269::1122::acceleration...
+2020-05-19 08:28:14 DEBUG (MainThread) [custom_components.hubitat.entities] Checking for existence of entity 10.0.1.99::2269::1890::acceleration...
+2020-05-19 08:28:14 DEBUG (MainThread) [custom_components.hubitat.entities] Checking for existence of entity 10.0.1.99::2269::1954::acceleration...
+2020-05-19 08:28:14 DEBUG (MainThread) [custom_components.hubitat.entities] Added HubitatAccelerationSensor entities: [<Entity Barn Sensor acceleration: off>, <Entity Garage Sensor acceleration: off>, <Entity Garage Door Sensor acceleration: off>, <Entity Breezeway Sensor acceleration: off>]
+...
+2020-05-19 08:28:15 DEBUG (MainThread) [custom_components.hubitat.device_trigger] Attaching trigger {'platform': 'event', 'event_type': 'hubitat_event', 'event_data': {'device_id': '180', 'name': 'pushed', 'value': '1'}}
+...
+2020-05-19 08:28:18 DEBUG (MainThread) [custom_components.hubitat.light] Turning off Basement Hearth Lights
+2020-05-19 08:28:18 DEBUG (MainThread) [hubitatmaker.hub] Sending command off() to 1510
+...
+```
 
 ## Developing
 
