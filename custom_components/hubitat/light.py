@@ -35,6 +35,7 @@ from homeassistant.util import color as color_util
 from .cover import is_cover
 from .device import HubitatEntity
 from .entities import create_and_add_entities
+from .fan import is_fan
 from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
@@ -166,7 +167,12 @@ def is_light(device: Device) -> bool:
         return True
     if CAP_SWITCH in device.capabilities and MATCH_LIGHT.match(device.name):
         return True
-    if CAP_SWITCH_LEVEL in device.capabilities and not is_cover(device):
+    if (
+        CAP_SWITCH_LEVEL in device.capabilities
+        and MATCH_LIGHT.match(device.name)
+        and not is_cover(device)
+        and not is_fan(device)
+    ):
         return True
 
     return False
