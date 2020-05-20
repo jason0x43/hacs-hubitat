@@ -1,7 +1,7 @@
 from logging import getLogger
-from typing import Any, Optional, Tuple, Type
+from typing import Any, List, Optional, Tuple, Type, Union
 
-from hubitatmaker import (
+from hubitatmaker.const import (
     ATTR_DOOR,
     ATTR_POSITION,
     ATTR_WINDOW_SHADE,
@@ -15,8 +15,8 @@ from hubitatmaker import (
     STATE_CLOSING,
     STATE_OPEN,
     STATE_OPENING,
-    Device,
 )
+from hubitatmaker.types import Device
 
 from homeassistant.components.cover import (
     ATTR_POSITION as HA_ATTR_POSITION,
@@ -78,12 +78,18 @@ class HubitatCover(HubitatEntity, CoverDevice):
     @property
     def unique_id(self) -> str:
         """Return a unique ID for this cover."""
-        return f"{super().unique_id}::{self._attribute}"
+        return f"{super().unique_id}::cover::{self._attribute}"
 
     @property
-    def old_unique_id(self) -> str:
+    def old_unique_id(self) -> Union[str, List[str]]:
         """Return the legacy unique ID for this cover."""
-        return f"{super().old_unique_id}::{self._attribute}"
+        old_parent_ids = super().old_unique_id
+        old_ids = [f"{super().unique_id}::{self._attribute}"]
+        if isinstance(old_ids, list):
+            old_ids.extend([f"{id}::{self._attribute}" for id in old_parent_ids])
+        else:
+            old_ids.append(f"{old_parent_ids}::{self._attribute}")
+        return old_ids
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close the cover."""
@@ -95,7 +101,7 @@ class HubitatCover(HubitatEntity, CoverDevice):
         _LOGGER.debug("Opening %s", self.name)
         await self.send_command(CMD_OPEN)
 
-    async def async_set_cover_position(self, **kwargs):
+    async def async_set_cover_position(self, **kwargs: Any) -> None:
         """Move the cover to a specific position."""
         pos = kwargs[HA_ATTR_POSITION]
         _LOGGER.debug("Setting cover position to %s", pos)

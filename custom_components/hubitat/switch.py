@@ -2,9 +2,21 @@
 
 from logging import getLogger
 import re
-from typing import Any, Optional
+from typing import Any, List, Optional, Union
 
-import hubitatmaker as hm
+from hubitatmaker.const import (
+    CAP_ALARM,
+    CAP_DOUBLE_TAPABLE_BUTTON,
+    CAP_HOLDABLE_BUTTON,
+    CAP_POWER_METER,
+    CAP_PUSHABLE_BUTTON,
+    CAP_SWITCH,
+    CMD_BOTH,
+    CMD_ON,
+    CMD_SIREN,
+    CMD_STROBE,
+)
+from hubitatmaker.types import Device
 import voluptuous as vol
 
 from homeassistant.components.switch import (
@@ -34,22 +46,43 @@ ENTITY_SCHEMA = vol.Schema({vol.Required(ATTR_ENTITY_ID): cv.entity_id})
 class HubitatSwitch(HubitatEntity, SwitchDevice):
     """Representation of a Hubitat switch."""
 
+    _attribute: str
+
     @property
     def is_on(self) -> bool:
         """Return True if the switch is on."""
         return self.get_str_attr("switch") == "on"
 
     @property
-    def device_class(self) -> str:
+    def device_class(self) -> Optional[str]:
         """Return the class of this device, from component DEVICE_CLASSES."""
         if _NAME_TEST.match(self._device.name):
             return DEVICE_CLASS_SWITCH
         return DEVICE_CLASS_OUTLET
 
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID for this cover."""
+        id = f"{super().unique_id}::switch::{self._attribute}"
+        if self._attribute:
+            id += f"::{self._attribute}"
+        return id
+
+    @property
+    def old_unique_id(self) -> Union[str, List[str]]:
+        """Return the legacy unique ID for this cover."""
+        old_ids = [super().unique_id]
+        old_parent_ids = super().old_unique_id
+        if isinstance(old_parent_ids, list):
+            old_ids.extend(old_parent_ids)
+        else:
+            old_ids.append(old_parent_ids)
+        return old_ids
+
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""
         _LOGGER.debug(f"Turning on {self.name} with {kwargs}")
-        await self.send_command(hm.CMD_ON)
+        await self.send_command(CMD_ON)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the switch."""
@@ -58,6 +91,8 @@ class HubitatSwitch(HubitatEntity, SwitchDevice):
 
 
 class HubitatPowerMeterSwitch(HubitatSwitch):
+    _attribute = "power_meter_switch"
+
     @property
     def current_power_w(self) -> Optional[float]:
         """Return the current power usage in W."""
@@ -65,6 +100,8 @@ class HubitatPowerMeterSwitch(HubitatSwitch):
 
 
 class HubitatAlarm(HubitatSwitch):
+    _attribute = "alarm"
+
     @property
     def icon(self) -> str:
         """Return the icon."""
@@ -77,45 +114,45 @@ class HubitatAlarm(HubitatSwitch):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the alarm."""
-        _LOGGER.debug(f"Activating alarm %s", self.name)
-        await self.send_command(hm.CMD_BOTH)
+        _LOGGER.debug("Activating alarm %s", self.name)
+        await self.send_command(CMD_BOTH)
 
     async def siren_on(self) -> None:
         """Turn on the siren."""
-        _LOGGER.debug(f"Turning on siren for %s", self.name)
-        await self.send_command(hm.CMD_SIREN)
+        _LOGGER.debug("Turning on siren for %s", self.name)
+        await self.send_command(CMD_SIREN)
 
     async def strobe_on(self) -> None:
         """Turn on the strobe."""
-        _LOGGER.debug(f"Turning on strobe for %s", self.name)
-        await self.send_command(hm.CMD_STROBE)
+        _LOGGER.debug("Turning on strobe for %s", self.name)
+        await self.send_command(CMD_STROBE)
 
 
-def is_switch(device: hm.Device) -> bool:
+def is_switch(device: Device) -> bool:
     """Return True if device looks like a switch."""
     return (
-        hm.CAP_SWITCH in device.capabilities
+        CAP_SWITCH in device.capabilities
         and not is_light(device)
         and not is_fan(device)
     )
 
 
-def is_energy_meter(device: hm.Device) -> bool:
+def is_energy_meter(device: Device) -> bool:
     """Return True if device can measure power."""
-    return hm.CAP_POWER_METER in device.capabilities
+    return CAP_POWER_METER in device.capabilities
 
 
-def is_alarm(device: hm.Device) -> bool:
+def is_alarm(device: Device) -> bool:
     """Return True if the device is an alarm."""
-    return hm.CAP_ALARM in device.capabilities
+    return CAP_ALARM in device.capabilities
 
 
-def is_button_controller(device: hm.Device) -> bool:
+def is_button_controller(device: Device) -> bool:
     """Return true if the device is a stateless button controller."""
     return (
-        hm.CAP_PUSHABLE_BUTTON in device.capabilities
-        or hm.CAP_HOLDABLE_BUTTON in device.capabilities
-        or hm.CAP_DOUBLE_TAPABLE_BUTTON in device.capabilities
+        CAP_PUSHABLE_BUTTON in device.capabilities
+        or CAP_HOLDABLE_BUTTON in device.capabilities
+        or CAP_DOUBLE_TAPABLE_BUTTON in device.capabilities
     )
 
 

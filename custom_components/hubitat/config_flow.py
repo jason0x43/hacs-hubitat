@@ -1,15 +1,15 @@
 """Config flow for Hubitat integration."""
 from copy import deepcopy
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-from hubitatmaker import (
+from hubitatmaker.error import (
     ConnectionError,
-    Hub as HubitatHub,
     InvalidConfig,
     InvalidToken,
     RequestError,
 )
+from hubitatmaker.hub import Hub as HubitatHub
 import voluptuous as vol
 
 from homeassistant.config_entries import (
@@ -60,11 +60,11 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry: ConfigEntry):
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
         return HubitatOptionsFlow(config_entry)
 
     async def async_step_user(
-        self, user_input: Dict[str, Any] = None
+        self, user_input: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Handle the user step."""
         errors: Dict[str, str] = {}
@@ -119,11 +119,15 @@ class HubitatOptionsFlow(OptionsFlow):
         self.config_entry = config_entry
         self.options = dict(config_entry.options)
 
-    async def async_step_init(self, user_input=None) -> Dict[str, Any]:
+    async def async_step_init(
+        self, user_input: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
         """Handle integration options."""
         return await self.async_step_user()
 
-    async def async_step_user(self, user_input=None) -> Dict[str, Any]:
+    async def async_step_user(
+        self, user_input: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Any]:
         """Handle integration options."""
         entry = self.config_entry
         errors: Dict[str, str] = {}

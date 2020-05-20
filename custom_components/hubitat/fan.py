@@ -1,9 +1,9 @@
 """Support for Hubitat fans."""
 
 from logging import getLogger
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
-from hubitatmaker import (
+from hubitatmaker.const import (
     ATTR_SPEED,
     ATTR_SWITCH,
     CAP_FAN_CONTROL,
@@ -15,8 +15,8 @@ from hubitatmaker import (
     STATE_LOW,
     STATE_OFF,
     STATE_ON,
-    Device,
 )
+from hubitatmaker.types import Device
 
 from homeassistant.components.fan import FanEntity
 from homeassistant.config_entries import ConfigEntry
@@ -47,6 +47,22 @@ class HubitatFan(HubitatEntity, FanEntity):
     def speed_list(self) -> List[str]:
         """Return the list of speeds for this fan."""
         return self._device.attributes[ATTR_SPEED].values or DEFAULT_FAN_SPEEDS
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID for this cover."""
+        return f"{super().unique_id}::fan"
+
+    @property
+    def old_unique_id(self) -> Union[str, List[str]]:
+        """Return the legacy unique ID for this cover."""
+        old_ids = [super().unique_id]
+        old_parent_ids = super().old_unique_id
+        if isinstance(old_parent_ids, list):
+            old_ids.extend(old_parent_ids)
+        else:
+            old_ids.append(old_parent_ids)
+        return old_ids
 
     async def async_turn_on(self, speed: Optional[str] = None, **kwargs: Any) -> None:
         """Turn on the switch."""

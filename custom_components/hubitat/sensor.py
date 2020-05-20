@@ -1,9 +1,9 @@
 """Hubitat sensor entities."""
 
 from logging import getLogger
-from typing import Any, Optional, Tuple, Type, Union
+from typing import Any, List, Optional, Tuple, Type, Union
 
-from hubitatmaker import (
+from hubitatmaker.const import (
     ATTR_BATTERY,
     ATTR_HUMIDITY,
     ATTR_ILLUMINANCE,
@@ -54,14 +54,20 @@ class HubitatSensor(HubitatEntity):
         return self.get_attr(self._attribute)
 
     @property
-    def old_unique_id(self) -> str:
+    def old_unique_id(self) -> Union[str, List[str]]:
         """Return the legacy unique ID for this sensor."""
-        return f"{super().old_unique_id}::{self._attribute}"
+        old_parent_ids = super().old_unique_id
+        old_ids = [f"{super().unique_id}::{self._attribute}"]
+        if isinstance(old_ids, list):
+            old_ids.extend([f"{id}::{self._attribute}" for id in old_parent_ids])
+        else:
+            old_ids.append(f"{old_parent_ids}::{self._attribute}")
+        return old_ids
 
     @property
     def unique_id(self) -> str:
         """Return a unique ID for this sensor."""
-        return f"{super().unique_id}::{self._attribute}"
+        return f"{super().unique_id}::sensor::{self._attribute}"
 
     @property
     def unit_of_measurement(self) -> Optional[str]:

@@ -1,7 +1,18 @@
 from logging import getLogger
-from typing import Any, Dict, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
-import hubitatmaker as hm
+from hubitatmaker.const import (
+    ATTR_LOCK,
+    ATTR_LOCK_CODES,
+    CAP_LOCK,
+    CMD_DELETE_CODE,
+    CMD_LOCK,
+    CMD_SET_CODE,
+    CMD_SET_CODE_LENGTH,
+    CMD_UNLOCK,
+    STATE_LOCKED,
+)
+from hubitatmaker.types import Device
 import voluptuous as vol
 
 from homeassistant.components.lock import LockDevice
@@ -53,7 +64,7 @@ class HubitatLock(HubitatEntity, LockDevice):
     @property
     def code_format(self) -> Optional[str]:
         """Regex for code format or None if no code is required."""
-        code_length = self.get_attr(hm.ATTR_CODE_LENGTH)
+        code_length = self.get_attr(ATTR_CODE_LENGTH)
         if code_length is not None:
             return f"^\\d{code_length}$"
         return None
@@ -61,26 +72,26 @@ class HubitatLock(HubitatEntity, LockDevice):
     @property
     def is_locked(self) -> bool:
         """Return True if the lock is locked."""
-        return self.get_attr(hm.ATTR_LOCK) == hm.STATE_LOCKED
+        return self.get_attr(ATTR_LOCK) == STATE_LOCKED
 
     @property
     def code_length(self) -> Optional[int]:
-        return self.get_int_attr(hm.ATTR_CODE_LENGTH)
+        return self.get_int_attr(ATTR_CODE_LENGTH)
 
     @property
     def codes(self) -> Union[str, Dict[str, Dict[str, str]], None]:
         try:
-            return self.get_json_attr(hm.ATTR_LOCK_CODES)
+            return self.get_json_attr(ATTR_LOCK_CODES)
         except Exception:
-            return self.get_str_attr(hm.ATTR_LOCK_CODES)
+            return self.get_str_attr(ATTR_LOCK_CODES)
 
     @property
     def last_code_name(self) -> Optional[str]:
-        return self.get_attr(hm.ATTR_LAST_CODE_NAME)
+        return self.get_str_attr(ATTR_LAST_CODE_NAME)
 
     @property
     def max_codes(self) -> Optional[int]:
-        return self.get_int_attr(hm.ATTR_MAX_CODES)
+        return self.get_int_attr(ATTR_MAX_CODES)
 
     @property
     def device_state_attributes(self) -> Dict[str, Any]:
@@ -92,30 +103,46 @@ class HubitatLock(HubitatEntity, LockDevice):
             ATTR_MAX_CODES: self.max_codes,
         }
 
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID for this cover."""
+        return f"{super().unique_id}::lock"
+
+    @property
+    def old_unique_id(self) -> Union[str, List[str]]:
+        """Return the legacy unique ID for this cover."""
+        old_ids = [super().unique_id]
+        old_parent_ids = super().old_unique_id
+        if isinstance(old_parent_ids, list):
+            old_ids.extend(old_parent_ids)
+        else:
+            old_ids.append(old_parent_ids)
+        return old_ids
+
     async def async_lock(self, **kwargs: Any) -> None:
         """Lock the lock."""
-        await self.send_command(hm.CMD_LOCK)
+        await self.send_command(CMD_LOCK)
 
     async def async_unlock(self, **kwargs: Any) -> None:
         """Unlock the lock."""
-        await self.send_command(hm.CMD_UNLOCK)
+        await self.send_command(CMD_UNLOCK)
 
     async def clear_code(self, position: int) -> None:
-        await self.send_command(hm.CMD_DELETE_CODE, position)
+        await self.send_command(CMD_DELETE_CODE, position)
 
     async def set_code(self, position: int, code: str, name: Optional[str]) -> None:
         arg = f"{position},{code}"
         if name is not None:
             arg = f"{arg},{name}"
-        await self.send_command(hm.CMD_SET_CODE, arg)
+        await self.send_command(CMD_SET_CODE, arg)
 
     async def set_code_length(self, length: int) -> None:
-        await self.send_command(hm.CMD_SET_CODE_LENGTH, length)
+        await self.send_command(CMD_SET_CODE_LENGTH, length)
 
 
-def is_lock(device: hm.Device) -> bool:
+def is_lock(device: Device) -> bool:
     """Return True if device looks like a fan."""
-    return hm.CAP_LOCK in device.capabilities
+    return CAP_LOCK in device.capabilities
 
 
 async def async_setup_entry(
@@ -134,30 +161,30 @@ async def async_setup_entry(
                     return lock
             return None
 
-        async def clear_code(service: ServiceCall):
+        async def clear_code(service: ServiceCall) -> None:
             entity_id = cast(str, service.data.get(ATTR_ENTITY_ID))
             lock = get_entity(entity_id)
             if lock:
-                pos = service.data.get(ATTR_POSITION)
+                pos = cast(int, service.data.get(ATTR_POSITION))
                 await lock.clear_code(pos)
 
-        async def set_code(service: ServiceCall):
+        async def set_code(service: ServiceCall) -> None:
             entity_id = cast(str, service.data.get(ATTR_ENTITY_ID))
             lock = get_entity(entity_id)
             if not lock:
                 raise ValueError(f"Invalid or unknown entity '{entity_id}'")
 
-            pos = service.data.get(ATTR_POSITION)
-            code = service.data.get(ATTR_CODE)
-            name = service.data.get(ATTR_NAME)
+            pos = cast(int, service.data.get(ATTR_POSITION))
+            code = cast(str, service.data.get(ATTR_CODE))
+            name = cast(str, service.data.get(ATTR_NAME))
             await lock.set_code(pos, code, name)
             _LOGGER.debug("Set code at %s to %s for %s", pos, code, entity_id)
 
-        async def set_code_length(service: ServiceCall):
+        async def set_code_length(service: ServiceCall) -> None:
             entity_id = cast(str, service.data.get(ATTR_ENTITY_ID))
             lock = get_entity(entity_id)
             if lock:
-                length = service.data.get(ATTR_LENGTH)
+                length = cast(int, service.data.get(ATTR_LENGTH))
                 await lock.set_code_length(length)
                 _LOGGER.debug("Set code length for %s to %d", entity_id, length)
 

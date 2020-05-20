@@ -1,9 +1,9 @@
 """Support for Hubitat thermostats."""
 
 from logging import getLogger
-from typing import List, Optional
+from typing import Any, List, Optional, Union
 
-from hubitatmaker import (
+from hubitatmaker.const import (
     CAP_THERMOSTAT,
     CMD_AUTO,
     CMD_AWAY,
@@ -16,8 +16,8 @@ from hubitatmaker import (
     CMD_PRESENT,
     CMD_SET_COOLING_SETPOINT,
     CMD_SET_HEATING_SETPOINT,
-    Device,
 )
+from hubitatmaker.types import Device
 
 from homeassistant.components.climate import ClimateDevice
 from homeassistant.components.climate.const import (
@@ -233,6 +233,22 @@ class HubitatThermostat(HubitatEntity, ClimateDevice):
             return TEMP_FAHRENHEIT
         return TEMP_CELSIUS
 
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID for this cover."""
+        return f"{super().unique_id}::climate"
+
+    @property
+    def old_unique_id(self) -> Union[str, List[str]]:
+        """Return the legacy unique ID for this cover."""
+        old_ids = [super().unique_id]
+        old_parent_ids = super().old_unique_id
+        if isinstance(old_parent_ids, list):
+            old_ids.extend(old_parent_ids)
+        else:
+            old_ids.append(old_parent_ids)
+        return old_ids
+
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new target fan mode."""
         if fan_mode == FAN_ON:
@@ -263,7 +279,7 @@ class HubitatThermostat(HubitatEntity, ClimateDevice):
             await self.send_command(CMD_AWAY)
             await self.send_command(CMD_ECO)
 
-    async def async_set_temperature(self, **kwargs) -> None:
+    async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
         if self.hvac_mode == HVAC_MODE_HEAT_COOL:
             temp_low = kwargs.get(ATTR_TARGET_TEMP_LOW)

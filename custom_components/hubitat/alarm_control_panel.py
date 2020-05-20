@@ -1,9 +1,35 @@
 """Support for Hubitat security keypads."""
 
 from logging import getLogger
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Union, cast
 
-import hubitatmaker as hm
+from hubitatmaker.const import (
+    ATTR_ALARM as HE_ATTR_ALARM,
+    ATTR_CODE_CHANGED as HE_ATTR_CODE_CHANGED,
+    ATTR_CODE_LENGTH as HE_ATTR_CODE_LENGTH,
+    ATTR_ENTRY_DELAY as HE_ATTR_ENTRY_DELAY,
+    ATTR_EXIT_DELAY as HE_ATTR_EXIT_DELAY,
+    ATTR_LOCK_CODES as HE_ATTR_LOCK_CODES,
+    ATTR_MAX_CODES as HE_ATTR_MAX_CODES,
+    ATTR_SECURITY_KEYPAD as HE_ATTR_SECURITY_KEYPAD,
+    CAP_ALARM,
+    CAP_SECURITY_KEYPAD,
+    CMD_ARM_AWAY,
+    CMD_ARM_HOME,
+    CMD_ARM_NIGHT,
+    CMD_BOTH,
+    CMD_DELETE_CODE,
+    CMD_DISARM,
+    CMD_SET_CODE,
+    CMD_SET_CODE_LENGTH,
+    CMD_SET_ENTRY_DELAY,
+    CMD_SET_EXIT_DELAY,
+    STATE_ARMED_AWAY,
+    STATE_ARMED_HOME,
+    STATE_ARMED_NIGHT,
+    STATE_DISARMED,
+)
+from hubitatmaker.types import Device
 import voluptuous as vol
 
 from homeassistant.components.alarm_control_panel import (
@@ -74,12 +100,12 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanel):
     @property
     def alarm(self) -> Optional[str]:
         """Alarm status."""
-        return self.get_attr(hm.ATTR_ALARM)
+        return self.get_str_attr(HE_ATTR_ALARM)
 
     @property
     def changed_by(self) -> Optional[str]:
         """Last change triggered by."""
-        return self.get_attr(hm.ATTR_CODE_CHANGED)
+        return self.get_str_attr(HE_ATTR_CODE_CHANGED)
 
     @property
     def code_arm_required(self) -> bool:
@@ -97,11 +123,11 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanel):
     @property
     def code_length(self) -> Optional[int]:
         """Return the length of codes for this keypad."""
-        return self.get_int_attr(hm.ATTR_CODE_LENGTH)
+        return self.get_int_attr(HE_ATTR_CODE_LENGTH)
 
     @property
     def codes(self) -> Optional[Dict[str, Dict[str, str]]]:
-        return self.get_json_attr(hm.ATTR_LOCK_CODES)
+        return self.get_json_attr(HE_ATTR_LOCK_CODES)
 
     @property
     def device_state_attributes(self) -> Dict[str, Any]:
@@ -118,29 +144,29 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanel):
     @property
     def entry_delay(self) -> Optional[int]:
         """Return the entry delay."""
-        return self.get_int_attr(hm.ATTR_ENTRY_DELAY)
+        return self.get_int_attr(HE_ATTR_ENTRY_DELAY)
 
     @property
     def exit_delay(self) -> Optional[int]:
         """Return the exit delay."""
-        return self.get_int_attr(hm.ATTR_EXIT_DELAY)
+        return self.get_int_attr(HE_ATTR_EXIT_DELAY)
 
     @property
     def max_codes(self) -> Optional[int]:
         """Return the maximum number of codes the keypad supports."""
-        return self.get_int_attr(hm.ATTR_MAX_CODES)
+        return self.get_int_attr(HE_ATTR_MAX_CODES)
 
     @property
     def state(self) -> Optional[str]:
         """Return the maximum number of codes the keypad supports."""
-        state = self.get_attr(hm.ATTR_SECURITY_KEYPAD)
-        if state == hm.STATE_ARMED_AWAY:
+        state = self.get_attr(HE_ATTR_SECURITY_KEYPAD)
+        if state == STATE_ARMED_AWAY:
             return STATE_ALARM_ARMED_AWAY
-        if state == hm.STATE_ARMED_HOME:
+        if state == STATE_ARMED_HOME:
             return STATE_ALARM_ARMED_HOME
-        if state == hm.STATE_ARMED_NIGHT:
+        if state == STATE_ARMED_NIGHT:
             return STATE_ALARM_ARMED_NIGHT
-        if state == hm.STATE_DISARMED:
+        if state == STATE_DISARMED:
             return STATE_ALARM_DISARMED
         return None
 
@@ -148,51 +174,82 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanel):
     def supported_features(self) -> int:
         """Return the list of supported features."""
         features = SUPPORT_ALARM_ARM_AWAY | SUPPORT_ALARM_ARM_HOME
-        if hm.CMD_ARM_NIGHT in self._device.commands:
+        if CMD_ARM_NIGHT in self._device.commands:
             features |= SUPPORT_ALARM_ARM_NIGHT
-        if hm.CAP_ALARM in self._device.capabilities:
+        if CAP_ALARM in self._device.capabilities:
             features |= SUPPORT_ALARM_TRIGGER
         return features
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID for this cover."""
+        return f"{super().unique_id}::alarm_control_panel"
+
+    @property
+    def old_unique_id(self) -> Union[str, List[str]]:
+        """Return the legacy unique ID for this cover."""
+        old_ids = [super().unique_id]
+        old_parent_ids = super().old_unique_id
+        if isinstance(old_parent_ids, list):
+            old_ids.extend(old_parent_ids)
+        else:
+            old_ids.append(old_parent_ids)
+        return old_ids
 
     async def async_alarm_disarm(self, code: Optional[str] = None) -> None:
         """Send disarm command."""
         _LOGGER.debug("Disarming %s", self.name)
-        await self.send_command(hm.CMD_DISARM)
+        await self.send_command(CMD_DISARM)
 
     async def async_alarm_arm_away(self, code: Optional[str] = None) -> None:
         """Send arm away command."""
         _LOGGER.debug("Setting armed to 'Away' for %s", self.name)
-        await self.send_command(hm.CMD_ARM_AWAY)
+        await self.send_command(CMD_ARM_AWAY)
 
     async def async_alarm_arm_home(self, code: Optional[str] = None) -> None:
         """Send arm home command."""
         _LOGGER.debug("Setting armed to 'Home' for %s", self.name)
-        await self.send_command(hm.CMD_ARM_HOME)
+        await self.send_command(CMD_ARM_HOME)
 
-    async def async_alarm_trigger(self, code: Optional[str] = None):
+    async def async_alarm_trigger(self, code: Optional[str] = None) -> None:
         """Send alarm trigger command."""
         _LOGGER.debug("Triggering alarm %s", self.name)
-        await self.send_command(hm.CMD_BOTH)
+        await self.send_command(CMD_BOTH)
 
     async def set_entry_delay(self, delay: int) -> None:
         """Set the entry delay in seconds."""
         _LOGGER.debug("Setting entry delay for %s to %d", self.name, delay)
-        await self.send_command(hm.CMD_SET_ENTRY_DELAY, delay)
+        await self.send_command(CMD_SET_ENTRY_DELAY, delay)
 
     async def set_exit_delay(self, delay: int) -> None:
         """Set the entry delay in seconds."""
         _LOGGER.debug("Setting exit delay for %s to %d", self.name, delay)
-        await self.send_command(hm.CMD_SET_EXIT_DELAY, delay)
+        await self.send_command(CMD_SET_EXIT_DELAY, delay)
+
+    async def clear_code(self, position: int) -> None:
+        """Clear the user code at an index."""
+        await self.send_command(CMD_DELETE_CODE, position)
+
+    async def set_code(self, position: int, code: str, name: Optional[str]) -> None:
+        """Set a user code at an index."""
+        arg = f"{position},{code}"
+        if name is not None:
+            arg = f"{arg},{name}"
+        await self.send_command(CMD_SET_CODE, arg)
+
+    async def set_code_length(self, length: int) -> None:
+        """Set the acceptable code length."""
+        await self.send_command(CMD_SET_CODE_LENGTH, length)
 
 
-def is_security_keypad(device: hm.Device) -> bool:
+def is_security_keypad(device: Device) -> bool:
     """Return True if device looks like a security keypad."""
-    return hm.CAP_SECURITY_KEYPAD in device.capabilities
+    return CAP_SECURITY_KEYPAD in device.capabilities
 
 
-def is_alarm(device: hm.Device) -> bool:
+def is_alarm(device: Device) -> bool:
     """Return True if device looks like an alarm."""
-    return hm.CAP_ALARM in device.capabilities
+    return CAP_ALARM in device.capabilities
 
 
 async def async_setup_entry(
@@ -210,39 +267,39 @@ async def async_setup_entry(
 
     if len(keypads) > 0:
 
-        def get_entity(service: ServiceCall):
+        def get_entity(service: ServiceCall) -> HubitatSecurityKeypad:
             entity_id = service.data.get(ATTR_ENTITY_ID)
             for keypad in keypads:
                 if keypad.entity_id == entity_id:
                     return keypad
-            return None
+            raise Exception(f"Invalid entity: {entity_id}")
 
         async def clear_code(service: ServiceCall) -> None:
             keypad = get_entity(service)
-            pos = service.data.get(ATTR_POSITION)
+            pos = cast(int, service.data.get(ATTR_POSITION))
             await keypad.clear_code(pos)
 
         async def set_code(service: ServiceCall) -> None:
             keypad = get_entity(service)
-            pos = service.data.get(ATTR_POSITION)
-            code = service.data.get(ATTR_CODE)
-            name = service.data.get(ATTR_NAME)
+            pos = cast(int, service.data.get(ATTR_POSITION))
+            code = cast(str, service.data.get(ATTR_CODE))
+            name = cast(str, service.data.get(ATTR_NAME))
             await keypad.set_code(pos, code, name)
 
         async def set_code_length(service: ServiceCall) -> None:
             keypad = get_entity(service)
-            length = service.data.get(ATTR_LENGTH)
+            length = cast(int, service.data.get(ATTR_LENGTH))
             await keypad.set_code_length(length)
 
         async def set_entry_delay(service: ServiceCall) -> None:
             keypad = get_entity(service)
-            length = service.data.get(ATTR_LENGTH)
-            await keypad.set_entry_delay(length)
+            delay = cast(int, service.data.get(ATTR_LENGTH))
+            await keypad.set_entry_delay(delay)
 
         async def set_exit_delay(service: ServiceCall) -> None:
             keypad = get_entity(service)
-            length = service.data.get(ATTR_LENGTH)
-            await keypad.set_exit_delay(length)
+            delay = cast(int, service.data.get(ATTR_LENGTH))
+            await keypad.set_exit_delay(delay)
 
         hass.services.async_register(
             DOMAIN, SERVICE_CLEAR_CODE, clear_code, schema=CLEAR_CODE_SCHEMA

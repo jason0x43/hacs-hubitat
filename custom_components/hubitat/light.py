@@ -5,7 +5,7 @@ from logging import getLogger
 import re
 from typing import Any, Dict, List, Optional, Union
 
-from hubitatmaker import (
+from hubitatmaker.const import (
     CAP_COLOR_CONTROL,
     CAP_COLOR_TEMP,
     CAP_LIGHT,
@@ -15,8 +15,8 @@ from hubitatmaker import (
     CMD_SET_COLOR,
     CMD_SET_COLOR_TEMP,
     CMD_SET_LEVEL,
-    Device,
 )
+from hubitatmaker.types import Device
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -35,7 +35,6 @@ from homeassistant.util import color as color_util
 from .cover import is_cover
 from .device import HubitatEntity
 from .entities import create_and_add_entities
-from .fan import is_fan
 from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
@@ -90,7 +89,23 @@ class HubitatLight(HubitatEntity, Light):
 
         return features
 
-    def supports_feature(self, feature) -> bool:
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID for this cover."""
+        return f"{super().unique_id}::light"
+
+    @property
+    def old_unique_id(self) -> Union[str, List[str]]:
+        """Return the legacy unique ID for this cover."""
+        old_ids = [super().unique_id]
+        old_parent_ids = super().old_unique_id
+        if isinstance(old_parent_ids, list):
+            old_ids.extend(old_parent_ids)
+        else:
+            old_ids.append(old_parent_ids)
+        return old_ids
+
+    def supports_feature(self, feature: int) -> bool:
         """Return True if light supports a given feature."""
         return self.supported_features & feature != 0
 
@@ -146,7 +161,7 @@ class HubitatLight(HubitatEntity, Light):
         if "temp" in props:
             await self.send_command(CMD_SET_COLOR_TEMP, props["temp"])
 
-    async def async_turn_off(self, **kwargs) -> None:
+    async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the light."""
         _LOGGER.debug(f"Turning off {self.name}")
         await self.send_command("off")
@@ -167,12 +182,10 @@ def is_light(device: Device) -> bool:
         return True
     if CAP_SWITCH in device.capabilities and MATCH_LIGHT.match(device.name):
         return True
-    if (
-        CAP_SWITCH_LEVEL in device.capabilities
-        and MATCH_LIGHT.match(device.name)
-        and not is_cover(device)
-        and not is_fan(device)
-    ):
+
+    # A Cover may also have a SwitchLevel capability that can be used to set
+    # the height of the cover.
+    if CAP_SWITCH_LEVEL in device.capabilities and not is_cover(device):
         return True
 
     return False
