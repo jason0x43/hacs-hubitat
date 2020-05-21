@@ -7,16 +7,21 @@ if [[ -z $op ]]; then
 	op=help
 fi
 
+if ! hash poetry 2> /dev/null; then
+	echo "Please install poetry"
+	echo "See https://python-poetry.org/docs/#installation"
+	exit 1
+fi
+
 case $op in
 	init)
-		pip3 install pipenv
-		pipenv install --dev
-		pipenv run pre-commit install
+		poetry install
+		poetry run pre-commit install
 		;;
 	
 	test)
-		pipenv run mypy custom_components/hubitat
-		pipenv run python -m pytest
+		poetry run mypy custom_components/hubitat
+		poetry run python -m pytest
 		;;
 
 	help)
