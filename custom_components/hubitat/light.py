@@ -5,7 +5,7 @@ from logging import getLogger
 import re
 from typing import Any, Dict, List, Optional, Union
 
-from hubitatmaker import (
+from hubitatmaker.const import (
     CAP_COLOR_CONTROL,
     CAP_COLOR_TEMP,
     CAP_LIGHT,
@@ -15,8 +15,8 @@ from hubitatmaker import (
     CMD_SET_COLOR,
     CMD_SET_COLOR_TEMP,
     CMD_SET_LEVEL,
-    Device,
 )
+from hubitatmaker.types import Device
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -90,7 +90,7 @@ class HubitatLight(HubitatEntity, Light):
 
         return features
 
-    def supports_feature(self, feature) -> bool:
+    def supports_feature(self, feature: int) -> bool:
         """Return True if light supports a given feature."""
         return self.supported_features & feature != 0
 
@@ -146,7 +146,7 @@ class HubitatLight(HubitatEntity, Light):
         if "temp" in props:
             await self.send_command(CMD_SET_COLOR_TEMP, props["temp"])
 
-    async def async_turn_off(self, **kwargs) -> None:
+    async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the light."""
         _LOGGER.debug(f"Turning off {self.name}")
         await self.send_command("off")

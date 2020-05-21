@@ -10,7 +10,7 @@ repos:
     language: system
     types: [python]
     require_serial: true
-    files: ^(custom_components|tests)/.+\.py$
+    files: ^(custom_components|tests|stubs)/.+\.pyi?$
 - repo: local
   hooks:
   - id: flake8
@@ -28,7 +28,7 @@ repos:
     language: system
     types: [python]
     require_serial: true
-    files: ^(custom_components|tests)/.+\.py$
+    files: ^(custom_components|tests|stubs)/.+\.pyi?$
 - repo: local
   hooks:
   - id: mypy
@@ -37,4 +37,4 @@ repos:
     language: system
     types: [python]
     require_serial: true
-    files: ^(custom_components|tests)/.+\.py$
+    files: ^(custom_components|tests|stubs)/.+\.pyi?$

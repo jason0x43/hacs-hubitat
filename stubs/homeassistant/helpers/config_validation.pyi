@@ -1,0 +1,3 @@
+from typing import Any
+
+def entity_id(value: Any) -> str: ...

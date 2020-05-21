@@ -1,6 +1,7 @@
 """The Hubitat integration."""
 from asyncio import gather
 from logging import getLogger
+from typing import Any, Dict
 
 import voluptuous as vol
 
@@ -16,7 +17,7 @@ _LOGGER = getLogger(__name__)
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 
 
-async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+async def async_setup(hass: HomeAssistant, config: Dict[str, Any]) -> bool:
     """Legacy setup -- not implemented."""
     return True
 
@@ -35,7 +36,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hub.async_update_device_registry()
 
-    def stop_hub(event: Event):
+    def stop_hub(event: Event) -> None:
         hub.stop()
 
     hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_hub)

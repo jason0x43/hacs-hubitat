@@ -1,7 +1,7 @@
 from logging import getLogger
 from typing import Any, Optional, Tuple, Type
 
-from hubitatmaker import (
+from hubitatmaker.const import (
     ATTR_DOOR,
     ATTR_POSITION,
     ATTR_WINDOW_SHADE,
@@ -15,8 +15,8 @@ from hubitatmaker import (
     STATE_CLOSING,
     STATE_OPEN,
     STATE_OPENING,
-    Device,
 )
+from hubitatmaker.types import Device
 
 from homeassistant.components.cover import (
     ATTR_POSITION as HA_ATTR_POSITION,
@@ -95,7 +95,7 @@ class HubitatCover(HubitatEntity, CoverDevice):
         _LOGGER.debug("Opening %s", self.name)
         await self.send_command(CMD_OPEN)
 
-    async def async_set_cover_position(self, **kwargs):
+    async def async_set_cover_position(self, **kwargs: Any) -> None:
         """Move the cover to a specific position."""
         pos = kwargs[HA_ATTR_POSITION]
         _LOGGER.debug("Setting cover position to %s", pos)

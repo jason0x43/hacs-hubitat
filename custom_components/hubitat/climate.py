@@ -1,9 +1,9 @@
 """Support for Hubitat thermostats."""
 
 from logging import getLogger
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from hubitatmaker import (
+from hubitatmaker.const import (
     CAP_THERMOSTAT,
     CMD_AUTO,
     CMD_AWAY,
@@ -16,8 +16,8 @@ from hubitatmaker import (
     CMD_PRESENT,
     CMD_SET_COOLING_SETPOINT,
     CMD_SET_HEATING_SETPOINT,
-    Device,
 )
+from hubitatmaker.types import Device
 
 from homeassistant.components.climate import ClimateDevice
 from homeassistant.components.climate.const import (
@@ -263,7 +263,7 @@ class HubitatThermostat(HubitatEntity, ClimateDevice):
             await self.send_command(CMD_AWAY)
             await self.send_command(CMD_ECO)
 
-    async def async_set_temperature(self, **kwargs) -> None:
+    async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
         if self.hvac_mode == HVAC_MODE_HEAT_COOL:
             temp_low = kwargs.get(ATTR_TARGET_TEMP_LOW)

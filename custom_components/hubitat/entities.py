@@ -1,7 +1,7 @@
 from logging import getLogger
-from typing import Callable, List, Type
+from typing import Callable, List, Type, TypeVar
 
-from hubitatmaker import Device
+from hubitatmaker.types import Device
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -13,15 +13,17 @@ from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
+T = TypeVar("T", bound=HubitatEntity)
+
 
 async def create_and_add_entities(
     hass: HomeAssistant,
     entry: ConfigEntry,
     async_add_entities: EntityAdder,
     platform: str,
-    EntityClass: Type[HubitatEntity],
+    EntityClass: Type[T],
     is_entity: Callable[[Device], bool],
-) -> List[HubitatEntity]:
+) -> List[T]:
     """Create entites and add them to the entity registry."""
     hub = get_hub(hass, entry.entry_id)
     devices = hub.devices
@@ -61,7 +63,7 @@ async def create_and_add_event_emitters(
 
 
 async def _migrate_old_unique_ids(
-    hass: HomeAssistant, entities: List[HubitatEntity], platform: str
+    hass: HomeAssistant, entities: List[T], platform: str
 ) -> None:
     """Migrate legacy unique IDs to the current format."""
     _LOGGER.debug("Migrating unique_ids for %s...", platform)

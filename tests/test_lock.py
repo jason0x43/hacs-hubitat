@@ -1,30 +1,31 @@
-import hubitatmaker as hm
+from hubitatmaker.const import ATTR_LOCK_CODES
+from hubitatmaker.types import Attribute
 
 
-def test_normal_lock_codes(mocker) -> None:
+def test_normal_lock_codes(mocker) -> None:  # type: ignore
     hub = mocker.MagicMock()
     device = mocker.MagicMock()
     device.attributes = {
-        hm.ATTR_LOCK_CODES: hm.Attribute(
+        ATTR_LOCK_CODES: Attribute(
             {
-                "name": hm.ATTR_LOCK_CODES,
+                "name": ATTR_LOCK_CODES,
                 "currentValue": '{"1":{"name":"Test","code":"1234"}}',
             }
         )
     }
 
-    from custom_components.hubitat.lock import HubitatLock
+    from custom_components.hubitat.lock import HubitatLock  # type: ignore
 
     lock = HubitatLock(hub=hub, device=device)
     assert isinstance(lock.codes, dict)
 
 
-def test_encrypted_lock_codes(mocker) -> None:
+def test_encrypted_lock_codes(mocker) -> None:  # type: ignore
     hub = mocker.MagicMock()
     device = mocker.MagicMock()
     device.attributes = {
-        hm.ATTR_LOCK_CODES: hm.Attribute(
-            {"name": hm.ATTR_LOCK_CODES, "currentValue": "abc1235Qbxyz"}
+        ATTR_LOCK_CODES: Attribute(
+            {"name": ATTR_LOCK_CODES, "currentValue": "abc1235Qbxyz"}
         )
     }
 

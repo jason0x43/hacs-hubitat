@@ -4,7 +4,8 @@ from json import loads
 from logging import getLogger
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Union, cast
 
-from hubitatmaker import Device, Event, Hub as HubitatHub
+from hubitatmaker.hub import Hub as HubitatHub
+from hubitatmaker.types import Device, Event
 
 from homeassistant.components.sensor import DEVICE_CLASS_TEMPERATURE
 from homeassistant.config_entries import ConfigEntry
@@ -46,11 +47,11 @@ class Hub:
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry, index: int):
         """Initialize a Hubitat manager."""
         if CONF_HOST not in entry.data:
-            raise ValueError(f"Missing host in config entry")
+            raise ValueError("Missing host in config entry")
         if CONF_APP_ID not in entry.data:
-            raise ValueError(f"Missing app ID in config entry")
+            raise ValueError("Missing app ID in config entry")
         if CONF_ACCESS_TOKEN not in entry.data:
-            raise ValueError(f"Missing access token in config entry")
+            raise ValueError("Missing access token in config entry")
 
         self.hass = hass
         self.config_entry = entry
@@ -116,9 +117,9 @@ class Hub:
         """The units used for temperature values."""
         return self._temperature_unit
 
-    def add_device_listener(self, device_id: str, listener: Listener):
+    def add_device_listener(self, device_id: str, listener: Listener) -> None:
         """Add a listener for events for a specific device."""
-        return self._hub.add_device_listener(device_id, listener)
+        self._hub.add_device_listener(device_id, listener)
 
     def add_entities(self, entities: Sequence["HubitatEntity"]) -> None:
         """Add entities to this hub."""
@@ -166,7 +167,7 @@ class Hub:
             hass.async_create_task(
                 hass.config_entries.async_forward_entry_setup(config_entry, component)
             )
-        _LOGGER.debug(f"Registered platforms")
+        _LOGGER.debug("Registered platforms")
 
         # Create an entity for the Hubitat hub with basic hub information
         hass.states.async_set(
@@ -258,7 +259,7 @@ class Hub:
 class HubitatBase:
     """Base class for Hubitat entities and event emitters."""
 
-    def __init__(self, hub: Hub, device: Device):
+    def __init__(self, hub: Hub, device: Device) -> None:
         """Initialize a device."""
         self._hub = hub
         self._device: Device = device
@@ -335,7 +336,7 @@ class HubitatBase:
         val = self.get_str_attr(attr)
         if val is None:
             return None
-        return loads(val)
+        return cast(Dict[str, Any], loads(val))
 
     @callback
     def get_str_attr(self, attr: str) -> Optional[str]:
@@ -362,7 +363,9 @@ class HubitatEntity(HubitatBase, Entity):
     @property
     def is_disabled(self) -> bool:
         """Indicate whether this device is currently disabled."""
-        return self.registry_entry and self.registry_entry.disabled_by
+        if self.registry_entry:
+            return self.registry_entry.disabled_by is not None
+        return False
 
     async def async_update(self) -> None:
         """Fetch new data for this device."""
@@ -372,7 +375,7 @@ class HubitatEntity(HubitatBase, Entity):
         """Send a command to this device."""
         arg = ",".join([str(a) for a in args])
         await self._hub.send_command(self.device_id, command, arg)
-        _LOGGER.debug(f"sent %s to %s", command, self.device_id)
+        _LOGGER.debug("sent %s to %s", command, self.device_id)
 
     def handle_event(self, event: Event) -> None:
         """Handle a device event."""
@@ -400,7 +403,8 @@ class HubitatEventEmitter(HubitatBase):
 
 def get_hub(hass: HomeAssistant, entry_id: str) -> Hub:
     """Get the Hub device associated with a given config entry."""
-    return hass.data[DOMAIN][entry_id]
+    hub: Hub = hass.data[DOMAIN][entry_id]
+    return hub
 
 
 def to_event_dict(event: Event) -> Dict[str, Any]:

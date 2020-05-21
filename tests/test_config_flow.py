@@ -1,19 +1,21 @@
-import hubitatmaker
-import pytest
+import pytest  # type: ignore
 
 
 @pytest.mark.asyncio
-async def test_validate_input(mocker) -> None:
+async def test_validate_input(mocker) -> None:  # type: ignore
     check_called = False
 
-    async def check_config():
+    async def check_config() -> None:
         nonlocal check_called
         check_called = True
 
-    FakeHub = mocker.patch.object(hubitatmaker, "Hub")
-    mocker.patch.object(FakeHub.return_value, "check_config", check_config)
+    def set_host(host: str) -> None:
+        return
 
-    from custom_components.hubitat import config_flow
+    FakeHub = mocker.patch("hubitatmaker.hub.Hub")
+    FakeHub.return_value.check_config = check_config
+
+    from custom_components.hubitat import config_flow  # type: ignore
 
     with pytest.raises(KeyError):
         await config_flow.validate_input({})

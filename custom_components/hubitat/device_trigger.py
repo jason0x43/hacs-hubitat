@@ -1,9 +1,9 @@
 """Provide automation triggers for certain types of Hubitat device."""
 from itertools import chain
 import logging
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence
 
-from hubitatmaker import (
+from hubitatmaker.const import (
     ATTR_DEVICE_ID,
     ATTR_NAME,
     ATTR_NUM_BUTTONS,
@@ -12,8 +12,8 @@ from hubitatmaker import (
     CAP_HOLDABLE_BUTTON,
     CAP_LOCK,
     CAP_PUSHABLE_BUTTON,
-    Device,
 )
+from hubitatmaker.types import Device
 import voluptuous as vol
 
 from homeassistant.components.automation import AutomationActionType, event
@@ -22,11 +22,10 @@ from homeassistant.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
 )
 from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers.typing import ConfigType
 
-from . import DOMAIN
 from .const import (
     CONF_BUTTONS,
     CONF_DOUBLE_TAPPED,
@@ -35,6 +34,7 @@ from .const import (
     CONF_PUSHED,
     CONF_SUBTYPE,
     CONF_UNLOCKED_WITH_CODE,
+    DOMAIN,
     TRIGGER_CAPABILITIES,
 )
 from .device import get_hub
@@ -57,7 +57,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_validate_trigger_config(
-    hass: HomeAssistant, config: ConfigType
+    hass: HomeAssistant, config: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Validate a trigger config."""
     config = TRIGGER_SCHEMA(config)
@@ -98,7 +98,9 @@ async def async_validate_trigger_config(
     return config
 
 
-async def async_get_triggers(hass: HomeAssistant, device_id: str) -> Sequence[dict]:
+async def async_get_triggers(
+    hass: HomeAssistant, device_id: str
+) -> Sequence[Dict[str, Any]]:
     """List device triggers for Hubitat devices."""
     device = await get_hubitat_device(hass, device_id)
     if device is None:
@@ -139,8 +141,8 @@ async def async_attach_trigger(
     hass: HomeAssistant,
     config: ConfigType,
     action: AutomationActionType,
-    automation_info: dict,
-) -> CALLBACK_TYPE:
+    automation_info: Dict[str, Any],
+) -> Callable[[], None]:
     """Attach a trigger."""
     hubitat_device = await get_hubitat_device(hass, config[CONF_DEVICE_ID])
     if hubitat_device is None:
@@ -173,7 +175,7 @@ async def async_attach_trigger(
     )
 
 
-async def get_device(hass: HomeAssistant, device_id: str) -> DeviceEntry:
+async def get_device(hass: HomeAssistant, device_id: str) -> Optional[DeviceEntry]:
     """Return a Home Assistant device for a given ID."""
     device_registry = await hass.helpers.device_registry.async_get_registry()
     return device_registry.async_get(device_id)
@@ -182,6 +184,8 @@ async def get_device(hass: HomeAssistant, device_id: str) -> DeviceEntry:
 async def get_hubitat_device(hass: HomeAssistant, device_id: str) -> Optional[Device]:
     """Return a Hubitat device for a given Home Assistant device ID."""
     device = await get_device(hass, device_id)
+    if device is None:
+        return None
 
     hubitat_id = None
     for identifier in device.identifiers:
