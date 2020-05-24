@@ -14,7 +14,9 @@ This integration uses [Hubitat’s](hubitat.com) [Maker API](https://docs.hubita
   * [Event server](#event-server)
   * [Device types](#device-types)
 * [Updating](#updating)
-* [Debugging](#debugging)
+* [Troubleshooting](#troubleshooting)
+  * [Checking device capabilities](#checking-device-capabilities)
+  * [Logging](#logging)
 * [Developing](#developing)
 
 <!-- vim-markdown-toc -->
@@ -87,7 +89,150 @@ The update process depends on how the integration was installed. If it was insta
 
 Note that you will need to restart Home Assistant after updating, whichever method is used.
 
-## Debugging
+## Troubleshooting
+
+### Checking device capabilities
+
+If a device isn't showing up in Home Assistant in the way you expect (like, a fan is showing up as a light), the problem may be that this integration is having trouble telling what kind of device it is. The integration uses "capability" information from the Maker API to determine what type of device a given device is.
+
+You can display the capabilities for a particular device, along with other information, by making a request to the Maker API:
+
+```
+$ curl 'http://HUBITAT_ADDRESS/apps/api/MAKER_API_ID/devices/DEVICE_ID?access_token=TOKEN&prettyPrint=true
+```
+
+If you open your Maker API instance in Hubitat, example URLs are shown at the bottom of the page. You can query these URLs using a command like command like `curl`, as show above, or in a browser. You should see output like:
+
+<details>
+  <summary>(Expand for sample output)</summary>
+<pre>
+{
+    "id": "2178",
+    "name": "Virtual RGB light",
+    "label": "Virtual RGB light",
+    "attributes": [
+        {
+            "name": "RGB",
+            "currentValue": null,
+            "dataType": "STRING"
+        },
+        {
+            "name": "color",
+            "currentValue": null,
+            "dataType": "STRING"
+        },
+        {
+            "name": "colorName",
+            "currentValue": "Blue",
+            "dataType": "STRING"
+        },
+        {
+            "name": "hue",
+            "currentValue": 66,
+            "dataType": "NUMBER"
+        },
+        {
+            "name": "level",
+            "currentValue": 74,
+            "dataType": "NUMBER"
+        },
+        {
+            "name": "saturation",
+            "currentValue": 57,
+            "dataType": "NUMBER"
+        },
+        {
+            "name": "switch",
+            "currentValue": "on",
+            "dataType": "ENUM",
+            "values": [
+                "on",
+                "off"
+            ]
+        },
+        {
+            "name": "switch",
+            "currentValue": "on",
+            "dataType": "ENUM",
+            "values": [
+                "on",
+                "off"
+            ]
+        }
+    ],
+    "capabilities": [
+        "Switch",
+        {
+            "attributes": [
+                {
+                    "name": "switch",
+                    "dataType": null
+                }
+            ]
+        },
+        "SwitchLevel",
+        {
+            "attributes": [
+                {
+                    "name": "level",
+                    "dataType": null
+                }
+            ]
+        },
+        "ColorControl",
+        {
+            "attributes": [
+                {
+                    "name": "hue",
+                    "dataType": null
+                },
+                {
+                    "name": "saturation",
+                    "dataType": null
+                },
+                {
+                    "name": "color",
+                    "dataType": null
+                },
+                {
+                    "name": "colorName",
+                    "dataType": null
+                },
+                {
+                    "name": "RGB",
+                    "dataType": null
+                }
+            ]
+        },
+        "Actuator",
+        "Light",
+        {
+            "attributes": [
+                {
+                    "name": "switch",
+                    "dataType": null
+                }
+            ]
+        }
+    ],
+    "commands": [
+        "off",
+        "off",
+        "on",
+        "on",
+        "setColor",
+        "setHue",
+        "setLevel",
+        "setSaturation"
+    ]
+}
+</pre>
+</details>
+<br>
+
+If you open an issue for a broken device, this information may be useful to include.
+
+### Logging
 
 If you run into problems, one of the first steps to take is to enable debug logging for the Hubitat integration. This will provide more insight into what the integration is doing, and may help track down problems. To enable debug logging:
 
