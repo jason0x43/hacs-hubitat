@@ -19,7 +19,6 @@ from hubitatmaker.const import (
 )
 from hubitatmaker.types import Device
 
-from homeassistant.components.climate import ClimateDevice
 from homeassistant.components.climate.const import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
@@ -50,6 +49,12 @@ from homeassistant.core import HomeAssistant
 from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .types import EntityAdder
+
+try:
+    from homeassistant.components.climate import ClimateEntity
+except ImportError:
+    from homeassistant.components.climate import ClimateDevice as ClimateEntity  # type: ignore
+
 
 _LOGGER = getLogger(__name__)
 
@@ -105,7 +110,7 @@ FAN_MODE_CIRCULATE = "circulate"
 HASS_FAN_MODES = [FAN_ON, FAN_AUTO]
 
 
-class HubitatThermostat(HubitatEntity, ClimateDevice):
+class HubitatThermostat(HubitatEntity, ClimateEntity):
     """Representation of a Hubitat switch."""
 
     @property

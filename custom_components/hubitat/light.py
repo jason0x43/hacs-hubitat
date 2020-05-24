@@ -26,7 +26,6 @@ from homeassistant.components.light import (
     SUPPORT_BRIGHTNESS,
     SUPPORT_COLOR,
     SUPPORT_COLOR_TEMP,
-    Light,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -38,10 +37,16 @@ from .entities import create_and_add_entities
 from .fan import is_fan
 from .types import EntityAdder
 
+try:
+    from homeassistant.components.light import LightEntity
+except ImportError:
+    from homeassistant.components.light import Light as LightEntity  # type: ignore
+
+
 _LOGGER = getLogger(__name__)
 
 
-class HubitatLight(HubitatEntity, Light):
+class HubitatLight(HubitatEntity, LightEntity):
     """Representation of a Hubitat light."""
 
     @property

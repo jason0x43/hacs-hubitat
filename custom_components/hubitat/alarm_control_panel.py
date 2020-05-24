@@ -37,7 +37,6 @@ from homeassistant.components.alarm_control_panel import (
     SUPPORT_ALARM_ARM_HOME,
     SUPPORT_ALARM_ARM_NIGHT,
     SUPPORT_ALARM_TRIGGER,
-    AlarmControlPanel,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -73,6 +72,14 @@ from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .types import EntityAdder
 
+try:
+    from homeassistant.components.alarm_control_panel import AlarmControlPanelEntity
+except ImportError:
+    from homeassistant.components.alarm_control_panel import (  # type: ignore
+        AlarmControlPanel as AlarmControlPanelEntity,
+    )
+
+
 _LOGGER = getLogger(__name__)
 
 CLEAR_CODE_SCHEMA = vol.Schema(
@@ -94,7 +101,7 @@ SET_DELAY_SCHEMA = vol.Schema(
 )
 
 
-class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanel):
+class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
     """Representation of a Hubitat security keypad."""
 
     @property

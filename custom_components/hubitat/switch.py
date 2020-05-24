@@ -19,11 +19,7 @@ from hubitatmaker.const import (
 from hubitatmaker.types import Device
 import voluptuous as vol
 
-from homeassistant.components.switch import (
-    DEVICE_CLASS_OUTLET,
-    DEVICE_CLASS_SWITCH,
-    SwitchDevice,
-)
+from homeassistant.components.switch import DEVICE_CLASS_OUTLET, DEVICE_CLASS_SWITCH
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -36,6 +32,12 @@ from .fan import is_fan
 from .light import is_light
 from .types import EntityAdder
 
+try:
+    from homeassistant.components.switch import SwitchEntity
+except ImportError:
+    from homeassistant.components.switch import SwitchDevice as SwitchEntity  # type: ignore
+
+
 _LOGGER = getLogger(__name__)
 
 _NAME_TEST = re.compile(r"\bswitch\b", re.IGNORECASE)
@@ -43,7 +45,7 @@ _NAME_TEST = re.compile(r"\bswitch\b", re.IGNORECASE)
 ENTITY_SCHEMA = vol.Schema({vol.Required(ATTR_ENTITY_ID): cv.entity_id})
 
 
-class HubitatSwitch(HubitatEntity, SwitchDevice):
+class HubitatSwitch(HubitatEntity, SwitchEntity):
     """Representation of a Hubitat switch."""
 
     @property

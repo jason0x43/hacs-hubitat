@@ -25,7 +25,6 @@ from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_PRESENCE,
     DEVICE_CLASS_SMOKE,
     DEVICE_CLASS_WINDOW,
-    BinarySensorDevice,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -33,6 +32,14 @@ from homeassistant.core import HomeAssistant
 from .device import Hub, HubitatEntity
 from .entities import create_and_add_entities
 from .types import EntityAdder
+
+try:
+    from homeassistant.components.binary_sensor import BinarySensorEntity
+except ImportError:
+    from homeassistant.components.binary_sensor import (  # type: ignore
+        BinarySensorDevice as BinarySensorEntity,
+    )
+
 
 _LOGGER = getLogger(__name__)
 
@@ -42,7 +49,7 @@ _CONTACT_MATCHERS = (
 )
 
 
-class HubitatBinarySensor(HubitatEntity, BinarySensorDevice):
+class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):
     """A generic Hubitat sensor."""
 
     _active_state: str

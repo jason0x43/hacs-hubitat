@@ -15,7 +15,6 @@ from hubitatmaker.const import (
 from hubitatmaker.types import Device
 import voluptuous as vol
 
-from homeassistant.components.lock import LockDevice
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -39,6 +38,12 @@ from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .types import EntityAdder
 
+try:
+    from homeassistant.components.lock import LockEntity
+except ImportError:
+    from homeassistant.components.lock import LockDevice as LockEntity  # type: ignore
+
+
 _LOGGER = getLogger(__name__)
 
 
@@ -58,7 +63,7 @@ SET_CODE_LENGTH_SCHEMA = vol.Schema(
 )
 
 
-class HubitatLock(HubitatEntity, LockDevice):
+class HubitatLock(HubitatEntity, LockEntity):
     """Representation of a Hubitat lock."""
 
     @property

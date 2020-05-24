@@ -26,7 +26,6 @@ from homeassistant.components.cover import (
     SUPPORT_CLOSE,
     SUPPORT_OPEN,
     SUPPORT_SET_POSITION,
-    CoverDevice,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -35,10 +34,16 @@ from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .types import EntityAdder
 
+try:
+    from homeassistant.components.cover import CoverEntity
+except ImportError:
+    from homeassistant.components.cover import CoverDevice as CoverEntity  # type: ignore
+
+
 _LOGGER = getLogger(__name__)
 
 
-class HubitatCover(HubitatEntity, CoverDevice):
+class HubitatCover(HubitatEntity, CoverEntity):
     """Representation of a Hubitat cover."""
 
     _attribute: str
