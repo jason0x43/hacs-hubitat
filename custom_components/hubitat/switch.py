@@ -155,7 +155,7 @@ async def async_setup_entry(
         lambda dev: is_switch(dev) and is_energy_meter(dev),
     )
 
-    create_and_add_event_emitters(hass, entry, is_button_controller)
+    await create_and_add_event_emitters(hass, entry, is_button_controller)
 
     alarms = await create_and_add_entities(
         hass, entry, async_add_entities, "switch", HubitatAlarm, is_alarm
