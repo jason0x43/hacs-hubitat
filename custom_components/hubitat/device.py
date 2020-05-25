@@ -399,6 +399,10 @@ class HubitatEventEmitter(HubitatBase):
         dreg.async_get_or_create(config_entry_id=entry.entry_id, **self.device_info)
         _LOGGER.debug("Created device for %s", self)
 
+    def __repr__(self) -> str:
+        """Return the representation."""
+        return f"<HubitatEventEmitter {self.name}>"
+
 
 def get_hub(hass: HomeAssistant, entry_id: str) -> Hub:
     """Get the Hub device associated with a given config entry."""
