@@ -3,7 +3,7 @@
 from logging import getLogger
 from typing import Any, List, Optional
 
-from hubitatmaker.const import (
+from hubitatmaker import (
     ATTR_SPEED,
     ATTR_SWITCH,
     CAP_FAN_CONTROL,
@@ -15,8 +15,8 @@ from hubitatmaker.const import (
     STATE_LOW,
     STATE_OFF,
     STATE_ON,
+    Device,
 )
-from hubitatmaker.types import Device
 
 from homeassistant.components.fan import FanEntity
 from homeassistant.config_entries import ConfigEntry

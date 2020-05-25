@@ -3,7 +3,7 @@ from itertools import chain
 import logging
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
-from hubitatmaker.const import (
+from hubitatmaker import (
     ATTR_DEVICE_ID,
     ATTR_NAME,
     ATTR_NUM_BUTTONS,
@@ -12,8 +12,8 @@ from hubitatmaker.const import (
     CAP_HOLDABLE_BUTTON,
     CAP_LOCK,
     CAP_PUSHABLE_BUTTON,
+    Device,
 )
-from hubitatmaker.types import Device
 import voluptuous as vol
 
 from homeassistant.components.automation import AutomationActionType, event

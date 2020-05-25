@@ -3,7 +3,7 @@
 from logging import getLogger
 from typing import Any, List, Optional
 
-from hubitatmaker.const import (
+from hubitatmaker import (
     CAP_THERMOSTAT,
     CMD_AUTO,
     CMD_AWAY,
@@ -16,8 +16,8 @@ from hubitatmaker.const import (
     CMD_PRESENT,
     CMD_SET_COOLING_SETPOINT,
     CMD_SET_HEATING_SETPOINT,
+    Device,
 )
-from hubitatmaker.types import Device
 
 from homeassistant.components.climate.const import (
     ATTR_TARGET_TEMP_HIGH,

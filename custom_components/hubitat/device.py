@@ -4,8 +4,7 @@ from json import loads
 from logging import getLogger
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Union, cast
 
-from hubitatmaker.hub import Hub as HubitatHub
-from hubitatmaker.types import Device, Event
+from hubitatmaker import Device, Event, Hub as HubitatHub
 
 from homeassistant.components.sensor import DEVICE_CLASS_TEMPERATURE
 from homeassistant.config_entries import ConfigEntry

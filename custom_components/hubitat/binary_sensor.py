@@ -4,7 +4,7 @@ from logging import getLogger
 import re
 from typing import Optional, Tuple, Type
 
-from hubitatmaker.const import (
+from hubitatmaker import (
     ATTR_ACCELERATION,
     ATTR_CARBON_MONOXIDE,
     ATTR_CONTACT,
@@ -12,8 +12,8 @@ from hubitatmaker.const import (
     ATTR_PRESENCE,
     ATTR_SMOKE,
     ATTR_WATER,
+    Device,
 )
-from hubitatmaker.types import Device
 
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_DOOR,

@@ -1,7 +1,7 @@
 from logging import getLogger
 from typing import Any, Optional, Tuple, Type
 
-from hubitatmaker.const import (
+from hubitatmaker import (
     ATTR_DOOR,
     ATTR_POSITION,
     ATTR_WINDOW_SHADE,
@@ -15,8 +15,8 @@ from hubitatmaker.const import (
     STATE_CLOSING,
     STATE_OPEN,
     STATE_OPENING,
+    Device,
 )
-from hubitatmaker.types import Device
 
 from homeassistant.components.cover import (
     ATTR_POSITION as HA_ATTR_POSITION,

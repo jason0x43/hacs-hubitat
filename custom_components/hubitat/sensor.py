@@ -3,7 +3,7 @@
 from logging import getLogger
 from typing import Any, Optional, Tuple, Type, Union
 
-from hubitatmaker.const import (
+from hubitatmaker import (
     ATTR_BATTERY,
     ATTR_HUMIDITY,
     ATTR_ILLUMINANCE,

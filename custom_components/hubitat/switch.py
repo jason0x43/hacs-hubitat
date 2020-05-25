@@ -4,7 +4,7 @@ from logging import getLogger
 import re
 from typing import Any, Optional
 
-from hubitatmaker.const import (
+from hubitatmaker import (
     CAP_ALARM,
     CAP_DOUBLE_TAPABLE_BUTTON,
     CAP_HOLDABLE_BUTTON,
@@ -15,8 +15,8 @@ from hubitatmaker.const import (
     CMD_ON,
     CMD_SIREN,
     CMD_STROBE,
+    Device,
 )
-from hubitatmaker.types import Device
 import voluptuous as vol
 
 from homeassistant.components.switch import DEVICE_CLASS_OUTLET, DEVICE_CLASS_SWITCH

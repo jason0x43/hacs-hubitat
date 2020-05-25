@@ -3,13 +3,13 @@ from copy import deepcopy
 import logging
 from typing import Any, Dict, Optional
 
-from hubitatmaker.error import (
+from hubitatmaker import (
     ConnectionError,
+    Hub as HubitatHub,
     InvalidConfig,
     InvalidToken,
     RequestError,
 )
-from hubitatmaker.hub import Hub as HubitatHub
 import voluptuous as vol
 
 from homeassistant.config_entries import (

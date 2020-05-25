@@ -5,7 +5,7 @@ from logging import getLogger
 import re
 from typing import Any, Dict, List, Optional, Union
 
-from hubitatmaker.const import (
+from hubitatmaker import (
     CAP_COLOR_CONTROL,
     CAP_COLOR_TEMP,
     CAP_LIGHT,
@@ -15,8 +15,8 @@ from hubitatmaker.const import (
     CMD_SET_COLOR,
     CMD_SET_COLOR_TEMP,
     CMD_SET_LEVEL,
+    Device,
 )
-from hubitatmaker.types import Device
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,

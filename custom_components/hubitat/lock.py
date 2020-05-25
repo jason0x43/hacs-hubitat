@@ -1,7 +1,7 @@
 from logging import getLogger
 from typing import Any, Dict, Optional, Union, cast
 
-from hubitatmaker.const import (
+from hubitatmaker import (
     ATTR_LOCK,
     ATTR_LOCK_CODES,
     CAP_LOCK,
@@ -11,8 +11,8 @@ from hubitatmaker.const import (
     CMD_SET_CODE_LENGTH,
     CMD_UNLOCK,
     STATE_LOCKED,
+    Device,
 )
-from hubitatmaker.types import Device
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry

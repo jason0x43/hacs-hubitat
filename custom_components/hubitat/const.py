@@ -1,7 +1,7 @@
 """Constants for the Hubitat integration."""
 from typing import Optional, Sequence
 
-from hubitatmaker.const import (
+from hubitatmaker import (
     ATTR_DOUBLE_TAPPED as HE_ATTR_DOUBLE_TAPPED,
     ATTR_HELD as HE_ATTR_HELD,
     ATTR_LAST_CODE_NAME as HE_ATTR_LAST_CODE_NAME,

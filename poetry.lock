@@ -205,7 +205,7 @@ description = "the modular source code checker: pep8 pyflakes and co"
 name = "flake8"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,>=2.7"
-version = "3.8.1"
+version = "3.8.2"
 
 [package.dependencies]
 mccabe = ">=0.6.0,<0.7.0"
@@ -243,7 +243,7 @@ description = "Open-source home automation platform running on Python 3."
 name = "homeassistant"
 optional = false
 python-versions = ">=3.7.0"
-version = "0.110.0"
+version = "0.110.2"
 
 [package.dependencies]
 PyJWT = "1.7.1"
@@ -272,7 +272,7 @@ description = "A library for interfacing with Hubitat via its Maker API"
 name = "hubitatmaker"
 optional = false
 python-versions = ">=3.6"
-version = "0.3.7"
+version = "0.3.9"
 
 [package.dependencies]
 aiohttp = ">=3"
@@ -284,7 +284,7 @@ description = "File identification library for Python"
 name = "identify"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,>=2.7"
-version = "1.4.15"
+version = "1.4.16"
 
 [package.extras]
 license = ["editdistance"]
@@ -641,7 +641,7 @@ description = "Python 2 and 3 compatibility utilities"
 name = "six"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
-version = "1.14.0"
+version = "1.15.0"
 
 [[package]]
 category = "dev"
@@ -752,7 +752,6 @@ multidict = ">=4.0"
 [[package]]
 category = "dev"
 description = "Backport of pathlib-compatible object wrapper for zip files"
-marker = "python_version < \"3.8\""
 name = "zipp"
 optional = false
 python-versions = ">=3.6"
@@ -763,7 +762,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "3658979396424d529b7e37bc8a1f2173ba6180c1f9dc0b5dc8befd1176c0f70e"
+content-hash = "bc96069199a5a21ece431260e068e4c7d902af5d77899c35f5516638d5f9b9ec"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -908,8 +907,8 @@ filelock = [
     {file = "filelock-3.0.12.tar.gz", hash = "sha256:18d82244ee114f543149c66a6e0c14e9c4f8a1044b5cdaadd0f82159d6a6ff59"},
 ]
 flake8 = [
-    {file = "flake8-3.8.1-py2.py3-none-any.whl", hash = "sha256:6c1193b0c3f853ef763969238f6c81e9e63ace9d024518edc020d5f1d6d93195"},
-    {file = "flake8-3.8.1.tar.gz", hash = "sha256:ea6623797bf9a52f4c9577d780da0bb17d65f870213f7b5bcc9fca82540c31d5"},
+    {file = "flake8-3.8.2-py2.py3-none-any.whl", hash = "sha256:ccaa799ef9893cebe69fdfefed76865aeaefbb94cb8545617b2298786a4de9a5"},
+    {file = "flake8-3.8.2.tar.gz", hash = "sha256:c69ac1668e434d37a2d2880b3ca9aafd54b3a10a3ac1ab101d22f29e29cf8634"},
 ]
 flake8-pyi = [
     {file = "flake8-pyi-20.5.0.tar.gz", hash = "sha256:f3db4d6feaec5343741feb07c75ab4f00be742f71ec2cad82d89a33b9326f8fe"},
@@ -920,16 +919,16 @@ getmac = [
     {file = "getmac-0.8.2.tar.gz", hash = "sha256:d501d20b71856248cfa07a8758192e86a01077910afb8b659a89946c4d52d368"},
 ]
 homeassistant = [
-    {file = "homeassistant-0.110.0-py3-none-any.whl", hash = "sha256:b880640bb4b21b13db6a647a78c6961c4a3d37b96e0356bfc2da6af545bd75fd"},
-    {file = "homeassistant-0.110.0.tar.gz", hash = "sha256:2760b16d12b776e2a9bf3b62a2b4fe0c3af0d88ca818dca90b3ce94846e8a023"},
+    {file = "homeassistant-0.110.2-py3-none-any.whl", hash = "sha256:09423dbc5695af5f5ea28ed52d64ed94c7fe25042cd49fda3d81ad77a96bce20"},
+    {file = "homeassistant-0.110.2.tar.gz", hash = "sha256:ead56c683f90be092e58788844faaaad4fbcdef6a8d0ceb1e7ade8e657d6dde4"},
 ]
 hubitatmaker = [
-    {file = "hubitatmaker-0.3.7-py3-none-any.whl", hash = "sha256:e53a42de4a2299abd8cd973a7700cd5f821b295c3e9e61cf435ebafbdc9bee19"},
-    {file = "hubitatmaker-0.3.7.tar.gz", hash = "sha256:35a5e7f4d08cba51579317ef30b94b82fabdb3df8020095fdcc90747b592fd4a"},
+    {file = "hubitatmaker-0.3.9-py3-none-any.whl", hash = "sha256:a658021d3d3ba8ffcbe1398c3f6bfacd2bc4cedc5ccc374c249f985e19dde46e"},
+    {file = "hubitatmaker-0.3.9.tar.gz", hash = "sha256:0de3d3e7b49e21352e970d0602c20c34d0033e202b83557507945bf3d812377c"},
 ]
 identify = [
-    {file = "identify-1.4.15-py2.py3-none-any.whl", hash = "sha256:88ed90632023e52a6495749c6732e61e08ec9f4f04e95484a5c37b9caf40283c"},
-    {file = "identify-1.4.15.tar.gz", hash = "sha256:23c18d97bb50e05be1a54917ee45cc61d57cb96aedc06aabb2b02331edf0dbf0"},
+    {file = "identify-1.4.16-py2.py3-none-any.whl", hash = "sha256:0f3c3aac62b51b86fea6ff52fe8ff9e06f57f10411502443809064d23e16f1c2"},
+    {file = "identify-1.4.16.tar.gz", hash = "sha256:f9ad3d41f01e98eb066b6e05c5b184fd1e925fadec48eb165b4e01c72a1ef3a7"},
 ]
 idna = [
     {file = "idna-2.9-py2.py3-none-any.whl", hash = "sha256:a068a21ceac8a4d63dbfd964670474107f541babbd2250d61922f029858365fa"},
@@ -1151,8 +1150,8 @@ requests = [
     {file = "ruamel.yaml-0.15.100.tar.gz", hash = "sha256:8e42f3067a59e819935a2926e247170ed93c8f0b2ab64526f888e026854db2e4"},
 ]
 six = [
-    {file = "six-1.14.0-py2.py3-none-any.whl", hash = "sha256:8f3cd2e254d8f793e7f3d6d9df77b92252b52637291d0f0da013c76ea2724b6c"},
-    {file = "six-1.14.0.tar.gz", hash = "sha256:236bdbdce46e6e6a3d61a337c0f8b763ca1e8717c03b369e87a7ec7ce1319c0a"},
+    {file = "six-1.15.0-py2.py3-none-any.whl", hash = "sha256:8b74bedcbbbaca38ff6d7491d76f2b06b3592611af620f8426e82dddb04a5ced"},
+    {file = "six-1.15.0.tar.gz", hash = "sha256:30639c035cdb23534cd4aa2dd52c3bf48f06e5f4a941509c8bafd8ce11080259"},
 ]
 text-unidecode = [
     {file = "text-unidecode-1.3.tar.gz", hash = "sha256:bad6603bb14d279193107714b288be206cac565dfa49aa5b105294dd5c4aab93"},

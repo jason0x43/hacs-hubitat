@@ -1,7 +1,7 @@
 from logging import getLogger
 from typing import Callable, List, Type, TypeVar
 
-from hubitatmaker.types import Device
+from hubitatmaker import Device
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
