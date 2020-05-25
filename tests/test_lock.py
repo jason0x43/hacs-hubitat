@@ -14,7 +14,7 @@ def test_normal_lock_codes(mocker) -> None:  # type: ignore
         )
     }
 
-    from custom_components.hubitat.lock import HubitatLock  # type: ignore
+    from custom_components.hubitat.lock import HubitatLock
 
     lock = HubitatLock(hub=hub, device=device)
     assert isinstance(lock.codes, dict)

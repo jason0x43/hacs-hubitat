@@ -1,4 +1,4 @@
-import pytest  # type: ignore
+import pytest
 
 
 @pytest.mark.asyncio
@@ -12,10 +12,10 @@ async def test_validate_input(mocker) -> None:  # type: ignore
     def set_host(host: str) -> None:
         return
 
-    FakeHub = mocker.patch("hubitatmaker.hub.Hub")
+    FakeHub = mocker.patch("hubitatmaker.Hub")
     FakeHub.return_value.check_config = check_config
 
-    from custom_components.hubitat import config_flow  # type: ignore
+    from custom_components.hubitat import config_flow
 
     with pytest.raises(KeyError):
         await config_flow.validate_input({})
