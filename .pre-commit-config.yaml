@@ -31,23 +31,10 @@ repos:
     files: ^(custom_components|tests|stubs)/.+\.pyi?$
 - repo: local
   hooks:
-  - id: mypy_pkg
-    name: mypy_pkg
+  - id: mypy
+    name: mypy
     entry: poetry run mypy
     language: system
     types: [python]
     require_serial: true
-    files: ^(custom_components|stubs)/.+\.pyi?$
-- repo: local
-  hooks:
-  - id: mypy_tests
-    name: mypy_tests
-    entry: poetry run mypy
-    language: system
-    types: [python]
-    require_serial: true
-    files: ^(tests)/.+\.py$
-    args:
-      - --namespace-packages
-      - --ignore-missing-imports
-      - --allow-untyped-decorators
+    files: ^(custom_components|tests|stubs)/.+\.pyi?$
