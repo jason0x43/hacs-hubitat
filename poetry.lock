@@ -48,6 +48,14 @@ version = "3.0.1"
 
 [[package]]
 category = "dev"
+description = "Enhance the standard unittest package with features for testing asyncio libraries"
+name = "asynctest"
+optional = false
+python-versions = ">=3.5"
+version = "0.13.0"
+
+[[package]]
+category = "dev"
 description = "Atomic file writes."
 marker = "sys_platform == \"win32\""
 name = "atomicwrites"
@@ -541,6 +549,18 @@ testing = ["argcomplete", "hypothesis (>=3.56)", "mock", "nose", "requests", "xm
 
 [[package]]
 category = "dev"
+description = "pytest plugin for aiohttp support"
+name = "pytest-aiohttp"
+optional = false
+python-versions = "*"
+version = "0.3.0"
+
+[package.dependencies]
+aiohttp = ">=2.3.5"
+pytest = "*"
+
+[[package]]
+category = "dev"
 description = "Pytest support for asyncio."
 name = "pytest-asyncio"
 optional = false
@@ -552,20 +572,6 @@ pytest = ">=5.4.0"
 
 [package.extras]
 testing = ["async_generator (>=1.3)", "coverage", "hypothesis (>=5.7.1)"]
-
-[[package]]
-category = "dev"
-description = "Thin-wrapper around the mock package for easier use with pytest"
-name = "pytest-mock"
-optional = false
-python-versions = ">=3.5"
-version = "3.1.0"
-
-[package.dependencies]
-pytest = ">=2.7"
-
-[package.extras]
-dev = ["pre-commit", "tox", "pytest-asyncio"]
 
 [[package]]
 category = "dev"
@@ -762,7 +768,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "bc96069199a5a21ece431260e068e4c7d902af5d77899c35f5516638d5f9b9ec"
+content-hash = "0d35568587913b4953654b110454778e2d0f8f78d91e488e76f9b93e287c04f5"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -792,6 +798,10 @@ astral = [
 async-timeout = [
     {file = "async-timeout-3.0.1.tar.gz", hash = "sha256:0c3c816a028d47f659d6ff5c745cb2acf1f966da1fe5c19c77a70282b25f4c5f"},
     {file = "async_timeout-3.0.1-py3-none-any.whl", hash = "sha256:4291ca197d287d274d0b6cb5d6f8f8f82d434ed288f962539ff18cc9012f9ea3"},
+]
+asynctest = [
+    {file = "asynctest-0.13.0-py3-none-any.whl", hash = "sha256:5da6118a7e6d6b54d83a8f7197769d046922a44d2a99c21382f0a6e4fadae676"},
+    {file = "asynctest-0.13.0.tar.gz", hash = "sha256:c27862842d15d83e6a34eb0b2866c323880eb3a75e4485b079ea11748fd77fac"},
 ]
 atomicwrites = [
     {file = "atomicwrites-1.4.0-py2.py3-none-any.whl", hash = "sha256:6d1784dea7c0c8d4a5172b6c620f40b6e4cbfdf96d783691f2e1302a7b88e197"},
@@ -1075,12 +1085,12 @@ pytest = [
     {file = "pytest-5.4.2-py3-none-any.whl", hash = "sha256:95c710d0a72d91c13fae35dce195633c929c3792f54125919847fdcdf7caa0d3"},
     {file = "pytest-5.4.2.tar.gz", hash = "sha256:eb2b5e935f6a019317e455b6da83dd8650ac9ffd2ee73a7b657a30873d67a698"},
 ]
+pytest-aiohttp = [
+    {file = "pytest-aiohttp-0.3.0.tar.gz", hash = "sha256:c929854339637977375838703b62fef63528598bc0a9d451639eba95f4aaa44f"},
+    {file = "pytest_aiohttp-0.3.0-py3-none-any.whl", hash = "sha256:0b9b660b146a65e1313e2083d0d2e1f63047797354af9a28d6b7c9f0726fa33d"},
+]
 pytest-asyncio = [
     {file = "pytest-asyncio-0.12.0.tar.gz", hash = "sha256:475bd2f3dc0bc11d2463656b3cbaafdbec5a47b47508ea0b329ee693040eebd2"},
-]
-pytest-mock = [
-    {file = "pytest-mock-3.1.0.tar.gz", hash = "sha256:ce610831cedeff5331f4e2fc453a5dd65384303f680ab34bee2c6533855b431c"},
-    {file = "pytest_mock-3.1.0-py2.py3-none-any.whl", hash = "sha256:997729451dfc36b851a9accf675488c7020beccda15e11c75632ee3d1b1ccd71"},
 ]
 python-slugify = [
     {file = "python-slugify-4.0.0.tar.gz", hash = "sha256:a8fc3433821140e8f409a9831d13ae5deccd0b033d4744d94b31fea141bdd84c"},

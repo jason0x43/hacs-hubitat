@@ -1,19 +1,26 @@
+from asyncio import Future
+from typing import Awaitable
+
 import pytest
 
+from tests.async_mock import patch
 
-@pytest.mark.asyncio
-async def test_validate_input(mocker) -> None:  # type: ignore
+
+@patch("custom_components.hubitat.config_flow.HubitatHub")
+async def test_validate_input(HubitatHub) -> None:
     check_called = False
 
-    async def check_config() -> None:
+    def check_config() -> Awaitable[None]:
         nonlocal check_called
         check_called = True
+        future: Future[None] = Future()
+        future.set_result(None)
+        return future
 
     def set_host(host: str) -> None:
         return
 
-    FakeHub = mocker.patch("hubitatmaker.Hub")
-    FakeHub.return_value.check_config = check_config
+    HubitatHub.return_value.check_config = check_config
 
     from custom_components.hubitat import config_flow
 

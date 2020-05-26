@@ -1,10 +1,12 @@
 from hubitatmaker.const import ATTR_LOCK_CODES
 from hubitatmaker.types import Attribute
 
+from tests.async_mock import MagicMock
 
-def test_normal_lock_codes(mocker) -> None:  # type: ignore
-    hub = mocker.MagicMock()
-    device = mocker.MagicMock()
+
+def test_normal_lock_codes() -> None:
+    hub = MagicMock()
+    device = MagicMock()
     device.attributes = {
         ATTR_LOCK_CODES: Attribute(
             {
@@ -20,9 +22,9 @@ def test_normal_lock_codes(mocker) -> None:  # type: ignore
     assert isinstance(lock.codes, dict)
 
 
-def test_encrypted_lock_codes(mocker) -> None:  # type: ignore
-    hub = mocker.MagicMock()
-    device = mocker.MagicMock()
+def test_encrypted_lock_codes() -> None:
+    hub = MagicMock()
+    device = MagicMock()
     device.attributes = {
         ATTR_LOCK_CODES: Attribute(
             {"name": ATTR_LOCK_CODES, "currentValue": "abc1235Qbxyz"}
