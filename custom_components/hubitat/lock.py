@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import Any, Dict, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
 from hubitatmaker import (
     ATTR_LOCK,
@@ -107,6 +107,22 @@ class HubitatLock(HubitatEntity, LockEntity):
             ATTR_LAST_CODE_NAME: self.last_code_name,
             ATTR_MAX_CODES: self.max_codes,
         }
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID for this lock."""
+        return f"{super().unique_id}::lock"
+
+    @property
+    def old_unique_id(self) -> Union[str, List[str]]:
+        """Return the legacy unique ID for this lock."""
+        old_ids = [super().unique_id]
+        old_parent_ids = super().old_unique_id
+        if isinstance(old_parent_ids, list):
+            old_ids.extend(old_parent_ids)
+        else:
+            old_ids.append(old_parent_ids)
+        return old_ids
 
     async def async_lock(self, **kwargs: Any) -> None:
         """Lock the lock."""

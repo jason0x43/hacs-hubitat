@@ -1,7 +1,7 @@
 """Support for Hubitat thermostats."""
 
 from logging import getLogger
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 from hubitatmaker import (
     CAP_THERMOSTAT,
@@ -237,6 +237,22 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         if temp is None or temp > 50:
             return TEMP_FAHRENHEIT
         return TEMP_CELSIUS
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID for this climate."""
+        return f"{super().unique_id}::climate"
+
+    @property
+    def old_unique_id(self) -> Union[str, List[str]]:
+        """Return the legacy unique ID for this climate."""
+        old_ids = [super().unique_id]
+        old_parent_ids = super().old_unique_id
+        if isinstance(old_parent_ids, list):
+            old_ids.extend(old_parent_ids)
+        else:
+            old_ids.append(old_parent_ids)
+        return old_ids
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new target fan mode."""

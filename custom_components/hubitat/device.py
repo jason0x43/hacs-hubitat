@@ -283,7 +283,7 @@ class HubitatBase:
         }
 
     @property
-    def old_unique_id(self) -> str:
+    def old_unique_id(self) -> Union[str, List[str]]:
         """Return the legacy unique for this device."""
         return self._old_id
 

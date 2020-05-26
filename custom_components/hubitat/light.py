@@ -34,7 +34,6 @@ from homeassistant.util import color as color_util
 from .cover import is_cover
 from .device import HubitatEntity
 from .entities import create_and_add_entities
-from .fan import is_fan
 from .types import EntityAdder
 
 try:
@@ -94,6 +93,22 @@ class HubitatLight(HubitatEntity, LightEntity):
             features |= SUPPORT_BRIGHTNESS
 
         return features
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID for this light."""
+        return f"{super().unique_id}::light"
+
+    @property
+    def old_unique_id(self) -> Union[str, List[str]]:
+        """Return the legacy unique ID for this light."""
+        old_ids = [super().unique_id]
+        old_parent_ids = super().old_unique_id
+        if isinstance(old_parent_ids, list):
+            old_ids.extend(old_parent_ids)
+        else:
+            old_ids.append(old_parent_ids)
+        return old_ids
 
     def supports_feature(self, feature: int) -> bool:
         """Return True if light supports a given feature."""
@@ -172,12 +187,10 @@ def is_light(device: Device) -> bool:
         return True
     if CAP_SWITCH in device.capabilities and MATCH_LIGHT.match(device.name):
         return True
-    if (
-        CAP_SWITCH_LEVEL in device.capabilities
-        and MATCH_LIGHT.match(device.name)
-        and not is_cover(device)
-        and not is_fan(device)
-    ):
+    # A Cover may also have a SwitchLevel capability that can be used to set
+    # the height of the cover. Fans may have SwitchLevel, but it seems to only
+    # apply to light switches in that case.
+    if CAP_SWITCH_LEVEL in device.capabilities and not is_cover(device):
         return True
 
     return False

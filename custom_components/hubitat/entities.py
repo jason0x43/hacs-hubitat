@@ -53,6 +53,7 @@ async def create_and_add_event_emitters(
         for i in devices
         if is_emitter(devices[i])
     ]
+    print(f"found {len(emitters)} emitters from {hub}")
 
     for emitter in emitters:
         hass.async_create_task(emitter.update_device_registry())
@@ -69,11 +70,15 @@ async def _migrate_old_unique_ids(
     _LOGGER.debug("Migrating unique_ids for %s...", platform)
     ereg = await entity_registry.async_get_registry(hass)
     for entity in entities:
-        _LOGGER.debug("Checking for existence of entity %s...", entity.old_unique_id)
-        # The async_get_entity_id args appear not to use standard names
-        entity_id = ereg.async_get_entity_id(
-            domain=platform, platform=DOMAIN, unique_id=entity.old_unique_id
-        )
-        if entity_id is not None:
-            _LOGGER.debug("Migrating unique_id for %s", entity_id)
-            ereg.async_update_entity(entity_id, new_unique_id=entity.unique_id)
+        old_ids = entity.old_unique_id
+        if not isinstance(old_ids, list):
+            old_ids = [old_ids]
+        _LOGGER.debug("Checking for existence of entity %s...", old_ids)
+        for id in old_ids:
+            # The async_get_entity_id args appear not to use standard names
+            entity_id = ereg.async_get_entity_id(
+                domain=platform, platform=DOMAIN, unique_id=id
+            )
+            if entity_id is not None:
+                _LOGGER.debug("Migrating unique_id for %s", entity_id)
+                ereg.async_update_entity(entity_id, new_unique_id=entity.unique_id)

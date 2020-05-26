@@ -2,7 +2,7 @@
 
 from logging import getLogger
 import re
-from typing import Any, Optional
+from typing import Any, List, Optional, Union
 
 from hubitatmaker import (
     CAP_ALARM,
@@ -48,6 +48,8 @@ ENTITY_SCHEMA = vol.Schema({vol.Required(ATTR_ENTITY_ID): cv.entity_id})
 class HubitatSwitch(HubitatEntity, SwitchEntity):
     """Representation of a Hubitat switch."""
 
+    _attribute: str
+
     @property
     def is_on(self) -> bool:
         """Return True if the switch is on."""
@@ -59,6 +61,25 @@ class HubitatSwitch(HubitatEntity, SwitchEntity):
         if _NAME_TEST.match(self._device.name):
             return DEVICE_CLASS_SWITCH
         return DEVICE_CLASS_OUTLET
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID for this switch."""
+        id = f"{super().unique_id}::switch"
+        if hasattr(self, "_attribute"):
+            id += f"::{self._attribute}"
+        return id
+
+    @property
+    def old_unique_id(self) -> Union[str, List[str]]:
+        """Return the legacy unique ID for this switch."""
+        old_ids = [super().unique_id]
+        old_parent_ids = super().old_unique_id
+        if isinstance(old_parent_ids, list):
+            old_ids.extend(old_parent_ids)
+        else:
+            old_ids.append(old_parent_ids)
+        return old_ids
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""
@@ -72,6 +93,8 @@ class HubitatSwitch(HubitatEntity, SwitchEntity):
 
 
 class HubitatPowerMeterSwitch(HubitatSwitch):
+    _attribute = "power_meter"
+
     @property
     def current_power_w(self) -> Optional[float]:
         """Return the current power usage in W."""
@@ -79,6 +102,8 @@ class HubitatPowerMeterSwitch(HubitatSwitch):
 
 
 class HubitatAlarm(HubitatSwitch):
+    _attribute = "alarm"
+
     @property
     def icon(self) -> str:
         """Return the icon."""
