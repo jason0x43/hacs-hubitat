@@ -262,8 +262,8 @@ class HubitatBase:
         """Initialize a device."""
         self._hub = hub
         self._device: Device = device
-        self._id = f"{self._hub.mac}::{self._hub.app_id}::{self._device.id}"
         self._old_id = f"{self._hub.host}::{self._hub.app_id}::{self._device.id}"
+        self._id = f"{self._hub.token}::{self._device.id}"
         self._hub.add_device_listener(self._device.id, self.handle_event)
 
     @property
