@@ -1,5 +1,6 @@
 """Classes for managing Hubitat devices."""
 
+from hashlib import sha256
 from json import loads
 from logging import getLogger
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Union, cast
@@ -110,6 +111,16 @@ class Hub:
     def token(self) -> str:
         """The token used to access the Maker API."""
         return cast(str, self.config_entry.data.get(CONF_ACCESS_TOKEN))
+
+    @property
+    def token_hash(self) -> str:
+        """The token used to access the Maker API."""
+        if not hasattr(self, "_token_hash"):
+            token = self.config_entry.data[CONF_ACCESS_TOKEN]
+            hasher = sha256()
+            hasher.update(token.encode("utf-8"))
+            self._token_hash = hasher.hexdigest()
+        return self._token_hash
 
     @property
     def temperature_unit(self) -> str:
@@ -262,7 +273,7 @@ class HubitatBase:
         """Initialize a device."""
         self._hub = hub
         self._device: Device = device
-        self._id = f"{self._hub.token}::{self._device.id}"
+        self._id = f"{self._hub.token_hash}::{self._device.id}"
         self._old_ids = [
             f"{self._hub.host}::{self._hub.app_id}::{self._device.id}",
             f"{self._hub.mac}::{self._hub.app_id}::{self._device.id}",
