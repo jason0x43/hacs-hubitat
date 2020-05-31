@@ -114,14 +114,11 @@ class HubitatLock(HubitatEntity, LockEntity):
         return f"{super().unique_id}::lock"
 
     @property
-    def old_unique_id(self) -> Union[str, List[str]]:
+    def old_unique_ids(self) -> List[str]:
         """Return the legacy unique ID for this lock."""
         old_ids = [super().unique_id]
-        old_parent_ids = super().old_unique_id
-        if isinstance(old_parent_ids, list):
-            old_ids.extend(old_parent_ids)
-        else:
-            old_ids.append(old_parent_ids)
+        old_parent_ids = super().old_unique_ids
+        old_ids.extend(old_parent_ids)
         return old_ids
 
     async def async_lock(self, **kwargs: Any) -> None:

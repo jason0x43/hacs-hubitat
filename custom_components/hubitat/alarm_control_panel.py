@@ -1,7 +1,7 @@
 """Support for Hubitat security keypads."""
 
 from logging import getLogger
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, cast
 
 from hubitatmaker.const import (
     ATTR_ALARM as HE_ATTR_ALARM,
@@ -193,14 +193,11 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
         return f"{super().unique_id}::alarm_control_panel"
 
     @property
-    def old_unique_id(self) -> Union[str, List[str]]:
+    def old_unique_ids(self) -> List[str]:
         """Return the legacy unique ID for this cover."""
         old_ids = [super().unique_id]
-        old_parent_ids = super().old_unique_id
-        if isinstance(old_parent_ids, list):
-            old_ids.extend(old_parent_ids)
-        else:
-            old_ids.append(old_parent_ids)
+        old_parent_ids = super().old_unique_ids
+        old_ids.extend(old_parent_ids)
         return old_ids
 
     async def async_alarm_disarm(self, code: Optional[str] = None) -> None:

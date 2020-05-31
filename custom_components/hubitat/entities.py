@@ -70,9 +70,7 @@ async def _migrate_old_unique_ids(
     _LOGGER.debug("Migrating unique_ids for %s...", platform)
     ereg = await entity_registry.async_get_registry(hass)
     for entity in entities:
-        old_ids = entity.old_unique_id
-        if not isinstance(old_ids, list):
-            old_ids = [old_ids]
+        old_ids = entity.old_unique_ids
         _LOGGER.debug("Checking for existence of entity %s...", old_ids)
         for id in old_ids:
             # The async_get_entity_id args appear not to use standard names

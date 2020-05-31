@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import Any, List, Optional, Tuple, Type, Union
+from typing import Any, List, Optional, Tuple, Type
 
 from hubitatmaker import (
     ATTR_DOOR,
@@ -86,15 +86,11 @@ class HubitatCover(HubitatEntity, CoverEntity):
         return f"{super().unique_id}::cover::{self._attribute}"
 
     @property
-    def old_unique_id(self) -> Union[str, List[str]]:
+    def old_unique_ids(self) -> List[str]:
         """Return the legacy unique ID for this cover."""
-        old_parent_ids = super().old_unique_id
-
+        old_parent_ids = super().old_unique_ids
         old_ids = [f"{super().unique_id}::{self._attribute}"]
-        if isinstance(old_ids, list):
-            old_ids.extend([f"{id}::{self._attribute}" for id in old_parent_ids])
-        else:
-            old_ids.append(f"{old_parent_ids}::{self._attribute}")
+        old_ids.extend([f"{id}::{self._attribute}" for id in old_parent_ids])
         return old_ids
 
     async def async_close_cover(self, **kwargs: Any) -> None:

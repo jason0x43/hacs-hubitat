@@ -262,8 +262,11 @@ class HubitatBase:
         """Initialize a device."""
         self._hub = hub
         self._device: Device = device
-        self._old_id = f"{self._hub.host}::{self._hub.app_id}::{self._device.id}"
         self._id = f"{self._hub.token}::{self._device.id}"
+        self._old_ids = [
+            f"{self._hub.host}::{self._hub.app_id}::{self._device.id}",
+            f"{self._hub.mac}::{self._hub.app_id}::{self._device.id}",
+        ]
         self._hub.add_device_listener(self._device.id, self.handle_event)
 
     @property
@@ -283,9 +286,9 @@ class HubitatBase:
         }
 
     @property
-    def old_unique_id(self) -> Union[str, List[str]]:
+    def old_unique_ids(self) -> List[str]:
         """Return the legacy unique for this device."""
-        return self._old_id
+        return self._old_ids
 
     @property
     def unique_id(self) -> str:
