@@ -18,7 +18,7 @@ from hubitatmaker import (
     Device,
 )
 
-from homeassistant.components.fan import FanEntity
+from homeassistant.components.fan import SUPPORT_SET_SPEED, FanEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
@@ -60,6 +60,11 @@ class HubitatFan(HubitatEntity, FanEntity):
         old_parent_ids = super().old_unique_ids
         old_ids.extend(old_parent_ids)
         return old_ids
+
+    @property
+    def supported_features(self) -> int:
+        """Flag supported features."""
+        return SUPPORT_SET_SPEED
 
     async def async_turn_on(self, speed: Optional[str] = None, **kwargs: Any) -> None:
         """Turn on the switch."""

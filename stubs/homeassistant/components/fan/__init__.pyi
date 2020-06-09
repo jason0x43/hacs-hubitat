@@ -1,1 +1,3 @@
 class FanEntity: ...
+
+SUPPORT_SET_SPEED: int
