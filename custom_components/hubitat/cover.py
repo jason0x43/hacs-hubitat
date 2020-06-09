@@ -3,6 +3,7 @@ from typing import Any, List, Optional, Tuple, Type
 
 from hubitatmaker import (
     ATTR_DOOR,
+    ATTR_LEVEL,
     ATTR_POSITION,
     ATTR_WINDOW_SHADE,
     CAP_DOOR_CONTROL,
@@ -15,6 +16,7 @@ from hubitatmaker import (
     STATE_CLOSING,
     STATE_OPEN,
     STATE_OPENING,
+    STATE_PARTIALLY_OPEN,
     Device,
 )
 
@@ -53,7 +55,12 @@ class HubitatCover(HubitatEntity, CoverEntity):
     @property
     def current_cover_position(self) -> Optional[int]:
         """Return current position of cover."""
-        return self.get_int_attr(ATTR_POSITION)
+        pos = self.get_int_attr(ATTR_POSITION)
+        if pos is not None:
+            return pos
+        # At least the Qubino Roller Shutter driver reports the shade position
+        # using the 'level' parameter
+        return self.get_int_attr(ATTR_LEVEL)
 
     @property
     def is_closed(self) -> bool:
@@ -68,7 +75,8 @@ class HubitatCover(HubitatEntity, CoverEntity):
     @property
     def is_open(self) -> bool:
         """Return True if the cover is open."""
-        return self.get_attr(self._attribute) == STATE_OPEN
+        state = self.get_attr(self._attribute)
+        return state == STATE_OPEN or state == STATE_PARTIALLY_OPEN
 
     @property
     def is_opening(self) -> bool:
