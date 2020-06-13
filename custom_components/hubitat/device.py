@@ -1,6 +1,5 @@
 """Classes for managing Hubitat devices."""
 
-from hashlib import sha256
 from json import loads
 from logging import getLogger
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Union, cast
@@ -22,6 +21,7 @@ from homeassistant.helpers.entity import Entity
 
 from .const import (
     ATTR_ATTRIBUTE,
+    ATTR_HUB,
     CONF_APP_ID,
     CONF_HUBITAT_EVENT,
     CONF_SERVER_PORT,
@@ -30,6 +30,7 @@ from .const import (
     TEMP_F,
     TRIGGER_CAPABILITIES,
 )
+from .util import get_hub_short_id, get_token_hash
 
 # Hubitat attributes that should be emitted as HA events
 _TRIGGER_ATTRS = tuple([v.attr for v in TRIGGER_CAPABILITIES.values()])
@@ -99,6 +100,11 @@ class Hub:
         )
 
     @property
+    def id(self) -> str:
+        """A unique ID for this hub instance."""
+        return get_hub_short_id(self._hub)
+
+    @property
     def mac(self) -> Optional[str]:
         """The MAC address of the  associated Hubitat hub."""
         return self._hub.mac
@@ -112,16 +118,6 @@ class Hub:
     def token(self) -> str:
         """The token used to access the Maker API."""
         return cast(str, self.config_entry.data.get(CONF_ACCESS_TOKEN))
-
-    @property
-    def token_hash(self) -> str:
-        """The token used to access the Maker API."""
-        if not hasattr(self, "_token_hash"):
-            token = self.config_entry.data[CONF_ACCESS_TOKEN]
-            hasher = sha256()
-            hasher.update(token.encode("utf-8"))
-            self._token_hash = hasher.hexdigest()
-        return self._token_hash
 
     @property
     def temperature_unit(self) -> str:
@@ -200,7 +196,7 @@ class Hub:
         dreg.async_get_or_create(
             config_entry_id=self.config_entry.entry_id,
             connections={(device_registry.CONNECTION_NETWORK_MAC, self._hub.mac)},
-            identifiers={(DOMAIN, self._hub.mac)},
+            identifiers={(DOMAIN, self.id)},
             manufacturer="Hubitat",
             name="Hubitat Elevation",
         )
@@ -274,7 +270,7 @@ class HubitatBase:
         """Initialize a device."""
         self._hub = hub
         self._device: Device = device
-        self._id = f"{self._hub.token_hash}::{self._device.id}"
+        self._id = f"{get_token_hash(hub.token)}::{self._device.id}"
         self._old_ids = [
             f"{self._hub.host}::{self._hub.app_id}::{self._device.id}",
             f"{self._hub.mac}::{self._hub.app_id}::{self._device.id}",
@@ -294,7 +290,7 @@ class HubitatBase:
             "name": self._device.name,
             "manufacturer": "Hubitat",
             "model": self.type,
-            "via_device": (DOMAIN, self._hub.mac),
+            "via_device": (DOMAIN, self._hub.id),
         }
 
     @property
@@ -363,7 +359,9 @@ class HubitatBase:
     def handle_event(self, event: Event) -> None:
         """Handle an event received from the Hubitat hub."""
         if event.attribute in _TRIGGER_ATTRS:
-            evt = to_event_dict(event)
+            evt = dict(event)
+            evt[ATTR_ATTRIBUTE] = _TRIGGER_ATTR_MAP[event.attribute]
+            evt[ATTR_HUB] = self._hub.id
             self._hub.hass.bus.async_fire(CONF_HUBITAT_EVENT, evt)
             _LOGGER.debug("Emitted event %s", evt)
 
@@ -423,9 +421,3 @@ def get_hub(hass: HomeAssistant, entry_id: str) -> Hub:
     """Get the Hub device associated with a given config entry."""
     hub: Hub = hass.data[DOMAIN][entry_id]
     return hub
-
-
-def to_event_dict(event: Event) -> Dict[str, Any]:
-    evt = dict(event)
-    evt[ATTR_ATTRIBUTE] = _TRIGGER_ATTR_MAP[event.attribute]
-    return evt

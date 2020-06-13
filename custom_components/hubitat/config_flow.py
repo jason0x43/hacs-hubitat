@@ -22,6 +22,7 @@ from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_TEMPERATURE_U
 from homeassistant.core import callback
 
 from .const import CONF_APP_ID, CONF_SERVER_PORT, DOMAIN, TEMP_C, TEMP_F
+from .util import get_hub_short_id
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,9 +48,7 @@ async def validate_input(data: Dict[str, Any]) -> Dict[str, Any]:
     hub = HubitatHub(host, app_id, token)
     await hub.check_config()
 
-    return {
-        "label": f"Hubitat ({hub.mac})",
-    }
+    return {"label": f"Hubitat ({get_hub_short_id(hub)})"}
 
 
 class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore

@@ -1,6 +1,7 @@
 """The Hubitat integration."""
 from asyncio import gather
 from logging import getLogger
+import re
 from typing import Any, Dict
 
 import voluptuous as vol
@@ -40,6 +41,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hub.stop()
 
     hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_hub)
+
+    # If this config entry's title uses a MAC address, rename it to use the hub
+    # ID
+    if re.match(r"Hubitat \(\w{2}(:\w{2}){5}\)", entry.title):
+        hass.config_entries.async_update_entry(entry, title=f"Hubitat ({hub.id})")
 
     hass.bus.fire(CONF_HUBITAT_EVENT, {"name": "ready"})
     _LOGGER.info("Hubitat is ready")

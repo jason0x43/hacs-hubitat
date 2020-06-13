@@ -1,4 +1,4 @@
-from typing import Any, Callable, Coroutine, Dict, Mapping, Optional
+from typing import Any, Callable, Coroutine, Dict, Mapping, Optional, Union
 
 import voluptuous as vol
 
@@ -10,6 +10,7 @@ class ConfigEntry:
     options: Mapping[str, Any]
     data: Dict[str, Any]
     entry_id: str
+    title: str
     def add_update_listener(
         self,
         listener: Callable[[HomeAssistant, ConfigEntry], Coroutine[Any, Any, None]],
@@ -22,6 +23,16 @@ class ConfigEntries:
     async def async_forward_entry_unload(
         self, entry: ConfigEntry, domain: str
     ) -> bool: ...
+    def async_update_entry(
+        self,
+        entry: ConfigEntry,
+        *,
+        unique_id: Union[str, Dict[str, Any], None] = ...,
+        title: Union[str, Dict[str, Any]] = ...,
+        data: Dict[str, Any] = ...,
+        options: Dict[str, Any] = ...,
+        system_options: Dict[str, Any] = ...,
+    ) -> None: ...
 
 class _FlowHandler:
     def async_create_entry(
