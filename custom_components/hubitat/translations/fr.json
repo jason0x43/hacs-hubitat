@@ -41,7 +41,7 @@
             "double_tapped": "Boutton {subtype} tapé deux fois",
             "held": "Boutton {subtype} tenu",
             "pushed": "Boutton {subtype} poussé",
-            "unlocked_with_code": "Déverrouillé avec code"
+            "code_name": "Déverrouillé avec code «{subtype}»"
         }
     },
     "options": {

@@ -41,7 +41,7 @@
             "double_tapped": "Button {subtype} double-tapped",
             "held": "Button {subtype} held",
             "pushed": "Button {subtype} pushed",
-            "unlocked_with_code": "Unlocked with code"
+            "code_name": "Unlocked with code \"{subtype}\""
         }
     },
     "options": {

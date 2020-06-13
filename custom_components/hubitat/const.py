@@ -41,7 +41,7 @@ CONF_BUTTONS = ("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")
 CONF_DOUBLE_TAPPED = "double_tapped"
 CONF_HELD = "held"
 CONF_PUSHED = "pushed"
-CONF_UNLOCKED_WITH_CODE = "unlocked_with_code"
+CONF_UNLOCKED_WITH_CODE = "code_name"
 CONF_SUBTYPE = "subtype"
 CONF_VALUE = "value"
 

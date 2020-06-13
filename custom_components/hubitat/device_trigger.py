@@ -1,10 +1,12 @@
 """Provide automation triggers for certain types of Hubitat device."""
 from itertools import chain
+from json import loads
 import logging
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence, cast
 
 from hubitatmaker import (
     ATTR_DEVICE_ID,
+    ATTR_LOCK_CODES,
     ATTR_NUM_BUTTONS,
     ATTR_VALUE,
     CAP_DOUBLE_TAPABLE_BUTTON,
@@ -47,10 +49,7 @@ TRIGGER_SUBTYPES = set(
 )
 
 TRIGGER_SCHEMA = TRIGGER_BASE_SCHEMA.extend(
-    {
-        vol.Required(CONF_TYPE): vol.In(TRIGGER_TYPES),
-        vol.Required(CONF_SUBTYPE): vol.In(TRIGGER_SUBTYPES),
-    }
+    {vol.Required(CONF_TYPE): vol.In(TRIGGER_TYPES), vol.Required(CONF_SUBTYPE): str}
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -67,18 +66,6 @@ async def async_validate_trigger_config(
         _LOGGER.warning("Missing device")
         raise InvalidDeviceAutomationConfig
 
-    trigger_type = config[CONF_TYPE]
-    if trigger_type not in TRIGGER_TYPES:
-        _LOGGER.warning("Invalid trigger type '%s'", trigger_type)
-        raise InvalidDeviceAutomationConfig
-
-    trigger_subtype = config.get(CONF_SUBTYPE)
-    if trigger_subtype:
-        valid_subtypes = get_valid_subtypes(trigger_type)
-        if not valid_subtypes or trigger_subtype not in valid_subtypes:
-            _LOGGER.warning("Invalid trigger subtype '%s'", trigger_subtype)
-            raise InvalidDeviceAutomationConfig
-
     if DOMAIN in hass.config.components:
         hubitat_device = await get_hubitat_device(hass, device.id)
         if hubitat_device is None:
@@ -86,10 +73,12 @@ async def async_validate_trigger_config(
             raise InvalidDeviceAutomationConfig
 
         types = get_trigger_types(hubitat_device)
+        trigger_type = config[CONF_TYPE]
         if trigger_type not in types:
             _LOGGER.warning("Device doesn't support '%s'", trigger_type)
             raise InvalidDeviceAutomationConfig
 
+        trigger_subtype = config.get(CONF_SUBTYPE)
         if trigger_subtype:
             subtypes = get_trigger_subtypes(hubitat_device, trigger_type)
             if not subtypes or trigger_subtype not in subtypes:
@@ -234,6 +223,8 @@ def get_trigger_subtypes(device: Device, trigger_type: str) -> Sequence[str]:
         if ATTR_NUM_BUTTONS in device.attributes:
             num_buttons = int(device.attributes[ATTR_NUM_BUTTONS].value)
         subtypes.extend(CONF_BUTTONS[0:num_buttons])
+    elif trigger_type == CONF_UNLOCKED_WITH_CODE:
+        subtypes.extend(get_lock_codes(device))
 
     return subtypes
 
@@ -244,3 +235,14 @@ def get_valid_subtypes(trigger_type: str) -> Optional[Sequence[str]]:
         if trigger_info.conf == trigger_type:
             return trigger_info.subconfs
     return None
+
+
+def get_lock_codes(device: Device) -> Sequence[str]:
+    """Return the lock codes for a lock."""
+    try:
+        codes_str = cast(str, device.attributes[ATTR_LOCK_CODES].value)
+        codes = loads(codes_str)
+        return [codes[id]["name"] for id in codes]
+    except Exception as e:
+        _LOGGER.warn("Error getting lock codes for %s: %s", device, e)
+        return []
