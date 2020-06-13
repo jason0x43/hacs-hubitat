@@ -21,6 +21,7 @@ from homeassistant.helpers import device_registry
 from homeassistant.helpers.entity import Entity
 
 from .const import (
+    ATTR_ATTRIBUTE,
     CONF_APP_ID,
     CONF_HUBITAT_EVENT,
     CONF_SERVER_PORT,
@@ -426,5 +427,5 @@ def get_hub(hass: HomeAssistant, entry_id: str) -> Hub:
 
 def to_event_dict(event: Event) -> Dict[str, Any]:
     evt = dict(event)
-    evt["attribute"] = _TRIGGER_ATTR_MAP[event.attribute]
+    evt[ATTR_ATTRIBUTE] = _TRIGGER_ATTR_MAP[event.attribute]
     return evt

@@ -14,6 +14,7 @@ from hubitatmaker import (
 
 DOMAIN = "hubitat"
 
+ATTR_ATTRIBUTE = "attribute"
 ATTR_ALARM = "alarm"
 ATTR_CODE = "code"
 ATTR_CODES = "codes"

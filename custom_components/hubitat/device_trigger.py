@@ -5,7 +5,6 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from hubitatmaker import (
     ATTR_DEVICE_ID,
-    ATTR_NAME,
     ATTR_NUM_BUTTONS,
     ATTR_VALUE,
     CAP_DOUBLE_TAPABLE_BUTTON,
@@ -27,6 +26,7 @@ from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
+    ATTR_ATTRIBUTE,
     CONF_BUTTONS,
     CONF_DOUBLE_TAPPED,
     CONF_HELD,
@@ -155,7 +155,7 @@ async def async_attach_trigger(
     # contain
     event_data = {
         ATTR_DEVICE_ID: hubitat_device.id,
-        ATTR_NAME: config[CONF_TYPE],
+        ATTR_ATTRIBUTE: config[CONF_TYPE],
     }
     if CONF_SUBTYPE in config:
         event_data[ATTR_VALUE] = config[CONF_SUBTYPE]
