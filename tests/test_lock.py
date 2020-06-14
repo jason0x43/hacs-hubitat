@@ -1,20 +1,24 @@
 from hubitatmaker.const import ATTR_LOCK_CODES
 from hubitatmaker.types import Attribute
 
-from tests.async_mock import MagicMock
+from tests.async_mock import Mock
 
 
 def test_normal_lock_codes() -> None:
-    hub = MagicMock()
-    device = MagicMock()
-    device.attributes = {
-        ATTR_LOCK_CODES: Attribute(
-            {
-                "name": ATTR_LOCK_CODES,
-                "currentValue": '{"1":{"name":"Test","code":"1234"}}',
-            }
-        )
-    }
+    hub = Mock()
+    hub.configure_mock(token="abc1235Qbxyz")
+
+    device = Mock()
+    device.configure_mock(
+        attributes={
+            ATTR_LOCK_CODES: Attribute(
+                {
+                    "name": ATTR_LOCK_CODES,
+                    "currentValue": '{"1":{"name":"Test","code":"1234"}}',
+                }
+            )
+        }
+    )
 
     from custom_components.hubitat.lock import HubitatLock
 
@@ -23,13 +27,17 @@ def test_normal_lock_codes() -> None:
 
 
 def test_encrypted_lock_codes() -> None:
-    hub = MagicMock()
-    device = MagicMock()
-    device.attributes = {
-        ATTR_LOCK_CODES: Attribute(
-            {"name": ATTR_LOCK_CODES, "currentValue": "abc1235Qbxyz"}
-        )
-    }
+    hub = Mock()
+    hub.configure_mock(token="abc1235Qbxyz")
+
+    device = Mock()
+    device.configure_mock(
+        attributes={
+            ATTR_LOCK_CODES: Attribute(
+                {"name": ATTR_LOCK_CODES, "currentValue": "abc1235Qbxyz"}
+            )
+        }
+    )
 
     from custom_components.hubitat.lock import HubitatLock
 

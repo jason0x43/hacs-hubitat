@@ -8,12 +8,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from tests.async_mock import Mock, NonCallableMock, call, patch
-from tests.types import GetHub
 
 
 @patch("custom_components.hubitat.entities.get_hub")
 @patch("custom_components.hubitat.entities.entity_registry")
-async def test_entity_migration(get_hub: GetHub, entity_registry) -> None:
+async def test_entity_migration(get_hub: Mock, entity_registry: Mock) -> None:
     mock_device_1 = NonCallableMock(type="switch", attributes=["state"])
     mock_device_2 = NonCallableMock(type="fan", attributes=["state"])
     MockHub = Mock(spec=Hub)
@@ -63,7 +62,7 @@ async def test_entity_migration(get_hub: GetHub, entity_registry) -> None:
 
 @patch("custom_components.hubitat.entities.get_hub")
 @patch("custom_components.hubitat.entities.HubitatEventEmitter")
-async def test_add_event_emitters(HubitatEventEmitter, get_hub) -> None:
+async def test_add_event_emitters(HubitatEventEmitter: Mock, get_hub: Mock) -> None:
     mock_device_1 = NonCallableMock(type="switch", attributes=["state"])
     mock_device_2 = NonCallableMock(type="button", attributes=["state"])
     MockHub = Mock(spec=Hub)
