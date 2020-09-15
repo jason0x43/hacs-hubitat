@@ -56,7 +56,7 @@ Note that you will need to restart Home Assistant after installion, whichever me
 
 ### HACS
 
-Add `jason0x43/hacs-hubitat` as a a custom repository in HACS (Marketplace -> Settings). Do _not_ add the complete GitHub URL.
+In HACS, go to Integrations, and then click the orange '+' button in the lower right corner to add an integration. Search for "Hubitat" and install it.
 
 ### Manually
 
