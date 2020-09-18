@@ -8,6 +8,7 @@ from hubitatmaker import (
     ATTR_HUMIDITY,
     ATTR_ILLUMINANCE,
     ATTR_POWER,
+    ATTR_PRESSURE,
     ATTR_TEMPERATURE,
     ATTR_VOLTAGE,
 )
@@ -17,10 +18,16 @@ from homeassistant.components.sensor import (
     DEVICE_CLASS_HUMIDITY,
     DEVICE_CLASS_ILLUMINANCE,
     DEVICE_CLASS_POWER,
+    DEVICE_CLASS_PRESSURE,
     DEVICE_CLASS_TEMPERATURE,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import POWER_WATT, TEMP_CELSIUS, TEMP_FAHRENHEIT
+from homeassistant.const import (
+    POWER_WATT,
+    PRESSURE_MBAR,
+    TEMP_CELSIUS,
+    TEMP_FAHRENHEIT,
+)
 from homeassistant.core import HomeAssistant
 
 from .const import TEMP_F
@@ -144,12 +151,27 @@ class HubitatVoltageSensor(HubitatSensor):
         self._units = "V"
         self._device_class = DEVICE_CLASS_POWER
 
+class HubitatPressureSensor(HubitatSensor):
+    """A pressure sensor."""
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        """Initialize a pressure sensor."""
+        super().__init__(*args, **kwargs)
+        self._attribute = ATTR_PRESSURE
+
+        # Maker API does not expose pressure unit
+        # Override if necessary through customization.py
+        # https://www.home-assistant.io/docs/configuration/customizing-devices/
+        self._units = PRESSURE_MBAR
+
+        self._device_class = DEVICE_CLASS_PRESSURE
 
 _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatSensor]], ...] = (
     (ATTR_BATTERY, HubitatBatterySensor),
     (ATTR_HUMIDITY, HubitatHumiditySensor),
     (ATTR_ILLUMINANCE, HubitatIlluminanceSensor),
     (ATTR_POWER, HubitatPowerSensor),
+    (ATTR_PRESSURE, HubitatPressureSensor),
     (ATTR_TEMPERATURE, HubitatTemperatureSensor),
     (ATTR_VOLTAGE, HubitatVoltageSensor),
 )

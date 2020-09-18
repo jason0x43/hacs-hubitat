@@ -48,6 +48,7 @@ The following device types are currently supported. The first level bullets are 
   - power (watts)
   - temperature
   - voltage
+  - pressure
 - switch
 
 ## Installation
