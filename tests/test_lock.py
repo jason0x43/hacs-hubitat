@@ -22,7 +22,10 @@ def test_normal_lock_codes() -> None:
     from custom_components.hubitat.lock import HubitatLock
 
     lock = HubitatLock(hub=hub, device=device)
-    assert isinstance(lock.codes, dict)
+    codes = lock.codes
+    assert isinstance(codes, dict)
+    assert codes["1"].get("name") == "Test"
+    assert codes["1"].get("code") is None
 
 
 def test_encrypted_lock_codes() -> None:

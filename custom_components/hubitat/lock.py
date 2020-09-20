@@ -81,7 +81,11 @@ class HubitatLock(HubitatEntity, LockEntity):
     @property
     def codes(self) -> Union[str, Dict[str, Dict[str, str]], None]:
         try:
-            return self.get_json_attr(ATTR_LOCK_CODES)
+            codes = self.get_json_attr(ATTR_LOCK_CODES)
+            if codes:
+                for id in codes:
+                    del codes[id]["code"]
+            return codes
         except Exception:
             return self.get_str_attr(ATTR_LOCK_CODES)
 
