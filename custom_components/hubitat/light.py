@@ -15,6 +15,8 @@ from hubitatmaker import (
     CMD_SET_COLOR,
     CMD_SET_COLOR_TEMP,
     CMD_SET_LEVEL,
+    COLOR_MODE_CT,
+    COLOR_MODE_RGB,
     Device,
 )
 
@@ -49,6 +51,11 @@ class HubitatLight(HubitatEntity, LightEntity):
     """Representation of a Hubitat light."""
 
     @property
+    def _color_mode(self) -> Optional[str]:
+        """Return this light's color mode."""
+        return self.get_str_attr("colorMode")
+
+    @property
     def brightness(self) -> Optional[int]:
         """Return the level of this light."""
         level = self.get_int_attr("level")
@@ -59,19 +66,29 @@ class HubitatLight(HubitatEntity, LightEntity):
     @property
     def hs_color(self) -> Optional[List[float]]:
         """Return the hue and saturation color value [float, float]."""
+        mode = self._color_mode
+        if mode and mode != COLOR_MODE_RGB:
+            return None
+
         hue = self.get_float_attr("hue")
         sat = self.get_float_attr("saturation")
         if hue is None or sat is None:
             return None
+
         hass_hue = 360 * hue / 100
         return [hass_hue, sat]
 
     @property
     def color_temp(self) -> Optional[float]:
         """Return the CT color value in mireds."""
+        mode = self._color_mode
+        if mode and mode != COLOR_MODE_CT:
+            return None
+
         temp = self.get_int_attr("colorTemperature")
         if temp is None:
             return None
+
         return color_util.color_temperature_kelvin_to_mired(temp)
 
     @property
