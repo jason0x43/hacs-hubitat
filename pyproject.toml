@@ -1,8 +1,11 @@
 [tool.poetry]
-name = "hacs-hubitat"
-version = "0.5.1"
+name = "hubitat"
+version = "0.5.9"
 description = "A Hubitat integration for Home Assistant"
 authors = ["Jason Cheatham <jason@jasoncheatham.com>"]
+packages = [
+	{ include = "custom_components" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.7.1"
@@ -24,3 +27,12 @@ asynctest = "^0.13.0"
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
+
+[tool.poetry.scripts]
+init = "scripts:init"
+test = "scripts:test"
+
+[tool.pytest.ini_options]
+testpaths = [
+	"tests"
+]
