@@ -213,14 +213,14 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
     def target_temperature_high(self) -> Optional[float]:
         """Return the highbound target temperature we try to reach."""
         if self.hvac_mode == HVAC_MODE_HEAT_COOL or self.hvac_mode == HVAC_MODE_AUTO:
-            return self.get_float_attr(ATTR_HEATING_SETPOINT)
+            return self.get_float_attr(ATTR_COOLING_SETPOINT)
         return None
 
     @property
     def target_temperature_low(self) -> Optional[float]:
         """Return the lowbound target temperature we try to reach."""
         if self.hvac_mode == HVAC_MODE_HEAT_COOL or self.hvac_mode == HVAC_MODE_AUTO:
-            return self.get_float_attr(ATTR_COOLING_SETPOINT)
+            return self.get_float_attr(ATTR_HEATING_SETPOINT)
         return None
 
     @property
@@ -287,9 +287,9 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
             temp_low = kwargs.get(ATTR_TARGET_TEMP_LOW)
             temp_high = kwargs.get(ATTR_TARGET_TEMP_HIGH)
             if temp_low is not None:
-                await self.send_command(CMD_SET_COOLING_SETPOINT, temp_low)
+                await self.send_command(CMD_SET_HEATING_SETPOINT, temp_low)
             if temp_high is not None:
-                await self.send_command(CMD_SET_HEATING_SETPOINT, temp_high)
+                await self.send_command(CMD_SET_COOLING_SETPOINT, temp_high)
         else:
             temp = kwargs.get(ATTR_TEMPERATURE)
             if temp is not None:
