@@ -78,7 +78,7 @@ MODE_EMERGENCY_HEAT = "emergency heat"
 MODE_HEAT = "heat"
 MODE_NEST_ECO = "eco"
 MODE_OFF = "off"
-HASS_MODES = [HVAC_MODE_HEAT, HVAC_MODE_HEAT_COOL, HVAC_MODE_COOL, HVAC_MODE_OFF]
+HASS_MODES = [HVAC_MODE_AUTO, HVAC_MODE_HEAT, HVAC_MODE_HEAT_COOL, HVAC_MODE_COOL, HVAC_MODE_OFF]
 
 OPSTATE_HEATING = "heating"
 OPSTATE_PENDING_COOL = "pending cool"
@@ -264,7 +264,7 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
             await self.send_command(CMD_COOL)
         elif hvac_mode == HVAC_MODE_HEAT:
             await self.send_command(CMD_HEAT)
-        elif hvac_mode == HVAC_MODE_HEAT_COOL:
+        elif hvac_mode == HVAC_MODE_HEAT_COOL or hvac_mode == HVAC_MODE_AUTO:
             await self.send_command(CMD_AUTO)
         elif hvac_mode == HVAC_MODE_OFF:
             await self.send_command(CMD_OFF)
@@ -283,7 +283,7 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
-        if self.hvac_mode == HVAC_MODE_HEAT_COOL:
+        if self.hvac_mode == HVAC_MODE_HEAT_COOL or self.hvac_mode == HVAC_MODE_AUTO:
             temp_low = kwargs.get(ATTR_TARGET_TEMP_LOW)
             temp_high = kwargs.get(ATTR_TARGET_TEMP_HIGH)
             if temp_low is not None:
