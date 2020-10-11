@@ -78,7 +78,7 @@ MODE_EMERGENCY_HEAT = "emergency heat"
 MODE_HEAT = "heat"
 MODE_NEST_ECO = "eco"
 MODE_OFF = "off"
-HASS_MODES = [HVAC_MODE_HEAT, HVAC_MODE_HEAT_COOL, HVAC_MODE_COOL, HVAC_MODE_OFF]
+HASS_MODES = [HVAC_MODE_AUTO, HVAC_MODE_HEAT, HVAC_MODE_HEAT_COOL, HVAC_MODE_COOL, HVAC_MODE_OFF]
 
 OPSTATE_HEATING = "heating"
 OPSTATE_PENDING_COOL = "pending cool"
@@ -213,14 +213,14 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
     def target_temperature_high(self) -> Optional[float]:
         """Return the highbound target temperature we try to reach."""
         if self.hvac_mode == HVAC_MODE_HEAT_COOL or self.hvac_mode == HVAC_MODE_AUTO:
-            return self.get_float_attr(ATTR_HEATING_SETPOINT)
+            return self.get_float_attr(ATTR_COOLING_SETPOINT)
         return None
 
     @property
     def target_temperature_low(self) -> Optional[float]:
         """Return the lowbound target temperature we try to reach."""
         if self.hvac_mode == HVAC_MODE_HEAT_COOL or self.hvac_mode == HVAC_MODE_AUTO:
-            return self.get_float_attr(ATTR_COOLING_SETPOINT)
+            return self.get_float_attr(ATTR_HEATING_SETPOINT)
         return None
 
     @property
@@ -264,7 +264,7 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
             await self.send_command(CMD_COOL)
         elif hvac_mode == HVAC_MODE_HEAT:
             await self.send_command(CMD_HEAT)
-        elif hvac_mode == HVAC_MODE_HEAT_COOL:
+        elif hvac_mode == HVAC_MODE_HEAT_COOL or hvac_mode == HVAC_MODE_AUTO:
             await self.send_command(CMD_AUTO)
         elif hvac_mode == HVAC_MODE_OFF:
             await self.send_command(CMD_OFF)
@@ -283,13 +283,13 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
-        if self.hvac_mode == HVAC_MODE_HEAT_COOL:
+        if self.hvac_mode == HVAC_MODE_HEAT_COOL or self.hvac_mode == HVAC_MODE_AUTO:
             temp_low = kwargs.get(ATTR_TARGET_TEMP_LOW)
             temp_high = kwargs.get(ATTR_TARGET_TEMP_HIGH)
             if temp_low is not None:
-                await self.send_command(CMD_SET_COOLING_SETPOINT, temp_low)
+                await self.send_command(CMD_SET_HEATING_SETPOINT, temp_low)
             if temp_high is not None:
-                await self.send_command(CMD_SET_HEATING_SETPOINT, temp_high)
+                await self.send_command(CMD_SET_COOLING_SETPOINT, temp_high)
         else:
             temp = kwargs.get(ATTR_TEMPERATURE)
             if temp is not None:
