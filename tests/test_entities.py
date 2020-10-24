@@ -3,11 +3,15 @@ from typing import Awaitable
 
 from custom_components.hubitat.device import Hub
 from hubitatmaker import Device
+from pytest_homeassistant_custom_component.async_mock import (
+    Mock,
+    NonCallableMock,
+    call,
+    patch,
+)
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-
-from tests.async_mock import Mock, NonCallableMock, call, patch
 
 
 @patch("custom_components.hubitat.entities.get_hub")
@@ -21,14 +25,11 @@ async def test_entity_migration(get_hub: Mock, entity_registry: Mock) -> None:
 
     get_hub.return_value = mock_hub
 
-    def get_entity_id() -> str:
-        return "foo"
-
     from homeassistant.helpers.entity_registry import EntityRegistry
 
     mock_reg = Mock(spec=EntityRegistry)
 
-    def async_get_reg(hass: HomeAssistant) -> Awaitable[EntityRegistry]:
+    def async_get_reg(_: HomeAssistant) -> Awaitable[EntityRegistry]:
         future: Future[EntityRegistry] = Future()
         future.set_result(mock_reg)
         return future
