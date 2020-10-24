@@ -143,14 +143,14 @@ async def async_attach_trigger(
     """Attach a trigger."""
     result = await get_hubitat_device(hass, config[CONF_DEVICE_ID])
 
-    if result[0] is None or result[1] is None:
+    hubitat_device = result[0]
+    hub = result[1]
+
+    if hubitat_device is None or hub is None:
         _LOGGER.warning(
             "Could not find Hubitat device for ID %s", config[CONF_DEVICE_ID]
         )
         raise InvalidDeviceAutomationConfig
-
-    hubitat_device: Device = result[0]
-    hub: Hub = result[1]
 
     # Event data should match up to the data a hubitat_event event would
     # contain

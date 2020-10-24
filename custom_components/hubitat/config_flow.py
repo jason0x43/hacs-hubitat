@@ -1,7 +1,7 @@
 """Config flow for Hubitat integration."""
 from copy import deepcopy
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from hubitatmaker import (
     ConnectionError,
@@ -105,7 +105,9 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
             form_errors = errors
 
         return self.async_show_form(
-            step_id="user", data_schema=CONFIG_SCHEMA, errors=form_errors,
+            step_id="user",
+            data_schema=CONFIG_SCHEMA,
+            errors=form_errors,
         )
 
 
@@ -133,7 +135,7 @@ class HubitatOptionsFlow(OptionsFlow):
 
         if user_input is not None:
             try:
-                check_input = {
+                check_input: Dict[str, Union[str, None]] = {
                     CONF_HOST: user_input[CONF_HOST],
                     CONF_APP_ID: entry.data.get(CONF_APP_ID),
                     CONF_ACCESS_TOKEN: entry.data.get(CONF_ACCESS_TOKEN),

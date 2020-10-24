@@ -15,6 +15,7 @@ from hubitatmaker import (
 )
 import voluptuous as vol
 
+from homeassistant.components.lock import LockEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -37,12 +38,6 @@ from .const import (
 from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .types import EntityAdder
-
-try:
-    from homeassistant.components.lock import LockEntity
-except ImportError:
-    from homeassistant.components.lock import LockDevice as LockEntity  # type: ignore
-
 
 _LOGGER = getLogger(__name__)
 
@@ -148,7 +143,9 @@ def is_lock(device: Device) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder,
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: EntityAdder,
 ) -> None:
     """Initialize lock devices."""
     locks = await create_and_add_entities(

@@ -1,6 +1,5 @@
 """Hubitat sensor entities."""
 
-from logging import getLogger
 from typing import Any, List, Optional, Tuple, Type, Union
 
 from hubitatmaker import (
@@ -34,8 +33,6 @@ from .const import TEMP_F
 from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .types import EntityAdder
-
-_LOGGER = getLogger(__name__)
 
 
 class HubitatSensor(HubitatEntity):

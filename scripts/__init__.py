@@ -12,5 +12,5 @@ def init() -> None:
 
 
 def test() -> None:
-    call("poetry run mypy custom_components/hubitat", shell=True)
+    call("pyright custom_components/hubitat", shell=True)
     call("poetry run pytest", shell=True)

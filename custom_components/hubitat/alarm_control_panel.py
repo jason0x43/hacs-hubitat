@@ -37,6 +37,7 @@ from homeassistant.components.alarm_control_panel import (
     SUPPORT_ALARM_ARM_HOME,
     SUPPORT_ALARM_ARM_NIGHT,
     SUPPORT_ALARM_TRIGGER,
+    AlarmControlPanelEntity,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -71,14 +72,6 @@ from .const import (
 from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .types import EntityAdder
-
-try:
-    from homeassistant.components.alarm_control_panel import AlarmControlPanelEntity
-except ImportError:
-    from homeassistant.components.alarm_control_panel import (  # type: ignore
-        AlarmControlPanel as AlarmControlPanelEntity,
-    )
-
 
 _LOGGER = getLogger(__name__)
 
@@ -257,7 +250,9 @@ def is_alarm(device: Device) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder,
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: EntityAdder,
 ) -> None:
     """Initialize security keypad devices."""
     keypads = await create_and_add_entities(

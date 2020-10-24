@@ -207,8 +207,8 @@ class Hub:
         _LOGGER.debug("Handling options update...")
         hub = get_hub(hass, entry.entry_id)
 
-        host = entry.options.get(CONF_HOST, entry.data.get(CONF_HOST))
-        if host != hub.host:
+        host: Optional[str] = entry.options.get(CONF_HOST, entry.data.get(CONF_HOST))
+        if host is not None and host != hub.host:
             await hub.set_host(host)
             _LOGGER.debug("Set hub host to %s", host)
 

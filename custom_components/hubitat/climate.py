@@ -1,6 +1,5 @@
 """Support for Hubitat thermostats."""
 
-from logging import getLogger
 from typing import Any, List, Optional
 
 from hubitatmaker import (
@@ -19,6 +18,7 @@ from hubitatmaker import (
     Device,
 )
 
+from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
@@ -50,14 +50,6 @@ from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .types import EntityAdder
 
-try:
-    from homeassistant.components.climate import ClimateEntity
-except ImportError:
-    from homeassistant.components.climate import ClimateDevice as ClimateEntity  # type: ignore
-
-
-_LOGGER = getLogger(__name__)
-
 ATTR_COOLING_SETPOINT = "coolingSetpoint"
 ATTR_FAN_MODE = "thermostatFanMode"
 ATTR_HEATING_SETPOINT = "heatingSetpoint"
@@ -78,7 +70,13 @@ MODE_EMERGENCY_HEAT = "emergency heat"
 MODE_HEAT = "heat"
 MODE_NEST_ECO = "eco"
 MODE_OFF = "off"
-HASS_MODES = [HVAC_MODE_AUTO, HVAC_MODE_HEAT, HVAC_MODE_HEAT_COOL, HVAC_MODE_COOL, HVAC_MODE_OFF]
+HASS_MODES = [
+    HVAC_MODE_AUTO,
+    HVAC_MODE_HEAT,
+    HVAC_MODE_HEAT_COOL,
+    HVAC_MODE_COOL,
+    HVAC_MODE_OFF,
+]
 
 OPSTATE_HEATING = "heating"
 OPSTATE_PENDING_COOL = "pending cool"
@@ -305,7 +303,9 @@ def is_thermostat(device: Device) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder,
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: EntityAdder,
 ) -> None:
     """Initialize thermostat devices."""
     await create_and_add_entities(

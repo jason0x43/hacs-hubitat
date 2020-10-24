@@ -1,6 +1,0 @@
-SUPPORT_ALARM_ARM_AWAY: int
-SUPPORT_ALARM_ARM_HOME: int
-SUPPORT_ALARM_ARM_NIGHT: int
-SUPPORT_ALARM_TRIGGER: int
-
-class AlarmControlPanelEntity: ...

@@ -1,6 +1,5 @@
 """Hubitat binary sensor entities."""
 
-from logging import getLogger
 import re
 from typing import List, Optional, Tuple, Type
 
@@ -25,6 +24,7 @@ from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_PRESENCE,
     DEVICE_CLASS_SMOKE,
     DEVICE_CLASS_WINDOW,
+    BinarySensorEntity,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -32,16 +32,6 @@ from homeassistant.core import HomeAssistant
 from .device import Hub, HubitatEntity
 from .entities import create_and_add_entities
 from .types import EntityAdder
-
-try:
-    from homeassistant.components.binary_sensor import BinarySensorEntity
-except ImportError:
-    from homeassistant.components.binary_sensor import (  # type: ignore
-        BinarySensorDevice as BinarySensorEntity,
-    )
-
-
-_LOGGER = getLogger(__name__)
 
 _CONTACT_MATCHERS = (
     (re.compile("garage door", re.IGNORECASE), DEVICE_CLASS_GARAGE_DOOR),

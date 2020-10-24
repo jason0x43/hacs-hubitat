@@ -31,10 +31,10 @@ repos:
     files: ^(custom_components|tests|stubs)/.+\.pyi?$
 - repo: local
   hooks:
-  - id: mypy
-    name: mypy
-    entry: poetry run mypy
+  - id: pyright
+    name: pyright
+    entry: pyright
     language: system
     types: [python]
     require_serial: true
-    files: ^(custom_components|tests|stubs)/.+\.pyi?$
+    files: ^(custom_components|tests)/.+\.pyi?$

@@ -28,6 +28,7 @@ from homeassistant.components.light import (
     SUPPORT_BRIGHTNESS,
     SUPPORT_COLOR,
     SUPPORT_COLOR_TEMP,
+    LightEntity,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -37,12 +38,6 @@ from .cover import is_cover
 from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .types import EntityAdder
-
-try:
-    from homeassistant.components.light import LightEntity
-except ImportError:
-    from homeassistant.components.light import Light as LightEntity  # type: ignore
-
 
 _LOGGER = getLogger(__name__)
 
@@ -211,7 +206,9 @@ def is_light(device: Device) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder,
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: EntityAdder,
 ) -> None:
     """Initialize light devices."""
     await create_and_add_entities(

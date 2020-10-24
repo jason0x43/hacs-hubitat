@@ -17,9 +17,6 @@ async def test_validate_input(HubitatHub) -> None:
         future.set_result(None)
         return future
 
-    def set_host(host: str) -> None:
-        return
-
     HubitatHub.return_value.check_config = check_config
 
     from custom_components.hubitat import config_flow

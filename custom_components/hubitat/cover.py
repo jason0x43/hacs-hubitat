@@ -28,6 +28,7 @@ from homeassistant.components.cover import (
     SUPPORT_CLOSE,
     SUPPORT_OPEN,
     SUPPORT_SET_POSITION,
+    CoverEntity,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -35,12 +36,6 @@ from homeassistant.core import HomeAssistant
 from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .types import EntityAdder
-
-try:
-    from homeassistant.components.cover import CoverEntity
-except ImportError:
-    from homeassistant.components.cover import CoverDevice as CoverEntity  # type: ignore
-
 
 _LOGGER = getLogger(__name__)
 
@@ -159,7 +154,9 @@ _COVER_CAPS: Tuple[Tuple[str, Type[HubitatCover]], ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder,
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: EntityAdder,
 ) -> None:
     """Initialize cover devices."""
     for cap in _COVER_CAPS:

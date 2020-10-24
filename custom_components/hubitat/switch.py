@@ -19,7 +19,11 @@ from hubitatmaker import (
 )
 import voluptuous as vol
 
-from homeassistant.components.switch import DEVICE_CLASS_OUTLET, DEVICE_CLASS_SWITCH
+from homeassistant.components.switch import (
+    DEVICE_CLASS_OUTLET,
+    DEVICE_CLASS_SWITCH,
+    SwitchEntity,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -31,12 +35,6 @@ from .entities import create_and_add_entities, create_and_add_event_emitters
 from .fan import is_fan
 from .light import is_light
 from .types import EntityAdder
-
-try:
-    from homeassistant.components.switch import SwitchEntity
-except ImportError:
-    from homeassistant.components.switch import SwitchDevice as SwitchEntity  # type: ignore
-
 
 _LOGGER = getLogger(__name__)
 
@@ -156,7 +154,9 @@ def is_button_controller(device: Device) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder,
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: EntityAdder,
 ) -> None:
     """Initialize switch devices."""
     await create_and_add_entities(
