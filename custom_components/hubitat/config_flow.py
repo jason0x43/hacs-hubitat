@@ -21,7 +21,15 @@ from homeassistant.config_entries import (
 from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_TEMPERATURE_UNIT
 from homeassistant.core import callback
 
-from .const import CONF_APP_ID, CONF_SERVER_PORT, DOMAIN, TEMP_C, TEMP_F
+from .const import (
+    CONF_APP_ID,
+    CONF_SERVER_PORT,
+    CONF_SERVER_URL,
+    CONF_USE_SERVER_URL,
+    DOMAIN,
+    TEMP_C,
+    TEMP_F,
+)
 from .util import get_hub_short_id
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,21 +39,28 @@ CONFIG_SCHEMA = vol.Schema(
         vol.Required(CONF_HOST): str,
         vol.Required(CONF_APP_ID): str,
         vol.Required(CONF_ACCESS_TOKEN): str,
+        vol.Optional(CONF_USE_SERVER_URL, default=False): bool,
+        vol.Optional(CONF_SERVER_URL, default=None): str,
         vol.Optional(CONF_SERVER_PORT, default=0): int,
         vol.Optional(CONF_TEMPERATURE_UNIT, default=TEMP_F): vol.In([TEMP_F, TEMP_C]),
     }
 )
 
 
-async def validate_input(data: Dict[str, Any]) -> Dict[str, Any]:
+async def validate_input(user_input: Dict[str, Any]) -> Dict[str, Any]:
     """Validate that the user input allows us to connect."""
 
     # data has the keys from CONFIG_SCHEMA with values provided by the user.
-    host: str = data[CONF_HOST]
-    app_id: str = data[CONF_APP_ID]
-    token: str = data[CONF_ACCESS_TOKEN]
+    host: str = user_input[CONF_HOST]
+    app_id: str = user_input[CONF_APP_ID]
+    token: str = user_input[CONF_ACCESS_TOKEN]
+    port: int = user_input[CONF_SERVER_PORT]
+    url: Optional[str] = user_input[CONF_SERVER_URL]
+    use_url: bool = user_input[CONF_USE_SERVER_URL]
 
-    hub = HubitatHub(host, app_id, token)
+    event_url = url if use_url else None
+
+    hub = HubitatHub(host, app_id, token, port=port, event_url=event_url)
     await hub.check_config()
 
     return {"label": f"Hubitat ({get_hub_short_id(hub)})"}
@@ -133,18 +148,26 @@ class HubitatOptionsFlow(OptionsFlow):
         entry = self.config_entry
         errors: Dict[str, str] = {}
 
+        _LOGGER.debug("Setting up entry with user input: %s", user_input)
+
         if user_input is not None:
             try:
                 check_input: Dict[str, Union[str, None]] = {
                     CONF_HOST: user_input[CONF_HOST],
                     CONF_APP_ID: entry.data.get(CONF_APP_ID),
                     CONF_ACCESS_TOKEN: entry.data.get(CONF_ACCESS_TOKEN),
+                    CONF_SERVER_PORT: user_input[CONF_SERVER_PORT],
+                    CONF_SERVER_URL: user_input[CONF_SERVER_URL],
+                    CONF_USE_SERVER_URL: user_input[CONF_USE_SERVER_URL],
                 }
                 await validate_input(check_input)
 
                 self.options[CONF_HOST] = user_input[CONF_HOST]
                 self.options[CONF_SERVER_PORT] = user_input[CONF_SERVER_PORT]
+                self.options[CONF_SERVER_URL] = user_input[CONF_SERVER_URL]
                 self.options[CONF_TEMPERATURE_UNIT] = user_input[CONF_TEMPERATURE_UNIT]
+                self.options[CONF_USE_SERVER_URL] = user_input[CONF_USE_SERVER_URL]
+                _LOGGER.debug("Creating entry with options %s", self.options)
                 return self.async_create_entry(title="", data=self.options)
             except ConnectionError:
                 _LOGGER.exception("Connection error")
@@ -174,6 +197,20 @@ class HubitatOptionsFlow(OptionsFlow):
                     vol.Optional(
                         CONF_HOST,
                         default=entry.options.get(CONF_HOST, entry.data.get(CONF_HOST)),
+                    ): str,
+                    vol.Optional(
+                        CONF_USE_SERVER_URL,
+                        default=entry.options.get(
+                            CONF_USE_SERVER_URL, entry.data.get(CONF_USE_SERVER_URL)
+                        )
+                        or False,
+                    ): bool,
+                    vol.Optional(
+                        CONF_SERVER_URL,
+                        default=entry.options.get(
+                            CONF_SERVER_URL, entry.data.get(CONF_SERVER_URL)
+                        )
+                        or None,
                     ): str,
                     vol.Optional(
                         CONF_SERVER_PORT,

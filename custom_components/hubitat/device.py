@@ -25,6 +25,8 @@ from .const import (
     CONF_APP_ID,
     CONF_HUBITAT_EVENT,
     CONF_SERVER_PORT,
+    CONF_SERVER_URL,
+    CONF_USE_SERVER_URL,
     DOMAIN,
     PLATFORMS,
     TEMP_F,
@@ -115,6 +117,11 @@ class Hub:
         return self._hub.port
 
     @property
+    def event_url(self) -> str:
+        """The event URL that Hubitat should POST events to."""
+        return self._hub.event_url
+
+    @property
     def token(self) -> str:
         """The token used to access the Maker API."""
         return cast(str, self.config_entry.data.get(CONF_ACCESS_TOKEN))
@@ -157,12 +164,22 @@ class Hub:
     async def async_setup(self) -> bool:
         """Initialize this hub instance."""
         entry = self.config_entry
+        use_url = entry.options.get(
+            CONF_USE_SERVER_URL, entry.data.get(CONF_USE_SERVER_URL)
+        )
+        url = (
+            None
+            if not use_url
+            else entry.options.get(CONF_SERVER_URL, entry.data.get(CONF_SERVER_URL))
+        )
         port = (
             entry.options.get(CONF_SERVER_PORT, entry.data.get(CONF_SERVER_PORT)) or 0
         )
 
         _LOGGER.debug("Initializing Hubitat hub with event server on port %s", port)
-        self._hub = HubitatHub(self.host, self.app_id, self.token, port)
+        self._hub = HubitatHub(
+            self.host, self.app_id, self.token, port=port, event_url=url
+        )
 
         await self._hub.start()
 
@@ -219,6 +236,18 @@ class Hub:
             await hub.set_port(port)
             _LOGGER.debug("Set event server port to %s", port)
 
+        use_url = entry.options.get(
+            CONF_USE_SERVER_URL, entry.data.get(CONF_USE_SERVER_URL)
+        )
+        if use_url:
+            url = entry.options.get(CONF_SERVER_URL, entry.data.get(CONF_SERVER_URL))
+            if url != hub.event_url:
+                await hub.set_event_url(url)
+                _LOGGER.debug("Set event server URL to %s", url)
+        else:
+            await hub.set_event_url(None)
+            _LOGGER.debug("Set event server URL to None")
+
         temp_unit = (
             entry.options.get(
                 CONF_TEMPERATURE_UNIT, entry.data.get(CONF_TEMPERATURE_UNIT)
@@ -261,6 +290,11 @@ class Hub:
         """Set the port that the event listener server will listen on."""
         _LOGGER.debug("Setting event listener port to %s", port)
         await self._hub.set_port(port)
+
+    async def set_event_url(self, url: Optional[str]) -> None:
+        """Set the port that the event listener server will listen on."""
+        _LOGGER.debug("Setting event server URL to %s", url)
+        await self._hub.set_event_url(url)
 
 
 class HubitatBase:

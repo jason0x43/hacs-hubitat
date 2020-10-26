@@ -4,14 +4,15 @@
     "step": {
       "user": {
         "title": "Connect to your Hubitat hub",
-        "description": "Provide the IP address or hostname of your Hubitat hub, along with the app ID of its Maker API instance. Optionally, provide a port number and/or an address for the integration's event server to listen on, and the units used for temperature sensors (F by default).",
+        "description": "Provide the IP address or hostname of your Hubitat hub, along with the app ID of its Maker API instance. Optionally, provide a port number for the integration's event server to listen on, the units used for temperature sensors (F by default), and/or the URL that Hubitat should POST events to.",
         "data": {
           "host": "Hub address",
           "app_id": "Maker API app ID",
           "access_token": "Maker API access token",
-          "server_addr": "Event server address (optional)",
           "server_port": "Event server port (optional)",
-          "temperature_unit": "Temperature units (optional)"
+          "server_url": "Event server URL (optional)",
+          "temperature_unit": "Temperature units (optional)",
+          "use_server_url": "Use custom event server URL"
         }
       }
     },
@@ -59,7 +60,9 @@
           "app_id": "Maker API app ID",
           "access_token": "Maker API access token",
           "server_port": "Event server port (optional)",
-          "temperature_unit": "Temperature units (optional)"
+          "server_url": "Event server URL (optional)",
+          "temperature_unit": "Temperature units (optional)",
+          "use_server_url": "Use custom event server URL"
         },
         "description": "Configure options for Hubitat. Note that changing the Maker API app ID will cause the integration to rediscover your devices.",
         "title": "Hubitat options"
