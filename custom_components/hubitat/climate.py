@@ -237,6 +237,13 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         return TEMP_CELSIUS
 
     @property
+    def precision(self) -> Optional[float]:
+        """Return current temperature precision when Farenheit and thermostat reports decimals."""
+        if self.temperature_unit == TEMP_FAHRENHEIT and "." in str(self.current_temperature):
+            return 0.1
+        return None
+
+    @property
     def unique_id(self) -> str:
         """Return a unique ID for this climate."""
         return f"{super().unique_id}::climate"
