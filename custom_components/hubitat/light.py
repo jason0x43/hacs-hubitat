@@ -81,27 +81,16 @@ class HubitatLight(HubitatEntity, LightEntity):
     @property
     def hs_color(self) -> Optional[List[float]]:
         """Return the hue and saturation color value [float, float]."""
-        _LOGGER.debug("Getting hs color for %s", self.device_id)
         mode = self.color_mode
-        _LOGGER.debug("Mode is %s (%s) for %s", mode, type(mode), self.device_id)
-        _LOGGER.debug(
-            "COLOR_MODE_RGB is %s (%s) for %s",
-            COLOR_MODE_RGB,
-            type(COLOR_MODE_RGB),
-            self.device_id,
-        )
         if mode is not None and mode != COLOR_MODE_RGB:
-            _LOGGER.debug("Mode is not RGB for %s", self.device_id)
             return None
 
         hue = self.get_float_attr("hue")
         sat = self.get_float_attr("saturation")
-        _LOGGER.debug("hue=%s, sat=%s for %s", hue, sat, self.device_id)
         if hue is None or sat is None:
             return None
 
         hass_hue = 360 * hue / 100
-        _LOGGER.debug("returning hue/sat for %s", self.device_id)
         return [hass_hue, sat]
 
     @property
