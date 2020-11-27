@@ -22,6 +22,7 @@ from hubitatmaker import (
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
+    ATTR_COLOR_NAME,
     ATTR_COLOR_TEMP,
     ATTR_HS_COLOR,
     ATTR_TRANSITION,
@@ -34,6 +35,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import color as color_util
 
+from .const import ATTR_COLOR_MODE
 from .cover import is_cover
 from .device import HubitatEntity
 from .entities import create_and_add_entities
@@ -46,9 +48,14 @@ class HubitatLight(HubitatEntity, LightEntity):
     """Representation of a Hubitat light."""
 
     @property
-    def _color_mode(self) -> Optional[str]:
+    def color_mode(self) -> Optional[str]:
         """Return this light's color mode."""
         return self.get_str_attr("colorMode")
+
+    @property
+    def color_name(self) -> Optional[str]:
+        """Return the name of this light's current color."""
+        return self.get_str_attr("colorName")
 
     @property
     def brightness(self) -> Optional[int]:
@@ -59,24 +66,9 @@ class HubitatLight(HubitatEntity, LightEntity):
         return int(255 * level / 100)
 
     @property
-    def hs_color(self) -> Optional[List[float]]:
-        """Return the hue and saturation color value [float, float]."""
-        mode = self._color_mode
-        if mode and mode != COLOR_MODE_RGB:
-            return None
-
-        hue = self.get_float_attr("hue")
-        sat = self.get_float_attr("saturation")
-        if hue is None or sat is None:
-            return None
-
-        hass_hue = 360 * hue / 100
-        return [hass_hue, sat]
-
-    @property
     def color_temp(self) -> Optional[float]:
         """Return the CT color value in mireds."""
-        mode = self._color_mode
+        mode = self.color_mode
         if mode and mode != COLOR_MODE_CT:
             return None
 
@@ -87,9 +79,45 @@ class HubitatLight(HubitatEntity, LightEntity):
         return color_util.color_temperature_kelvin_to_mired(temp)
 
     @property
+    def hs_color(self) -> Optional[List[float]]:
+        """Return the hue and saturation color value [float, float]."""
+        _LOGGER.debug("Getting hs color for %s", self.device_id)
+        mode = self.color_mode
+        _LOGGER.debug("Mode is %s (%s) for %s", mode, type(mode), self.device_id)
+        _LOGGER.debug(
+            "COLOR_MODE_RGB is %s (%s) for %s",
+            COLOR_MODE_RGB,
+            type(COLOR_MODE_RGB),
+            self.device_id,
+        )
+        if mode is not None and mode != COLOR_MODE_RGB:
+            _LOGGER.debug("Mode is not RGB for %s", self.device_id)
+            return None
+
+        hue = self.get_float_attr("hue")
+        sat = self.get_float_attr("saturation")
+        _LOGGER.debug("hue=%s, sat=%s for %s", hue, sat, self.device_id)
+        if hue is None or sat is None:
+            return None
+
+        hass_hue = 360 * hue / 100
+        _LOGGER.debug("returning hue/sat for %s", self.device_id)
+        return [hass_hue, sat]
+
+    @property
     def is_on(self) -> bool:
         """Return True if the light is on."""
         return self.get_str_attr("switch") == "on"
+
+    @property
+    def state_attributes(self):
+        """Return state attributes."""
+        attrs = super().state_attributes
+
+        attrs[ATTR_COLOR_MODE] = self.color_mode
+        attrs[ATTR_COLOR_NAME] = self.color_name
+
+        return attrs
 
     @property
     def supported_features(self) -> int:
