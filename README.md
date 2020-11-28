@@ -13,6 +13,7 @@ This integration uses [Hubitat’s](hubitat.com) [Maker API](https://docs.hubita
 * [Setup](#setup)
   * [Event server](#event-server)
   * [Device types](#device-types)
+* [Event-emitting devices](#event-emitting-devices)
 * [Updating](#updating)
 * [Troubleshooting](#troubleshooting)
   * [Checking device capabilities](#checking-device-capabilities)
@@ -83,6 +84,12 @@ To receive these events, the integration starts up a Python-based web server and
 ### Device types
 
 The integration assigns Home Assistant device classes based on the capabilities reported by Hubitat. Sometimes the device type is ambiguous; a switchable outlet and a light switch may both only implement Hubitat’s [Switch](https://docs.hubitat.com/index.php?title=Driver_Capability_List#Switch) capability, and will therefore look like the same type of device to the integration. In some of these cases, the integration guesses the device class based on the device’s label (e.g., a switch named “Office Lamp” would be setup as a light in Home Assistant). This heuristic behavior is currently only used for lights and switches.
+
+## Event-emitting devices
+
+Some devices, such as pushable buttons, emit events rather than having state. In fact, devices that _only_ contain event emitters and have no stateful components won’t have any associated entities in Home Assistant.
+
+Event emitting devices can be used as triggers in Home Assistant automations, or in Node Red. In Home Assistant, you can use event emitters as “Device” triggers. Whenever a the device emits an event, such as a button press, the automation will be triggered. In Node Red, a workflow can listen for `hubitat_event` events and filter them based on properties in `payload.event`.
 
 ## Updating
 
