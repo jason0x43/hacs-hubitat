@@ -103,8 +103,9 @@ class HubitatLight(HubitatEntity, LightEntity):
         """Return state attributes."""
         attrs = super().state_attributes
 
-        attrs[ATTR_COLOR_MODE] = self.color_mode
-        attrs[ATTR_COLOR_NAME] = self.color_name
+        if attrs:
+            attrs[ATTR_COLOR_MODE] = self.color_mode
+            attrs[ATTR_COLOR_NAME] = self.color_name
 
         return attrs
 
