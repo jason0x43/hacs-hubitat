@@ -332,7 +332,7 @@ yarl = "1.4.2"
 
 [[package]]
 name = "hubitatmaker"
-version = "0.4.2"
+version = "0.4.4"
 description = "A library for interfacing with Hubitat via its Maker API"
 category = "dev"
 optional = false
@@ -1300,8 +1300,8 @@ homeassistant = [
     {file = "homeassistant-0.116.4.tar.gz", hash = "sha256:7b646c4280157e793ca5fa19010df0527fe95972a04ad2e7fa76006814680fe5"},
 ]
 hubitatmaker = [
-    {file = "hubitatmaker-0.4.2-py3-none-any.whl", hash = "sha256:abc2ae671c552b85032033b2173d5ecaeca831463407df89638ef42f6166d72c"},
-    {file = "hubitatmaker-0.4.2.tar.gz", hash = "sha256:fef73b4e1be0226f28211bbf34880efbe5198f576f951389786595d3cfbdebbe"},
+    {file = "hubitatmaker-0.4.4-py3-none-any.whl", hash = "sha256:4a5e79f24b69e1c3adb23fe2017a00f4865898788fd2afce885c44c3f7ded005"},
+    {file = "hubitatmaker-0.4.4.tar.gz", hash = "sha256:30c97a9c870285f9d003e3c2619d566cbbc20b05b1f6062b5a7597ca81e80c42"},
 ]
 identify = [
     {file = "identify-1.5.9-py2.py3-none-any.whl", hash = "sha256:5dd84ac64a9a115b8e0b27d1756b244b882ad264c3c423f42af8235a6e71ca12"},

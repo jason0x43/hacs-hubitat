@@ -11,6 +11,7 @@ from hubitatmaker import (
     CAP_LIGHT,
     CAP_SWITCH,
     CAP_SWITCH_LEVEL,
+    CMD_FLASH,
     CMD_ON,
     CMD_SET_COLOR,
     CMD_SET_COLOR_TEMP,
@@ -24,11 +25,13 @@ from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_NAME,
     ATTR_COLOR_TEMP,
+    ATTR_FLASH,
     ATTR_HS_COLOR,
     ATTR_TRANSITION,
     SUPPORT_BRIGHTNESS,
     SUPPORT_COLOR,
     SUPPORT_COLOR_TEMP,
+    SUPPORT_FLASH,
     LightEntity,
 )
 from homeassistant.config_entries import ConfigEntry
@@ -114,6 +117,7 @@ class HubitatLight(HubitatEntity, LightEntity):
         """Return supported feature flags."""
         features = 0
         caps = self._device.capabilities
+        cmds = self._device.commands
 
         if CAP_COLOR_CONTROL in caps:
             features |= SUPPORT_COLOR
@@ -121,6 +125,8 @@ class HubitatLight(HubitatEntity, LightEntity):
             features |= SUPPORT_COLOR_TEMP
         if CAP_SWITCH_LEVEL in caps:
             features |= SUPPORT_BRIGHTNESS
+        if CMD_FLASH in cmds:
+            features |= SUPPORT_FLASH
 
         return features
 
@@ -192,6 +198,9 @@ class HubitatLight(HubitatEntity, LightEntity):
 
         if "temp" in props:
             await self.send_command(CMD_SET_COLOR_TEMP, props["temp"])
+
+        if ATTR_FLASH in kwargs and self.supports_feature(SUPPORT_FLASH):
+            await self.send_command(CMD_FLASH)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the light."""

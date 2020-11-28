@@ -13,7 +13,7 @@ from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
-T = TypeVar("T", bound=HubitatEntity)
+E = TypeVar("E", bound=HubitatEntity)
 
 
 async def create_and_add_entities(
@@ -21,9 +21,9 @@ async def create_and_add_entities(
     entry: ConfigEntry,
     async_add_entities: EntityAdder,
     platform: str,
-    EntityClass: Type[T],
+    EntityClass: Type[E],
     is_entity: Callable[[Device], bool],
-) -> List[T]:
+) -> List[E]:
     """Create entites and add them to the entity registry."""
     hub = get_hub(hass, entry.entry_id)
     devices = hub.devices
@@ -43,7 +43,9 @@ async def create_and_add_entities(
 
 
 async def create_and_add_event_emitters(
-    hass: HomeAssistant, entry: ConfigEntry, is_emitter: Callable[[Device], bool],
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    is_emitter: Callable[[Device], bool],
 ) -> List[HubitatEventEmitter]:
     """Create event emitters."""
     hub = get_hub(hass, entry.entry_id)
@@ -64,7 +66,7 @@ async def create_and_add_event_emitters(
 
 
 async def _migrate_old_unique_ids(
-    hass: HomeAssistant, entities: List[T], platform: str
+    hass: HomeAssistant, entities: List[E], platform: str
 ) -> None:
     """Migrate legacy unique IDs to the current format."""
     _LOGGER.debug("Migrating unique_ids for %s...", platform)
