@@ -40,7 +40,7 @@ CONFIG_SCHEMA = vol.Schema(
         vol.Required(CONF_APP_ID): str,
         vol.Required(CONF_ACCESS_TOKEN): str,
         vol.Optional(CONF_USE_SERVER_URL, default=False): bool,
-        vol.Optional(CONF_SERVER_URL, default=None): str,
+        vol.Optional(CONF_SERVER_URL, default=""): str,
         vol.Optional(CONF_SERVER_PORT, default=0): int,
         vol.Optional(CONF_TEMPERATURE_UNIT, default=TEMP_F): vol.In([TEMP_F, TEMP_C]),
     }
@@ -210,7 +210,7 @@ class HubitatOptionsFlow(OptionsFlow):
                         default=entry.options.get(
                             CONF_SERVER_URL, entry.data.get(CONF_SERVER_URL)
                         )
-                        or None,
+                        or "",
                     ): str,
                     vol.Optional(
                         CONF_SERVER_PORT,
