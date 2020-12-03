@@ -133,7 +133,7 @@ class HubitatPresenceSensor(HubitatBinarySensor):
 class HubitatSmokeSensor(HubitatBinarySensor):
     """A smoke sensor."""
 
-    _active_state = "active"
+    _active_state = "detected"
     _attribute = ATTR_SMOKE
     _device_class = DEVICE_CLASS_SMOKE
 
