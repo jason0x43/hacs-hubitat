@@ -43,7 +43,7 @@ from homeassistant.components.climate.const import (
     SUPPORT_TARGET_TEMPERATURE_RANGE,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS, TEMP_FAHRENHEIT
+from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS, TEMP_FAHRENHEIT, PRECISION_TENTHS
 from homeassistant.core import HomeAssistant
 
 from .device import HubitatEntity
@@ -235,6 +235,11 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         if temp is None or temp > 50:
             return TEMP_FAHRENHEIT
         return TEMP_CELSIUS
+
+    @property
+    def precision(self) -> Optional[float]:
+        """Return current temperature precision in tenths."""
+        return PRECISION_TENTHS
 
     @property
     def unique_id(self) -> str:
