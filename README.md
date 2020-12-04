@@ -42,6 +42,7 @@ The following device types are currently supported. The first level bullets are 
   - window shade
 - fan
 - light
+- lock
 - sensor
   - battery
   - humidity
@@ -87,7 +88,7 @@ The integration assigns Home Assistant device classes based on the capabilities 
 
 ## Event-emitting devices
 
-Some devices, such as pushable buttons, emit events rather than having state. In fact, devices that _only_ contain event emitters and have no stateful components won’t have any associated entities in Home Assistant.
+Some devices, such as pushable buttons, emit events rather than having state. Other devices such as locks both emit events and have state. Devices that _only_ contain event emitters and have no stateful components won’t have any associated entities in Home Assistant.
 
 Event emitting devices can be used as triggers in Home Assistant automations, or in Node Red. In Home Assistant, you can use event emitters as “Device” triggers. Whenever a the device emits an event, such as a button press, the automation will be triggered. In Node Red, a workflow can listen for `hubitat_event` events and filter them based on properties in `payload.event`.
 
