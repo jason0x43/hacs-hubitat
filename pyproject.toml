@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hubitat"
-version = "0.5.15"
+version = "0.5.16"
 description = "A Hubitat integration for Home Assistant"
 authors = ["Jason Cheatham <jason@jasoncheatham.com>"]
 packages = [
