@@ -33,6 +33,7 @@ ATTR_NAME = "name"
 ATTR_POSITION = "position"
 
 CONF_APP_ID = "app_id"
+CONF_DEVICES = "devices"
 CONF_HUB = "hub"
 CONF_HUBITAT_EVENT = "hubitat_event"
 CONF_SERVER_PORT = "server_port"

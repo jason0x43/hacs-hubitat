@@ -1,7 +1,7 @@
 """Config flow for Hubitat integration."""
 from copy import deepcopy
 import logging
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from hubitatmaker import (
     ConnectionError,
@@ -11,6 +11,7 @@ from hubitatmaker import (
     RequestError,
 )
 import voluptuous as vol
+from voluptuous.schema_builder import Schema
 
 from homeassistant.config_entries import (
     CONN_CLASS_LOCAL_PUSH,
@@ -19,10 +20,14 @@ from homeassistant.config_entries import (
     OptionsFlow,
 )
 from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_TEMPERATURE_UNIT
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import device_registry
+import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.device_registry import DeviceEntry, DeviceRegistry
 
 from .const import (
     CONF_APP_ID,
+    CONF_DEVICES,
     CONF_SERVER_PORT,
     CONF_SERVER_URL,
     CONF_USE_SERVER_URL,
@@ -63,7 +68,7 @@ async def validate_input(user_input: Dict[str, Any]) -> Dict[str, Any]:
     hub = HubitatHub(host, app_id, token, port=port, event_url=event_url)
     await hub.check_config()
 
-    return {"label": f"Hubitat ({get_hub_short_id(hub)})"}
+    return {"label": f"Hubitat ({get_hub_short_id(hub)})", "hub": hub}
 
 
 class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
@@ -71,6 +76,9 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
 
     VERSION = 1
     CONNECTION_CLASS = CONN_CLASS_LOCAL_PUSH
+
+    hub: Optional[HubitatHub] = None
+    device_schema: Schema
 
     @staticmethod
     @callback
@@ -83,10 +91,14 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
         """Handle the user step."""
         errors: Dict[str, str] = {}
 
+        if self.hub:
+            return await self.async_step_devices()
+
         if user_input is not None:
             try:
                 info = await validate_input(user_input)
                 entry_data = deepcopy(user_input)
+                self.hub = info["hub"]
 
                 placeholders: Dict[str, str] = {}
                 for key in user_input:
@@ -98,6 +110,7 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
                     data=entry_data,
                     description_placeholders=placeholders,
                 )
+
             except ConnectionError:
                 _LOGGER.exception("Connection error")
                 errors["base"] = "cannot_connect"
@@ -118,6 +131,7 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
             form_errors = None
         else:
             form_errors = errors
+            self.hub = None
 
         return self.async_show_form(
             step_id="user",
@@ -125,9 +139,39 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
             errors=form_errors,
         )
 
+    async def async_step_devices(
+        self, user_input: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Handle the user step."""
+        errors: Dict[str, str] = {}
+
+        if self.device_schema is None:
+            await self.hub._load_devices()
+            devices = self.hub.devices
+            self.device_schema = vol.Schema(
+                {vol.Optional(devices[id].name, default=False): str for id in devices}
+            )
+
+        if user_input is not None:
+            _LOGGER.debug("Updating devices with: %s", user_input)
+
+        if len(errors) == 0:
+            form_errors = None
+        else:
+            form_errors = errors
+
+        return self.async_show_form(
+            step_id="devices",
+            data_schema=CONFIG_SCHEMA,
+            errors=form_errors,
+        )
+
 
 class HubitatOptionsFlow(OptionsFlow):
     """Handle an options flow for Hubitat."""
+
+    device_schema: Optional[Schema] = None
+    should_remove_devices = False
 
     def __init__(self, config_entry: ConfigEntry):
         """Initialize an options flow."""
@@ -167,8 +211,9 @@ class HubitatOptionsFlow(OptionsFlow):
                 self.options[CONF_SERVER_URL] = user_input[CONF_SERVER_URL]
                 self.options[CONF_TEMPERATURE_UNIT] = user_input[CONF_TEMPERATURE_UNIT]
                 self.options[CONF_USE_SERVER_URL] = user_input[CONF_USE_SERVER_URL]
-                _LOGGER.debug("Creating entry with options %s", self.options)
-                return self.async_create_entry(title="", data=self.options)
+
+                _LOGGER.debug("Moving to device removal step")
+                return await self.async_step_remove_devices()
             except ConnectionError:
                 _LOGGER.exception("Connection error")
                 errors["base"] = "cannot_connect"
@@ -189,6 +234,7 @@ class HubitatOptionsFlow(OptionsFlow):
             form_errors = None
         else:
             form_errors = errors
+            self.hub = None
 
         return self.async_show_form(
             step_id="user",
@@ -230,3 +276,67 @@ class HubitatOptionsFlow(OptionsFlow):
             ),
             errors=form_errors,
         )
+
+    async def async_step_remove_devices(
+        self, user_input: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Handle the user step."""
+        errors: Dict[str, str] = {}
+
+        if self.device_schema is None:
+            devices: List[DeviceEntry] = await self.hass.async_create_task(
+                _get_devices(self.hass, self.config_entry)
+            )
+            device_dict = {d.id: d.name for d in devices}
+            self.device_schema = vol.Schema(
+                {
+                    vol.Optional(CONF_DEVICES, default=[]): cv.multi_select(
+                        device_dict
+                    ),
+                }
+            )
+
+        if user_input is not None:
+            ids = [id for id in user_input[CONF_DEVICES]]
+            await self.hass.async_create_task(_remove_devices(self.hass, ids))
+            return self.async_create_entry(title="", data=self.options)
+
+        if len(errors) == 0:
+            form_errors = None
+        else:
+            form_errors = errors
+
+        return self.async_show_form(
+            step_id="remove_devices",
+            data_schema=self.device_schema,
+            errors=form_errors,
+        )
+
+
+async def _get_devices(
+    hass: Optional[HomeAssistant], config_entry: ConfigEntry
+) -> List[DeviceEntry]:
+    if hass is None:
+        return []
+    dreg: DeviceRegistry = await device_registry.async_get_registry(hass)
+    all_devices: Dict[str, DeviceEntry] = dreg.devices
+    devices: List[DeviceEntry] = []
+
+    for id in all_devices:
+        dev = all_devices[id]
+        for entry_id in dev.config_entries:
+            if entry_id == config_entry.entry_id:
+                devices.append(dev)
+                break
+
+    devices.sort(key=lambda e: e.name)
+    return devices
+
+
+async def _remove_devices(hass: Optional[HomeAssistant], device_ids: List[str]) -> None:
+    if hass is None:
+        return
+    _LOGGER.debug("Removing devices: %s", device_ids)
+    dreg: DeviceRegistry = await device_registry.async_get_registry(hass)
+    for id in device_ids:
+        dreg.async_remove_device(id)

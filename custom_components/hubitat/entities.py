@@ -6,6 +6,7 @@ from hubitatmaker import Device
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry
+from homeassistant.helpers.entity_registry import EntityRegistry
 
 from .const import DOMAIN
 from .device import HubitatEntity, HubitatEventEmitter, get_hub
@@ -70,7 +71,7 @@ async def _migrate_old_unique_ids(
 ) -> None:
     """Migrate legacy unique IDs to the current format."""
     _LOGGER.debug("Migrating unique_ids for %s...", platform)
-    ereg = await entity_registry.async_get_registry(hass)
+    ereg: EntityRegistry = await entity_registry.async_get_registry(hass)
     for entity in entities:
         old_ids = entity.old_unique_ids
         _LOGGER.debug("Checking for existence of entity %s...", old_ids)
