@@ -17,6 +17,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry
+from homeassistant.helpers.device_registry import DeviceRegistry
 from homeassistant.helpers.entity import Entity
 
 from .const import (
@@ -209,7 +210,7 @@ class Hub:
 
     async def async_update_device_registry(self) -> None:
         """Add a device for this hub to the device registry."""
-        dreg = await device_registry.async_get_registry(self.hass)
+        dreg: DeviceRegistry = await device_registry.async_get_registry(self.hass)
         dreg.async_get_or_create(
             config_entry_id=self.config_entry.entry_id,
             connections={(device_registry.CONNECTION_NETWORK_MAC, self._hub.mac)},
