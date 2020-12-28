@@ -1,7 +1,7 @@
 """Config flow for Hubitat integration."""
 from copy import deepcopy
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 
 from hubitatmaker import (
     ConnectionError,
@@ -43,27 +43,11 @@ CONFIG_SCHEMA = vol.Schema(
         vol.Required(CONF_HOST): str,
         vol.Required(CONF_APP_ID): str,
         vol.Required(CONF_ACCESS_TOKEN): str,
-        vol.Optional(CONF_SERVER_URL): cv.url,
+        vol.Optional(CONF_SERVER_URL): str,
         vol.Optional(CONF_SERVER_PORT): int,
         vol.Optional(CONF_TEMPERATURE_UNIT, default=TEMP_F): vol.In([TEMP_F, TEMP_C]),
     }
 )
-
-
-async def validate_input(user_input: Dict[str, Any]) -> Dict[str, Any]:
-    """Validate that the user input allows us to connect."""
-
-    # data has the keys from CONFIG_SCHEMA with values provided by the user.
-    host: str = user_input[CONF_HOST]
-    app_id: str = user_input[CONF_APP_ID]
-    token: str = user_input[CONF_ACCESS_TOKEN]
-    port: Optional[int] = user_input.get(CONF_SERVER_PORT)
-    event_url: Optional[str] = user_input.get(CONF_SERVER_URL)
-
-    hub = HubitatHub(host, app_id, token, port=port, event_url=event_url)
-    await hub.check_config()
-
-    return {"label": f"Hubitat ({get_hub_short_id(hub)})", "hub": hub}
 
 
 class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
@@ -91,7 +75,7 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
 
         if user_input is not None:
             try:
-                info = await validate_input(user_input)
+                info = await _validate_input(user_input)
                 entry_data = deepcopy(user_input)
                 self.hub = info["hub"]
 
@@ -118,6 +102,9 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
             except RequestError:
                 _LOGGER.exception("Request error")
                 errors["base"] = "request_error"
+            except vol.Invalid:
+                _LOGGER.exception("Invalid event URL")
+                errors["base"] = "invalid_event_url"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
@@ -198,7 +185,7 @@ class HubitatOptionsFlow(OptionsFlow):
                     CONF_SERVER_PORT: user_input.get(CONF_SERVER_PORT),
                     CONF_SERVER_URL: user_input.get(CONF_SERVER_URL),
                 }
-                await validate_input(check_input)
+                await _validate_input(check_input)
 
                 self.options[CONF_HOST] = user_input[CONF_HOST]
                 self.options[CONF_SERVER_PORT] = user_input.get(CONF_SERVER_PORT)
@@ -219,6 +206,9 @@ class HubitatOptionsFlow(OptionsFlow):
             except RequestError:
                 _LOGGER.exception("Request error")
                 errors["base"] = "request_error"
+            except vol.Invalid:
+                _LOGGER.exception("Invalid event URL")
+                errors["base"] = "invalid_event_url"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
@@ -244,7 +234,7 @@ class HubitatOptionsFlow(OptionsFlow):
                                 CONF_SERVER_URL, entry.data.get(CONF_SERVER_URL)
                             )
                         },
-                    ): cv.url,
+                    ): str,
                     vol.Optional(
                         CONF_SERVER_PORT,
                         description={
@@ -306,7 +296,7 @@ async def _get_devices(
 ) -> List[DeviceEntry]:
     if hass is None:
         return []
-    dreg: DeviceRegistry = await device_registry.async_get_registry(hass)
+    dreg = cast(DeviceRegistry, await device_registry.async_get_registry(hass))
     all_devices: Dict[str, DeviceEntry] = dreg.devices
     devices: List[DeviceEntry] = []
 
@@ -325,6 +315,25 @@ async def _remove_devices(hass: Optional[HomeAssistant], device_ids: List[str]) 
     if hass is None:
         return
     _LOGGER.debug("Removing devices: %s", device_ids)
-    dreg: DeviceRegistry = await device_registry.async_get_registry(hass)
+    dreg = cast(DeviceRegistry, await device_registry.async_get_registry(hass))
     for id in device_ids:
         dreg.async_remove_device(id)
+
+
+async def _validate_input(user_input: Dict[str, Any]) -> Dict[str, Any]:
+    """Validate that the user input can create a working connection."""
+
+    # data has the keys from CONFIG_SCHEMA with values provided by the user.
+    host: str = user_input[CONF_HOST]
+    app_id: str = user_input[CONF_APP_ID]
+    token: str = user_input[CONF_ACCESS_TOKEN]
+    port: Optional[int] = user_input.get(CONF_SERVER_PORT)
+    event_url: Optional[str] = user_input.get(CONF_SERVER_URL)
+
+    if event_url:
+        event_url = cv.url(event_url)
+
+    hub = HubitatHub(host, app_id, token, port=port, event_url=event_url)
+    await hub.check_config()
+
+    return {"label": f"Hubitat ({get_hub_short_id(hub)})", "hub": hub}

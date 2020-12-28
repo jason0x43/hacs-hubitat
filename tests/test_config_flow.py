@@ -21,12 +21,12 @@ async def test_validate_input(HubitatHub) -> None:
     from custom_components.hubitat import config_flow
 
     with pytest.raises(KeyError):
-        await config_flow.validate_input({})
+        await config_flow._validate_input({})
     with pytest.raises(KeyError):
-        await config_flow.validate_input({"host": "host"})
+        await config_flow._validate_input({"host": "host"})
     with pytest.raises(KeyError):
-        await config_flow.validate_input({"host": "host", "app_id": "app_id"})
-    await config_flow.validate_input(
+        await config_flow._validate_input({"host": "host", "app_id": "app_id"})
+    await config_flow._validate_input(
         {
             "host": "host",
             "app_id": "app_id",

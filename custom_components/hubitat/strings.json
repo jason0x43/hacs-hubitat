@@ -18,6 +18,7 @@
     "error": {
       "cannot_connect": "Failed to connect, please try again",
       "invalid_access_token": "Access token is invalid",
+      "invalid_event_url": "Invalid event URL",
       "invalid_hub_config": "Invalid hub config",
       "request_error": "Error communicating with the hub",
       "unknown": "Unexpected error"
@@ -48,6 +49,7 @@
     "error": {
       "cannot_connect": "Failed to connect, please try again",
       "invalid_access_token": "Access token is invalid",
+      "invalid_event_url": "Invalid event URL",
       "invalid_hub_config": "Invalid hub config",
       "request_error": "Error communicating with the hub",
       "unknown": "Unexpected error"

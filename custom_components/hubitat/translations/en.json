@@ -6,6 +6,7 @@
         "error": {
             "cannot_connect": "Failed to connect, please try again",
             "invalid_access_token": "Access token is invalid",
+            "invalid_event_url": "Invalid event URL",
             "invalid_hub_config": "Invalid hub config",
             "request_error": "Error communicating with the hub",
             "unknown": "Unexpected error"
@@ -48,6 +49,7 @@
         "error": {
             "cannot_connect": "Failed to connect, please try again",
             "invalid_access_token": "Access token is invalid",
+            "invalid_event_url": "Invalid event URL",
             "invalid_hub_config": "Invalid hub config",
             "request_error": "Error communicating with the hub",
             "unknown": "Unexpected error"
@@ -68,7 +70,7 @@
                     "remove_devices": "Remove devices",
                     "server_port": "Event server port (optional)",
                     "server_url": "Event server URL (optional)",
-                    "temperature_unit": "Temperature units (optional)",
+                    "temperature_unit": "Temperature units (optional)"
                 },
                 "description": "Configure options for Hubitat. Note that changing the Maker API app ID will cause the integration to rediscover your devices.",
                 "title": "Hubitat options"
