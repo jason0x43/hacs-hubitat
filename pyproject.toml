@@ -19,6 +19,7 @@ flake8-pyi = "^20.5.0"
 hubitatmaker = "^0.4.2"
 homeassistant = "^0.116.0"
 pytest-homeassistant-custom-component = "^0.0.8"
+neovim = "^0.3.1"
 
 [tool.poetry.scripts]
 init = "scripts:init"
