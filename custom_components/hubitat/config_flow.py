@@ -30,7 +30,6 @@ from .const import (
     CONF_DEVICES,
     CONF_SERVER_PORT,
     CONF_SERVER_URL,
-    CONF_USE_SERVER_URL,
     DOMAIN,
     TEMP_C,
     TEMP_F,
@@ -44,9 +43,8 @@ CONFIG_SCHEMA = vol.Schema(
         vol.Required(CONF_HOST): str,
         vol.Required(CONF_APP_ID): str,
         vol.Required(CONF_ACCESS_TOKEN): str,
-        vol.Optional(CONF_USE_SERVER_URL, default=False): bool,
-        vol.Optional(CONF_SERVER_URL, default=""): str,
-        vol.Optional(CONF_SERVER_PORT, default=0): int,
+        vol.Optional(CONF_SERVER_URL): cv.url,
+        vol.Optional(CONF_SERVER_PORT): int,
         vol.Optional(CONF_TEMPERATURE_UNIT, default=TEMP_F): vol.In([TEMP_F, TEMP_C]),
     }
 )
@@ -59,11 +57,8 @@ async def validate_input(user_input: Dict[str, Any]) -> Dict[str, Any]:
     host: str = user_input[CONF_HOST]
     app_id: str = user_input[CONF_APP_ID]
     token: str = user_input[CONF_ACCESS_TOKEN]
-    port: int = user_input[CONF_SERVER_PORT]
-    url: Optional[str] = user_input[CONF_SERVER_URL]
-    use_url: bool = user_input[CONF_USE_SERVER_URL]
-
-    event_url = url if use_url else None
+    port: Optional[int] = user_input.get(CONF_SERVER_PORT)
+    event_url: Optional[str] = user_input.get(CONF_SERVER_URL)
 
     hub = HubitatHub(host, app_id, token, port=port, event_url=event_url)
     await hub.check_config()
@@ -200,17 +195,15 @@ class HubitatOptionsFlow(OptionsFlow):
                     CONF_HOST: user_input[CONF_HOST],
                     CONF_APP_ID: entry.data.get(CONF_APP_ID),
                     CONF_ACCESS_TOKEN: entry.data.get(CONF_ACCESS_TOKEN),
-                    CONF_SERVER_PORT: user_input[CONF_SERVER_PORT],
-                    CONF_SERVER_URL: user_input[CONF_SERVER_URL],
-                    CONF_USE_SERVER_URL: user_input[CONF_USE_SERVER_URL],
+                    CONF_SERVER_PORT: user_input.get(CONF_SERVER_PORT),
+                    CONF_SERVER_URL: user_input.get(CONF_SERVER_URL),
                 }
                 await validate_input(check_input)
 
                 self.options[CONF_HOST] = user_input[CONF_HOST]
-                self.options[CONF_SERVER_PORT] = user_input[CONF_SERVER_PORT]
-                self.options[CONF_SERVER_URL] = user_input[CONF_SERVER_URL]
+                self.options[CONF_SERVER_PORT] = user_input.get(CONF_SERVER_PORT)
+                self.options[CONF_SERVER_URL] = user_input.get(CONF_SERVER_URL)
                 self.options[CONF_TEMPERATURE_UNIT] = user_input[CONF_TEMPERATURE_UNIT]
-                self.options[CONF_USE_SERVER_URL] = user_input[CONF_USE_SERVER_URL]
 
                 _LOGGER.debug("Moving to device removal step")
                 return await self.async_step_remove_devices()
@@ -245,25 +238,20 @@ class HubitatOptionsFlow(OptionsFlow):
                         default=entry.options.get(CONF_HOST, entry.data.get(CONF_HOST)),
                     ): str,
                     vol.Optional(
-                        CONF_USE_SERVER_URL,
-                        default=entry.options.get(
-                            CONF_USE_SERVER_URL, entry.data.get(CONF_USE_SERVER_URL)
-                        )
-                        or False,
-                    ): bool,
-                    vol.Optional(
                         CONF_SERVER_URL,
-                        default=entry.options.get(
-                            CONF_SERVER_URL, entry.data.get(CONF_SERVER_URL)
-                        )
-                        or "",
-                    ): str,
+                        description={
+                            "suggested_value": entry.options.get(
+                                CONF_SERVER_URL, entry.data.get(CONF_SERVER_URL)
+                            )
+                        },
+                    ): cv.url,
                     vol.Optional(
                         CONF_SERVER_PORT,
-                        default=entry.options.get(
-                            CONF_SERVER_PORT, entry.data.get(CONF_SERVER_PORT)
-                        )
-                        or 0,
+                        description={
+                            "suggested_value": entry.options.get(
+                                CONF_SERVER_PORT, entry.data.get(CONF_SERVER_PORT)
+                            )
+                        },
                     ): int,
                     vol.Optional(
                         CONF_TEMPERATURE_UNIT,

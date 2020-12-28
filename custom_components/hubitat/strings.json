@@ -11,8 +11,7 @@
           "access_token": "Maker API access token",
           "server_port": "Event server port (optional)",
           "server_url": "Event server URL (optional)",
-          "temperature_unit": "Temperature units (optional)",
-          "use_server_url": "Use custom event server URL"
+          "temperature_unit": "Temperature units (optional)"
         }
       }
     },
@@ -69,8 +68,7 @@
           "remove_devices": "Remove devices",
           "server_port": "Event server port (optional)",
           "server_url": "Event server URL (optional)",
-          "temperature_unit": "Temperature units (optional)",
-          "use_server_url": "Use custom event server URL"
+          "temperature_unit": "Temperature units (optional)"
         },
         "description": "Configure options for Hubitat. Note that changing the Maker API app ID will cause the integration to rediscover your devices.",
         "title": "Hubitat options"
