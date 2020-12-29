@@ -24,6 +24,7 @@ neovim = "^0.3.1"
 [tool.poetry.scripts]
 init = "scripts:init"
 test = "scripts:test"
+copy = "scripts:copy"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
