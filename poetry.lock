@@ -340,7 +340,7 @@ yarl = "1.4.2"
 
 [[package]]
 name = "hubitatmaker"
-version = "0.4.4"
+version = "0.5.2"
 description = "A library for interfacing with Hubitat via its Maker API"
 category = "dev"
 optional = false
@@ -1119,7 +1119,7 @@ testing = ["pytest (>=3.5,!=3.7.3)", "pytest-checkdocs (>=1.2.3)", "pytest-flake
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7.1"
-content-hash = "3eb68d20c56a87a45cfab74f390d8ad58ca6f6659f203e625a7523f1b07d62dc"
+content-hash = "7926ce47b6d53c9275806adc112fc6f3d8b6cfff0c619115998f0ee245fab7b7"
 
 [metadata.files]
 aiohttp = [
@@ -1363,8 +1363,8 @@ homeassistant = [
     {file = "homeassistant-0.116.4.tar.gz", hash = "sha256:7b646c4280157e793ca5fa19010df0527fe95972a04ad2e7fa76006814680fe5"},
 ]
 hubitatmaker = [
-    {file = "hubitatmaker-0.4.4-py3-none-any.whl", hash = "sha256:4a5e79f24b69e1c3adb23fe2017a00f4865898788fd2afce885c44c3f7ded005"},
-    {file = "hubitatmaker-0.4.4.tar.gz", hash = "sha256:30c97a9c870285f9d003e3c2619d566cbbc20b05b1f6062b5a7597ca81e80c42"},
+    {file = "hubitatmaker-0.5.2-py3-none-any.whl", hash = "sha256:84cafedffdcbc5c60fa7e429f732092a3c1256306e1ec6e475dada12dcf59489"},
+    {file = "hubitatmaker-0.5.2.tar.gz", hash = "sha256:cfc92ff0a7d2baa93436d27b038810ff70d32f92afc29bac1db81b6201a1c62b"},
 ]
 identify = [
     {file = "identify-1.5.9-py2.py3-none-any.whl", hash = "sha256:5dd84ac64a9a115b8e0b27d1756b244b882ad264c3c423f42af8235a6e71ca12"},
