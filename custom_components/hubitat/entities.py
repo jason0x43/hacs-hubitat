@@ -36,7 +36,9 @@ async def create_and_add_entities(
         devices[id] for id in devices if is_type(devices[id], overrides)
     ]
 
-    entities = [EntityClass(hub=hub, device=device) for device in devices_with_entity]
+    entities: List[E] = [
+        EntityClass(hub=hub, device=device) for device in devices_with_entity
+    ]
 
     if len(entities) > 0:
         await _migrate_old_unique_ids(hass, entities, platform)
@@ -58,10 +60,11 @@ async def create_and_add_entities(
         if d not in devices_with_entity
     ]
     ereg = cast(EntityRegistry, await entity_registry.async_get_registry(hass))
-    for id in ereg.entities:
-        if ereg.entities[id].unique_id in entity_unique_ids_to_remove:
-            ereg.async_remove(id)
-            _LOGGER.debug(f"Removed overridden entity {id}")
+    entity_ids = {ereg.entities[id].unique_id: id for id in ereg.entities}
+    for unique_id in entity_ids:
+        if unique_id in entity_unique_ids_to_remove:
+            ereg.async_remove(entity_ids[unique_id])
+            _LOGGER.debug(f"Removed overridden entity {unique_id}")
 
     return entities
 
