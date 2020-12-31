@@ -75,7 +75,7 @@ class Hub:
         else:
             self._hub_entity_id = f"hubitat.hub_{index}"
 
-        entry.add_update_listener(self.async_update_options)
+        self.unsub_config_listener = entry.add_update_listener(_update_entry)
 
     @property
     def app_id(self) -> str:
@@ -161,6 +161,7 @@ class Hub:
         """Unload the hub."""
         for emitter in self.event_emitters:
             emitter.async_will_remove_from_hass()
+        self.unsub_config_listener()
 
     async def async_setup(self) -> bool:
         """Initialize this hub instance."""
@@ -188,10 +189,11 @@ class Hub:
         hass = self.hass
         config_entry = self.config_entry
 
-        for component in PLATFORMS:
+        for platform in PLATFORMS:
             hass.async_create_task(
-                hass.config_entries.async_forward_entry_setup(config_entry, component)
+                hass.config_entries.async_forward_entry_setup(config_entry, platform)
             )
+
         _LOGGER.debug("Registered platforms")
 
         # Create an entity for the Hubitat hub with basic hub information
@@ -210,7 +212,7 @@ class Hub:
 
     async def async_update_device_registry(self) -> None:
         """Add a device for this hub to the device registry."""
-        dreg: DeviceRegistry = await device_registry.async_get_registry(self.hass)
+        dreg = cast(DeviceRegistry, await device_registry.async_get_registry(self.hass))
         dreg.async_get_or_create(
             config_entry_id=self.config_entry.entry_id,
             connections={(device_registry.CONNECTION_NETWORK_MAC, self._hub.mac)},
@@ -220,28 +222,37 @@ class Hub:
         )
 
     @staticmethod
-    async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    async def async_update_options(
+        hass: HomeAssistant, config_entry: ConfigEntry
+    ) -> None:
         """Handle options update."""
         _LOGGER.debug("Handling options update...")
-        hub = get_hub(hass, entry.entry_id)
+        hub = get_hub(hass, config_entry.entry_id)
 
-        host: Optional[str] = entry.options.get(CONF_HOST, entry.data.get(CONF_HOST))
+        host: Optional[str] = config_entry.options.get(
+            CONF_HOST, config_entry.data.get(CONF_HOST)
+        )
         if host is not None and host != hub.host:
             await hub.set_host(host)
             _LOGGER.debug("Set hub host to %s", host)
 
         port = (
-            entry.options.get(CONF_SERVER_PORT, entry.data.get(CONF_SERVER_PORT)) or 0
+            config_entry.options.get(
+                CONF_SERVER_PORT, config_entry.data.get(CONF_SERVER_PORT)
+            )
+            or 0
         )
         if port != hub.port:
             await hub.set_port(port)
             _LOGGER.debug("Set event server port to %s", port)
 
-        use_url = entry.options.get(
-            CONF_USE_SERVER_URL, entry.data.get(CONF_USE_SERVER_URL)
+        use_url = config_entry.options.get(
+            CONF_USE_SERVER_URL, config_entry.data.get(CONF_USE_SERVER_URL)
         )
         if use_url:
-            url = entry.options.get(CONF_SERVER_URL, entry.data.get(CONF_SERVER_URL))
+            url = config_entry.options.get(
+                CONF_SERVER_URL, config_entry.data.get(CONF_SERVER_URL)
+            )
             if url != hub.event_url:
                 await hub.set_event_url(url)
                 _LOGGER.debug("Set event server URL to %s", url)
@@ -250,8 +261,8 @@ class Hub:
             _LOGGER.debug("Set event server URL to None")
 
         temp_unit = (
-            entry.options.get(
-                CONF_TEMPERATURE_UNIT, entry.data.get(CONF_TEMPERATURE_UNIT)
+            config_entry.options.get(
+                CONF_TEMPERATURE_UNIT, config_entry.data.get(CONF_TEMPERATURE_UNIT)
             )
             or TEMP_F
         )
@@ -301,7 +312,7 @@ class Hub:
 class HubitatBase:
     """Base class for Hubitat entities and event emitters."""
 
-    def __init__(self, hub: Hub, device: Device) -> None:
+    def __init__(self, hub: Hub, device: Device, temp: Optional[bool] = False) -> None:
         """Initialize a device."""
         self._hub = hub
         self._device: Device = device
@@ -310,7 +321,12 @@ class HubitatBase:
             f"{self._hub.host}::{self._hub.app_id}::{self._device.id}",
             f"{self._hub.mac}::{self._hub.app_id}::{self._device.id}",
         ]
-        self._hub.add_device_listener(self._device.id, self.handle_event)
+        self._temp = temp
+
+        # Sometimes entities may be temporary, created only to compute entity
+        # metadata. Don't register device listeners for temprorary entities.
+        if not temp:
+            self._hub.add_device_listener(self._device.id, self.handle_event)
 
     @property
     def device_id(self) -> str:
@@ -443,7 +459,9 @@ class HubitatEventEmitter(HubitatBase):
         # Create a device for the emitter since Home Assistant doesn't
         # automatically do that as it does for entities.
         entry = self._hub.config_entry
-        dreg = await device_registry.async_get_registry(self._hub.hass)
+        dreg = cast(
+            DeviceRegistry, await device_registry.async_get_registry(self._hub.hass)
+        )
         dreg.async_get_or_create(config_entry_id=entry.entry_id, **self.device_info)
         _LOGGER.debug("Created device for %s", self)
 
@@ -452,7 +470,10 @@ class HubitatEventEmitter(HubitatBase):
         return f"<HubitatEventEmitter {self.name}>"
 
 
-def get_hub(hass: HomeAssistant, entry_id: str) -> Hub:
+def get_hub(hass: HomeAssistant, config_entry_id: str) -> Hub:
     """Get the Hub device associated with a given config entry."""
-    hub: Hub = hass.data[DOMAIN][entry_id]
-    return hub
+    return hass.data[DOMAIN][config_entry_id]
+
+
+async def _update_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    await hass.config_entries.async_reload(config_entry.entry_id)

@@ -1,7 +1,7 @@
 """Hubitat binary sensor entities."""
 
 import re
-from typing import List, Optional, Tuple, Type
+from typing import Dict, List, Optional, Tuple, Type
 
 from hubitatmaker import (
     ATTR_ACCELERATION,
@@ -150,17 +150,21 @@ _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatBinarySensor]], ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder,
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: EntityAdder,
 ) -> None:
     """Initialize light devices."""
+
     for attr in _SENSOR_ATTRS:
+
+        def is_sensor(
+            device: Device, overrides: Optional[Dict[str, str]] = None
+        ) -> bool:
+            return attr[0] in device.attributes
+
         await create_and_add_entities(
-            hass,
-            entry,
-            async_add_entities,
-            "binary_sensor",
-            attr[1],
-            lambda dev: attr[0] in dev.attributes,
+            hass, config_entry, async_add_entities, "binary_sensor", attr[1], is_sensor
         )
 
 

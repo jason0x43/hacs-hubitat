@@ -55,9 +55,23 @@
             "unknown": "Unexpected error"
         },
         "step": {
+            "override_lights": {
+              "data": {
+                "devices": "Switches that should be lights"
+              },
+              "description": "The following devices were automatically classified as switches. Select any that should be lights instead.",
+              "title": "Switches -> Lights"
+            },
+            "override_switches": {
+              "data": {
+                "devices": "Lights that should be switches"
+              },
+              "description": "The following devices were automatically classified as lights. Select any that should be switches instead.",
+              "title": "Lights -> Switches"
+            },
             "remove_devices": {
                 "data": {
-                    "devices": "Devices"
+                    "devices": "Devices to remove"
                 },
                 "description": "Select any devices managed by this integration that you'd like to remove. Typically, this would be any devices that are no longer being shared by Hubitat.",
                 "title": "Remove devices"

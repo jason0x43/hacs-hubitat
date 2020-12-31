@@ -1,6 +1,6 @@
 """Hubitat sensor entities."""
 
-from typing import Any, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from hubitatmaker import (
     ATTR_BATTERY,
@@ -11,6 +11,7 @@ from hubitatmaker import (
     ATTR_TEMPERATURE,
     ATTR_VOLTAGE,
 )
+from hubitatmaker.types import Device
 
 from homeassistant.components.sensor import (
     DEVICE_CLASS_BATTERY,
@@ -21,12 +22,7 @@ from homeassistant.components.sensor import (
     DEVICE_CLASS_TEMPERATURE,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    POWER_WATT,
-    PRESSURE_MBAR,
-    TEMP_CELSIUS,
-    TEMP_FAHRENHEIT,
-)
+from homeassistant.const import POWER_WATT, PRESSURE_MBAR, TEMP_CELSIUS, TEMP_FAHRENHEIT
 from homeassistant.core import HomeAssistant
 
 from .const import TEMP_F
@@ -148,6 +144,7 @@ class HubitatVoltageSensor(HubitatSensor):
         self._units = "V"
         self._device_class = DEVICE_CLASS_POWER
 
+
 class HubitatPressureSensor(HubitatSensor):
     """A pressure sensor."""
 
@@ -163,6 +160,7 @@ class HubitatPressureSensor(HubitatSensor):
 
         self._device_class = DEVICE_CLASS_PRESSURE
 
+
 _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatSensor]], ...] = (
     (ATTR_BATTERY, HubitatBatterySensor),
     (ATTR_HUMIDITY, HubitatHumiditySensor),
@@ -175,15 +173,18 @@ _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatSensor]], ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder,
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: EntityAdder,
 ) -> None:
     """Initialize sensor devices."""
     for attr in _SENSOR_ATTRS:
+
+        def is_sensor(
+            device: Device, overrides: Optional[Dict[str, str]] = None
+        ) -> bool:
+            return attr[0] in device.attributes
+
         await create_and_add_entities(
-            hass,
-            entry,
-            async_add_entities,
-            "sensor",
-            attr[1],
-            lambda dev: attr[0] in dev.attributes,
+            hass, entry, async_add_entities, "sensor", attr[1], is_sensor
         )

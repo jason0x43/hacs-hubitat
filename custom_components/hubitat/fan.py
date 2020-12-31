@@ -1,7 +1,7 @@
 """Support for Hubitat fans."""
 
 from logging import getLogger
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from hubitatmaker import (
     ATTR_SPEED,
@@ -89,8 +89,10 @@ class HubitatFan(HubitatEntity, FanEntity):
         await self.send_command(CMD_SET_SPEED, speed)
 
 
-def is_fan(device: Device) -> bool:
+def is_fan(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
     """Return True if device looks like a fan."""
+    if overrides and device.id in overrides and overrides[device.id] != "fan":
+        return False
     return CAP_FAN_CONTROL in device.capabilities
 
 

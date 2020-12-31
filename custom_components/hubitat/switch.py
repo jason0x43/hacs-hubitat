@@ -2,7 +2,7 @@
 
 from logging import getLogger
 import re
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from hubitatmaker import (
     CAP_ALARM,
@@ -125,21 +125,24 @@ class HubitatAlarm(HubitatSwitch):
         await self.send_command(CMD_STROBE)
 
 
-def is_switch(device: Device) -> bool:
+def is_switch(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
     """Return True if device looks like a switch."""
+    if overrides and device.id in overrides and overrides[device.id] != "switch":
+        return False
+
     return (
         CAP_SWITCH in device.capabilities
-        and not is_light(device)
-        and not is_fan(device)
+        and not is_light(device, overrides)
+        and not is_fan(device, overrides)
     )
 
 
-def is_energy_meter(device: Device) -> bool:
+def is_energy_meter(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
     """Return True if device can measure power."""
     return CAP_POWER_METER in device.capabilities
 
 
-def is_alarm(device: Device) -> bool:
+def is_alarm(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
     """Return True if the device is an alarm."""
     return CAP_ALARM in device.capabilities
 
@@ -155,32 +158,43 @@ def is_button_controller(device: Device) -> bool:
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: EntityAdder,
 ) -> None:
     """Initialize switch devices."""
+
+    def _is_simple_switch(
+        device: Device, overrides: Optional[Dict[str, str]] = None
+    ) -> bool:
+        return is_switch(device, overrides) and not is_energy_meter(device, overrides)
+
     await create_and_add_entities(
         hass,
-        entry,
+        config_entry,
         async_add_entities,
         "switch",
         HubitatSwitch,
-        lambda dev: is_switch(dev) and not is_energy_meter(dev),
+        _is_simple_switch,
     )
+
+    def _is_smart_switch(
+        device: Device, overrides: Optional[Dict[str, str]] = None
+    ) -> bool:
+        return is_switch(device, overrides) and is_energy_meter(device, overrides)
 
     await create_and_add_entities(
         hass,
-        entry,
+        config_entry,
         async_add_entities,
         "switch",
         HubitatPowerMeterSwitch,
-        lambda dev: is_switch(dev) and is_energy_meter(dev),
+        _is_smart_switch,
     )
 
-    await create_and_add_event_emitters(hass, entry, is_button_controller)
+    await create_and_add_event_emitters(hass, config_entry, is_button_controller)
 
     alarms = await create_and_add_entities(
-        hass, entry, async_add_entities, "switch", HubitatAlarm, is_alarm
+        hass, config_entry, async_add_entities, "switch", HubitatAlarm, is_alarm
     )
 
     if len(alarms) > 0:

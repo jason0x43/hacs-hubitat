@@ -144,7 +144,7 @@ class HubitatLock(HubitatEntity, LockEntity):
         await self.send_command(CMD_SET_CODE_LENGTH, length)
 
 
-def is_lock(device: Device) -> bool:
+def is_lock(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
     """Return True if device looks like a fan."""
     return CAP_LOCK in device.capabilities
 

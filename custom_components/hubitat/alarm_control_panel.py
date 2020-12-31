@@ -239,14 +239,11 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
         await self.send_command(CMD_SET_CODE_LENGTH, length)
 
 
-def is_security_keypad(device: Device) -> bool:
+def is_security_keypad(
+    device: Device, overrides: Optional[Dict[str, str]] = None
+) -> bool:
     """Return True if device looks like a security keypad."""
     return CAP_SECURITY_KEYPAD in device.capabilities
-
-
-def is_alarm(device: Device) -> bool:
-    """Return True if device looks like an alarm."""
-    return CAP_ALARM in device.capabilities
 
 
 async def async_setup_entry(

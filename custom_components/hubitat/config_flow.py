@@ -1,7 +1,7 @@
 """Config flow for Hubitat integration."""
 from copy import deepcopy
 import logging
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Union, cast
 
 from hubitatmaker import (
     ConnectionError,
@@ -10,6 +10,7 @@ from hubitatmaker import (
     InvalidToken,
     RequestError,
 )
+from hubitatmaker.types import Device
 import voluptuous as vol
 from voluptuous.schema_builder import Schema
 
@@ -27,13 +28,21 @@ from homeassistant.helpers.device_registry import DeviceEntry, DeviceRegistry
 
 from .const import (
     CONF_APP_ID,
+    CONF_DEVICE_LIST,
+    CONF_DEVICE_TYPE_OVERRIDES,
     CONF_DEVICES,
     CONF_SERVER_PORT,
     CONF_SERVER_URL,
     DOMAIN,
+    STEP_OVERRIDE_LIGHTS,
+    STEP_OVERRIDE_SWITCHES,
+    STEP_REMOVE_DEVICES,
+    STEP_USER,
     TEMP_C,
     TEMP_F,
 )
+from .light import is_definitely_light, is_light
+from .switch import is_switch
 from .util import get_hub_short_id
 
 _LOGGER = logging.getLogger(__name__)
@@ -69,9 +78,6 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
     ) -> Dict[str, Any]:
         """Handle the user step."""
         errors: Dict[str, str] = {}
-
-        if self.hub:
-            return await self.async_step_devices()
 
         if user_input is not None:
             try:
@@ -116,34 +122,7 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
             self.hub = None
 
         return self.async_show_form(
-            step_id="user",
-            data_schema=CONFIG_SCHEMA,
-            errors=form_errors,
-        )
-
-    async def async_step_devices(
-        self, user_input: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """Handle the user step."""
-        errors: Dict[str, str] = {}
-
-        if self.device_schema is None:
-            await self.hub._load_devices()
-            devices = self.hub.devices
-            self.device_schema = vol.Schema(
-                {vol.Optional(devices[id].name, default=False): str for id in devices}
-            )
-
-        if user_input is not None:
-            _LOGGER.debug("Updating devices with: %s", user_input)
-
-        if len(errors) == 0:
-            form_errors = None
-        else:
-            form_errors = errors
-
-        return self.async_show_form(
-            step_id="devices",
+            step_id=STEP_USER,
             data_schema=CONFIG_SCHEMA,
             errors=form_errors,
         )
@@ -152,7 +131,8 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
 class HubitatOptionsFlow(OptionsFlow):
     """Handle an options flow for Hubitat."""
 
-    device_schema: Optional[Schema] = None
+    hub: Optional[HubitatHub] = None
+    overrides: Dict[str, str] = {}
     should_remove_devices = False
 
     def __init__(self, config_entry: ConfigEntry):
@@ -185,7 +165,9 @@ class HubitatOptionsFlow(OptionsFlow):
                     CONF_SERVER_PORT: user_input.get(CONF_SERVER_PORT),
                     CONF_SERVER_URL: user_input.get(CONF_SERVER_URL),
                 }
-                await _validate_input(check_input)
+
+                info = await _validate_input(check_input)
+                self.hub = info["hub"]
 
                 self.options[CONF_HOST] = user_input[CONF_HOST]
                 self.options[CONF_SERVER_PORT] = user_input.get(CONF_SERVER_PORT)
@@ -220,7 +202,7 @@ class HubitatOptionsFlow(OptionsFlow):
             self.hub = None
 
         return self.async_show_form(
-            step_id="user",
+            step_id=STEP_USER,
             data_schema=vol.Schema(
                 {
                     vol.Optional(
@@ -258,26 +240,28 @@ class HubitatOptionsFlow(OptionsFlow):
     async def async_step_remove_devices(
         self, user_input: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Handle the user step."""
+        """Handle the device removal step."""
         errors: Dict[str, str] = {}
 
-        if self.device_schema is None:
-            devices: List[DeviceEntry] = await self.hass.async_create_task(
-                _get_devices(self.hass, self.config_entry)
-            )
-            device_dict = {d.id: d.name for d in devices}
-            self.device_schema = vol.Schema(
-                {
-                    vol.Optional(CONF_DEVICES, default=[]): cv.multi_select(
-                        device_dict
-                    ),
-                }
-            )
+        assert self.hass is not None
+
+        devices: List[DeviceEntry] = await self.hass.async_create_task(
+            _get_devices(cast(HomeAssistant, self.hass), self.config_entry)
+        )
+        device_schema = vol.Schema(
+            {
+                vol.Optional(CONF_DEVICES, default=[]): cv.multi_select(
+                    {d.id: d.name for d in devices}
+                ),
+            }
+        )
 
         if user_input is not None:
             ids = [id for id in user_input[CONF_DEVICES]]
-            await self.hass.async_create_task(_remove_devices(self.hass, ids))
-            return self.async_create_entry(title="", data=self.options)
+            await self.hass.async_create_task(
+                _remove_devices(cast(HomeAssistant, self.hass), ids)
+            )
+            return await self.async_step_override_lights()
 
         if len(errors) == 0:
             form_errors = None
@@ -285,17 +269,96 @@ class HubitatOptionsFlow(OptionsFlow):
             form_errors = errors
 
         return self.async_show_form(
-            step_id="remove_devices",
-            data_schema=self.device_schema,
+            step_id=STEP_REMOVE_DEVICES,
+            data_schema=device_schema,
+            errors=form_errors,
+        )
+
+    async def async_step_override_lights(
+        self, user_input: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Let the user manually specify some devices as lights."""
+
+        async def next_step() -> Dict[str, Any]:
+            return await self.async_step_override_switches()
+
+        return await self._async_step_override_type(
+            user_input, "light", STEP_OVERRIDE_LIGHTS, next_step, is_switch
+        )
+
+    async def async_step_override_switches(
+        self, user_input: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Let the user manually specify some devices as switches."""
+
+        async def next_step() -> Dict[str, Any]:
+            self.options[CONF_DEVICE_TYPE_OVERRIDES] = self.overrides
+            _LOGGER.debug(f"Set device type overrides to {self.overrides}")
+            _LOGGER.debug("Creating entry")
+            return self.async_create_entry(title="", data=self.options)
+
+        def is_possible_light(device: Device) -> bool:
+            return is_light(device, None) and not is_definitely_light(device)
+
+        return await self._async_step_override_type(
+            user_input, "switch", STEP_OVERRIDE_SWITCHES, next_step, is_possible_light
+        )
+
+    async def _async_step_override_type(
+        self,
+        user_input: Optional[Dict[str, Any]],
+        platform: str,
+        step_id: str,
+        next_step: Callable[[], Awaitable[Dict[str, str]]],
+        matcher: Callable[[Device], bool],
+    ) -> Dict[str, Any]:
+        errors: Dict[str, str] = {}
+
+        assert self.hub is not None
+
+        await self.hub.load_devices()
+        devices = self.hub.devices
+
+        # Store the list of devices in the config flow so that a config entry
+        # update will be triggered if devices are added or removed
+        self.options[CONF_DEVICE_LIST] = sorted([id for id in devices])
+
+        existing_overrides = self.options.get(CONF_DEVICE_TYPE_OVERRIDES)
+        default_value = []
+        if existing_overrides:
+            default_value = [
+                id for id in existing_overrides if existing_overrides[id] == platform
+            ]
+
+        device_schema = vol.Schema(
+            {
+                vol.Optional(CONF_DEVICES, default=default_value): cv.multi_select(
+                    {id: devices[id].name for id in devices if matcher(devices[id])}
+                ),
+            }
+        )
+
+        if user_input is not None:
+            for id in user_input[CONF_DEVICES]:
+                self.overrides[id] = platform
+            return await next_step()
+
+        if len(errors) == 0:
+            form_errors = None
+        else:
+            form_errors = errors
+
+        return self.async_show_form(
+            step_id=step_id,
+            data_schema=device_schema,
             errors=form_errors,
         )
 
 
 async def _get_devices(
-    hass: Optional[HomeAssistant], config_entry: ConfigEntry
+    hass: HomeAssistant, config_entry: ConfigEntry
 ) -> List[DeviceEntry]:
-    if hass is None:
-        return []
+    """Return the devices associated with a given config entry."""
     dreg = cast(DeviceRegistry, await device_registry.async_get_registry(hass))
     all_devices: Dict[str, DeviceEntry] = dreg.devices
     devices: List[DeviceEntry] = []
@@ -311,9 +374,8 @@ async def _get_devices(
     return devices
 
 
-async def _remove_devices(hass: Optional[HomeAssistant], device_ids: List[str]) -> None:
-    if hass is None:
-        return
+async def _remove_devices(hass: HomeAssistant, device_ids: List[str]) -> None:
+    """Remove a list of devices."""
     _LOGGER.debug("Removing devices: %s", device_ids)
     dreg = cast(DeviceRegistry, await device_registry.async_get_registry(hass))
     for id in device_ids:

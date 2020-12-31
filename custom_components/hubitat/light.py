@@ -217,12 +217,16 @@ MATCH_LIGHT = re.compile(
 )
 
 
-def is_light(device: Device) -> bool:
+def is_light(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
     """Return True if device looks like a light."""
-    if any(cap in device.capabilities for cap in LIGHT_CAPABILITIES):
+    if overrides and device.id in overrides and overrides[device.id] != "light":
+        return False
+
+    if is_definitely_light(device):
         return True
     if CAP_SWITCH in device.capabilities and MATCH_LIGHT.match(device.name):
         return True
+
     # A Cover may also have a SwitchLevel capability that can be used to set
     # the height of the cover. Fans may have SwitchLevel, but it seems to only
     # apply to light switches in that case.
@@ -232,12 +236,19 @@ def is_light(device: Device) -> bool:
     return False
 
 
+def is_definitely_light(
+    device: Device, overrides: Optional[Dict[str, str]] = None
+) -> bool:
+    """Return True if the device has light-specific capabilities."""
+    return any(cap in device.capabilities for cap in LIGHT_CAPABILITIES)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    config_entry: ConfigEntry,
     async_add_entities: EntityAdder,
 ) -> None:
     """Initialize light devices."""
     await create_and_add_entities(
-        hass, entry, async_add_entities, "light", HubitatLight, is_light
+        hass, config_entry, async_add_entities, "light", HubitatLight, is_light
     )

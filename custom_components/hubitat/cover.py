@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import Any, List, Optional, Tuple, Type
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 from hubitatmaker import (
     ATTR_DOOR,
@@ -160,17 +160,26 @@ async def async_setup_entry(
 ) -> None:
     """Initialize cover devices."""
     for cap in _COVER_CAPS:
+
+        def is_cover(
+            device: Device, overrides: Optional[Dict[str, str]] = None
+        ) -> bool:
+            return _is_cover_type(device, cap[0])
+
         await create_and_add_entities(
-            hass,
-            entry,
-            async_add_entities,
-            "cover",
-            cap[1],
-            lambda dev: is_cover_type(dev, cap[0]),
+            hass, entry, async_add_entities, "cover", cap[1], is_cover
         )
 
 
-def is_cover_type(dev: Device, cap: str) -> bool:
+def is_cover(dev: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
+    return (
+        CAP_WINDOW_SHADE in dev.capabilities
+        or CAP_GARAGE_DOOR_CONTROL in dev.capabilities
+        or CAP_DOOR_CONTROL in dev.capabilities
+    )
+
+
+def _is_cover_type(dev: Device, cap: str) -> bool:
     cover_type = None
 
     if CAP_WINDOW_SHADE in dev.capabilities:
@@ -184,11 +193,3 @@ def is_cover_type(dev: Device, cap: str) -> bool:
         return False
 
     return cap == cover_type
-
-
-def is_cover(dev: Device) -> bool:
-    return (
-        CAP_WINDOW_SHADE in dev.capabilities
-        or CAP_GARAGE_DOOR_CONTROL in dev.capabilities
-        or CAP_DOOR_CONTROL in dev.capabilities
-    )

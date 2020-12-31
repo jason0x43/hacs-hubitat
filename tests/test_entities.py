@@ -1,5 +1,5 @@
 from asyncio import Future
-from typing import Awaitable
+from typing import Awaitable, Dict, Optional
 
 from custom_components.hubitat.device import Hub
 from hubitatmaker import Device
@@ -12,30 +12,33 @@ from pytest_homeassistant_custom_component.async_mock import (
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_registry import EntityRegistry
+
+
+def mock_get_reg(_: HomeAssistant) -> Awaitable[EntityRegistry]:
+    MockReg = Mock(spec=EntityRegistry)
+    mock_reg = MockReg()
+    mock_reg.configure_mock(entities={})
+    future = Future()
+    future.set_result(mock_reg)
+    return future
 
 
 @patch("custom_components.hubitat.entities.get_hub")
-@patch("custom_components.hubitat.entities.entity_registry")
-async def test_entity_migration(get_hub: Mock, entity_registry: Mock) -> None:
+@patch(
+    "custom_components.hubitat.entities.entity_registry.async_get_registry",
+    new=mock_get_reg,
+)
+async def test_entity_migration(get_hub: Mock) -> None:
     mock_device_1 = NonCallableMock(type="switch", attributes=["state"])
     mock_device_2 = NonCallableMock(type="fan", attributes=["state"])
     MockHub = Mock(spec=Hub)
     mock_hub = MockHub()
-    mock_hub.configure_mock(devices={"id1": mock_device_1, "id2": mock_device_2})
+    mock_hub.configure_mock(
+        devices={"id1": mock_device_1, "id2": mock_device_2}, token="12345"
+    )
 
     get_hub.return_value = mock_hub
-
-    from homeassistant.helpers.entity_registry import EntityRegistry
-
-    mock_reg = Mock(spec=EntityRegistry)
-
-    def async_get_reg(_: HomeAssistant) -> Awaitable[EntityRegistry]:
-        future: Future[EntityRegistry] = Future()
-        future.set_result(mock_reg)
-        return future
-
-    mock_async_get_reg = Mock(side_effect=async_get_reg)
-    entity_registry.configure_mock(async_get_registry=mock_async_get_reg)
 
     from custom_components.hubitat.switch import HubitatSwitch
     from custom_components.hubitat.entities import create_and_add_entities
@@ -44,7 +47,7 @@ async def test_entity_migration(get_hub: Mock, entity_registry: Mock) -> None:
     MockConfigEntry = Mock(spec=ConfigEntry)
     mock_entry = MockConfigEntry()
 
-    def _is_switch(device: Device) -> bool:
+    def _is_switch(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
         return device.type == "switch"
 
     is_switch = Mock(side_effect=_is_switch)

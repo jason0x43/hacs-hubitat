@@ -1,6 +1,6 @@
 """Support for Hubitat thermostats."""
 
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from hubitatmaker import (
     CAP_THERMOSTAT,
@@ -43,7 +43,12 @@ from homeassistant.components.climate.const import (
     SUPPORT_TARGET_TEMPERATURE_RANGE,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS, TEMP_FAHRENHEIT, PRECISION_TENTHS
+from homeassistant.const import (
+    ATTR_TEMPERATURE,
+    PRECISION_TENTHS,
+    TEMP_CELSIUS,
+    TEMP_FAHRENHEIT,
+)
 from homeassistant.core import HomeAssistant
 
 from .device import HubitatEntity
@@ -302,7 +307,7 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
                     await self.send_command(CMD_SET_HEATING_SETPOINT, temp)
 
 
-def is_thermostat(device: Device) -> bool:
+def is_thermostat(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
     """Return True if device looks like a thermostat."""
     return CAP_THERMOSTAT in device.capabilities
 
