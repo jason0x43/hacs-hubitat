@@ -1,0 +1,12 @@
+{
+	"reportDuplicateImport": true,
+	"reportMissingImports": true,
+	"reportOptionalCall": true,
+	"reportOptionalMemberAccess": true,
+	"reportOptionalSubscript": true,
+	"reportUnusedClass": true,
+	"reportUnusedFunction": true,
+	"reportUnusedImport": true,
+	"reportUnusedVariable": true,
+	"useLibraryCodeForTypes": true
+}
