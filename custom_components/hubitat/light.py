@@ -107,8 +107,10 @@ class HubitatLight(HubitatEntity, LightEntity):
         attrs = super().state_attributes
 
         if attrs:
-            attrs[ATTR_COLOR_MODE] = self.color_mode
-            attrs[ATTR_COLOR_NAME] = self.color_name
+            if self.color_mode is not None:
+                attrs[ATTR_COLOR_MODE] = self.color_mode
+            if self.color_name is not None:
+                attrs[ATTR_COLOR_NAME] = self.color_name
 
         return attrs
 
