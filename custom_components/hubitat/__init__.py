@@ -67,7 +67,7 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
         )
     )
 
-    get_hub(hass, config_entry.entry_id).unload()
+    await get_hub(hass, config_entry.entry_id).unload()
 
     _LOGGER.debug(f"Unloaded all components for {config_entry.entry_id}")
 

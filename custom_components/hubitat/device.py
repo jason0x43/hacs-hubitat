@@ -156,10 +156,10 @@ class Hub:
         """Stop the hub."""
         self._hub.stop()
 
-    def unload(self) -> None:
+    async def unload(self) -> None:
         """Unload the hub."""
         for emitter in self.event_emitters:
-            emitter.async_will_remove_from_hass()
+            await emitter.async_will_remove_from_hass()
         self.unsub_config_listener()
 
     async def async_setup(self) -> bool:
@@ -347,7 +347,7 @@ class HubitatBase:
         """Return the type name of this device."""
         return self._device.type
 
-    def async_will_remove_from_hass(self) -> None:
+    async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
         self._hub.remove_device_listeners(self.device_id)
 
