@@ -27,7 +27,6 @@ from .const import (
     CONF_HUBITAT_EVENT,
     CONF_SERVER_PORT,
     CONF_SERVER_URL,
-    CONF_USE_SERVER_URL,
     DOMAIN,
     PLATFORMS,
     TEMP_F,
@@ -166,17 +165,8 @@ class Hub:
     async def async_setup(self) -> bool:
         """Initialize this hub instance."""
         entry = self.config_entry
-        use_url = entry.options.get(
-            CONF_USE_SERVER_URL, entry.data.get(CONF_USE_SERVER_URL)
-        )
-        url = (
-            None
-            if not use_url
-            else entry.options.get(CONF_SERVER_URL, entry.data.get(CONF_SERVER_URL))
-        )
-        port = (
-            entry.options.get(CONF_SERVER_PORT, entry.data.get(CONF_SERVER_PORT)) or 0
-        )
+        url = entry.options.get(CONF_SERVER_URL, entry.data.get(CONF_SERVER_URL))
+        port = entry.options.get(CONF_SERVER_PORT, entry.data.get(CONF_SERVER_PORT))
 
         _LOGGER.debug("Initializing Hubitat hub with event server on port %s", port)
         self._hub = HubitatHub(
@@ -246,19 +236,12 @@ class Hub:
             await hub.set_port(port)
             _LOGGER.debug("Set event server port to %s", port)
 
-        use_url = config_entry.options.get(
-            CONF_USE_SERVER_URL, config_entry.data.get(CONF_USE_SERVER_URL)
+        url = config_entry.options.get(
+            CONF_SERVER_URL, config_entry.data.get(CONF_SERVER_URL)
         )
-        if use_url:
-            url = config_entry.options.get(
-                CONF_SERVER_URL, config_entry.data.get(CONF_SERVER_URL)
-            )
-            if url != hub.event_url:
-                await hub.set_event_url(url)
-                _LOGGER.debug("Set event server URL to %s", url)
-        else:
-            await hub.set_event_url(None)
-            _LOGGER.debug("Set event server URL to None")
+        if url != hub.event_url:
+            await hub.set_event_url(url)
+            _LOGGER.debug("Set event server URL to %s", url)
 
         temp_unit = (
             config_entry.options.get(
@@ -364,7 +347,7 @@ class HubitatBase:
         """Return the type name of this device."""
         return self._device.type
 
-    async def async_will_remove_from_hass(self) -> None:
+    def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
         self._hub.remove_device_listeners(self.device_id)
 
