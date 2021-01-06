@@ -221,8 +221,8 @@ MATCH_LIGHT = re.compile(
 
 def is_light(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
     """Return True if device looks like a light."""
-    if overrides and device.id in overrides and overrides[device.id] != "light":
-        return False
+    if overrides and overrides.get(device.id) is not None:
+        return overrides[device.id] == "light"
 
     if is_definitely_light(device):
         return True

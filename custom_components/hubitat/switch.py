@@ -127,8 +127,8 @@ class HubitatAlarm(HubitatSwitch):
 
 def is_switch(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
     """Return True if device looks like a switch."""
-    if overrides and device.id in overrides and overrides[device.id] != "switch":
-        return False
+    if overrides and overrides.get(device.id) is not None:
+        return overrides[device.id] == "switch"
 
     return (
         CAP_SWITCH in device.capabilities

@@ -292,6 +292,8 @@ class HubitatOptionsFlow(OptionsFlow):
         """Let the user manually specify some devices as switches."""
 
         async def next_step() -> Dict[str, Any]:
+            # Copy self.options to ensure config entry is recreated
+            self.options = {key: self.options[key] for key in self.options}
             self.options[CONF_DEVICE_TYPE_OVERRIDES] = self.overrides
             _LOGGER.debug(f"Set device type overrides to {self.overrides}")
             _LOGGER.debug("Creating entry")
@@ -330,17 +332,26 @@ class HubitatOptionsFlow(OptionsFlow):
                 id for id in existing_overrides if existing_overrides[id] == platform
             ]
 
+        possible_overrides = {
+            id: devices[id].name for id in devices if matcher(devices[id])
+        }
+
         device_schema = vol.Schema(
             {
                 vol.Optional(CONF_DEVICES, default=default_value): cv.multi_select(
-                    {id: devices[id].name for id in devices if matcher(devices[id])}
-                ),
+                    possible_overrides
+                )
             }
         )
 
         if user_input is not None:
-            for id in user_input[CONF_DEVICES]:
-                self.overrides[id] = platform
+            for id in possible_overrides:
+                if id in user_input[CONF_DEVICES]:
+                    self.overrides[id] = platform
+                    _LOGGER.debug(f"Overrode device {id} to {platform}")
+                elif id in self.overrides:
+                    del self.overrides[id]
+                    _LOGGER.debug(f"Cleared override for device {id}")
             return await next_step()
 
         if len(errors) == 0:
