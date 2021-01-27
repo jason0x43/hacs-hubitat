@@ -201,6 +201,12 @@ class HubitatOptionsFlow(OptionsFlow):
             form_errors = errors
             self.hub = None
 
+        default_server_url = entry.options.get(
+            CONF_SERVER_URL, entry.data.get(CONF_SERVER_URL)
+        )
+        if default_server_url == "":
+            default_server_url = None
+
         return self.async_show_form(
             step_id=STEP_USER,
             data_schema=vol.Schema(
@@ -211,11 +217,7 @@ class HubitatOptionsFlow(OptionsFlow):
                     ): str,
                     vol.Optional(
                         CONF_SERVER_URL,
-                        description={
-                            "suggested_value": entry.options.get(
-                                CONF_SERVER_URL, entry.data.get(CONF_SERVER_URL)
-                            )
-                        },
+                        description={"suggested_value": default_server_url},
                     ): str,
                     vol.Optional(
                         CONF_SERVER_PORT,

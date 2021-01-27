@@ -168,6 +168,13 @@ class Hub:
         url = entry.options.get(CONF_SERVER_URL, entry.data.get(CONF_SERVER_URL))
         port = entry.options.get(CONF_SERVER_PORT, entry.data.get(CONF_SERVER_PORT))
 
+        # Previous versions of the integration may have saved a value of "" for
+        # server_url with the assumption that a use_server_url flag would control
+        # it's use. The current version uses a value of null for "no user URL"
+        # rather than a flag.
+        if url == "":
+            url = None
+
         _LOGGER.debug("Initializing Hubitat hub with event server on port %s", port)
         self._hub = HubitatHub(
             self.host, self.app_id, self.token, port=port, event_url=url
@@ -239,6 +246,8 @@ class Hub:
         url = config_entry.options.get(
             CONF_SERVER_URL, config_entry.data.get(CONF_SERVER_URL)
         )
+        if url == "":
+            url = None
         if url != hub.event_url:
             await hub.set_event_url(url)
             _LOGGER.debug("Set event server URL to %s", url)
