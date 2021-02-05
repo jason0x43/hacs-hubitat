@@ -7,6 +7,7 @@ from hubitatmaker import (
     ATTR_HUMIDITY,
     ATTR_ILLUMINANCE,
     ATTR_POWER,
+    ATTR_POWER_SOURCE,
     ATTR_PRESSURE,
     ATTR_TEMPERATURE,
     ATTR_VOLTAGE,
@@ -119,6 +120,16 @@ class HubitatPowerSensor(HubitatSensor):
         self._device_class = DEVICE_CLASS_POWER
 
 
+class HubitatPowerSourceSensor(HubitatSensor):
+    """A power source sensor."""
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        """Initialize a power source sensor."""
+        super().__init__(*args, **kwargs)
+        self._attribute = ATTR_POWER_SOURCE
+        self._device_class = DEVICE_CLASS_POWER
+
+
 class HubitatTemperatureSensor(HubitatSensor):
     """A temperature sensor."""
 
@@ -166,6 +177,7 @@ _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatSensor]], ...] = (
     (ATTR_HUMIDITY, HubitatHumiditySensor),
     (ATTR_ILLUMINANCE, HubitatIlluminanceSensor),
     (ATTR_POWER, HubitatPowerSensor),
+    (ATTR_POWER_SOURCE, HubitatPowerSourceSensor),
     (ATTR_PRESSURE, HubitatPressureSensor),
     (ATTR_TEMPERATURE, HubitatTemperatureSensor),
     (ATTR_VOLTAGE, HubitatVoltageSensor),
