@@ -4,6 +4,10 @@ from logging import getLogger
 import re
 from typing import Any, Dict
 
+from custom_components.hubitat.services import (
+    async_register_services,
+    async_remove_services,
+)
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
@@ -37,6 +41,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     await hub.async_update_device_registry()
 
+    async_register_services(hass, config_entry)
+
     def stop_hub(event: Event) -> None:
         hub.stop()
 
@@ -57,6 +63,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+
+    async_remove_services(hass, config_entry)
 
     unload_ok = all(
         await gather(

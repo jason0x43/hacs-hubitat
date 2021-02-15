@@ -60,3 +60,16 @@ alarm_strobe_on:
   fields:
     entity_id:
       description: Entity ID of an alarm
+
+send_command:
+  description: Send a command to a Hubitat device
+  fields:
+    entity_id:
+      description: Entity to send command to
+    command:
+      description: A command to send
+      example: refresh
+    args:
+      description: >-
+          Optional arguments for command; may be a single value or a list of
+          values

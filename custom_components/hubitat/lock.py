@@ -1,5 +1,4 @@
-from logging import getLogger
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union
 
 from hubitatmaker import (
     ATTR_CODE_LENGTH as HM_ATTR_CODE_LENGTH,
@@ -16,49 +15,15 @@ from hubitatmaker import (
     STATE_LOCKED,
     Device,
 )
-import voluptuous as vol
 
 from homeassistant.components.lock import LockEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
+from homeassistant.core import HomeAssistant
 
-from .const import (
-    ATTR_CODE,
-    ATTR_CODE_LENGTH,
-    ATTR_CODES,
-    ATTR_LAST_CODE_NAME,
-    ATTR_LENGTH,
-    ATTR_MAX_CODES,
-    ATTR_NAME,
-    ATTR_POSITION,
-    DOMAIN,
-    SERVICE_CLEAR_CODE,
-    SERVICE_SET_CODE,
-    SERVICE_SET_CODE_LENGTH,
-)
+from .const import ATTR_CODE_LENGTH, ATTR_CODES, ATTR_LAST_CODE_NAME, ATTR_MAX_CODES
 from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .types import EntityAdder
-
-_LOGGER = getLogger(__name__)
-
-
-SET_CODE_SCHEMA = vol.Schema(
-    {
-        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
-        vol.Required(ATTR_POSITION): vol.Coerce(int),
-        vol.Required(ATTR_CODE): vol.Coerce(str),
-        vol.Optional(ATTR_NAME): str,
-    }
-)
-CLEAR_CODE_SCHEMA = vol.Schema(
-    {vol.Required(ATTR_ENTITY_ID): cv.entity_id, vol.Required(ATTR_POSITION): int}
-)
-SET_CODE_LENGTH_SCHEMA = vol.Schema(
-    {vol.Required(ATTR_ENTITY_ID): cv.entity_id, vol.Required(ATTR_LENGTH): int}
-)
 
 
 class HubitatLock(HubitatEntity, LockEntity):
@@ -155,54 +120,6 @@ async def async_setup_entry(
     async_add_entities: EntityAdder,
 ) -> None:
     """Initialize lock devices."""
-    locks = await create_and_add_entities(
+    await create_and_add_entities(
         hass, entry, async_add_entities, "lock", HubitatLock, is_lock
     )
-
-    if len(locks) > 0:
-
-        def get_entity(entity_id: str) -> Optional[HubitatLock]:
-            for lock in locks:
-                if lock.entity_id == entity_id:
-                    return lock
-            return None
-
-        async def clear_code(service: ServiceCall) -> None:
-            entity_id = cast(str, service.data.get(ATTR_ENTITY_ID))
-            lock = get_entity(entity_id)
-            if lock:
-                pos = cast(int, service.data.get(ATTR_POSITION))
-                await lock.clear_code(pos)
-
-        async def set_code(service: ServiceCall) -> None:
-            entity_id = cast(str, service.data.get(ATTR_ENTITY_ID))
-            lock = get_entity(entity_id)
-            if not lock:
-                raise ValueError(f"Invalid or unknown entity '{entity_id}'")
-
-            pos = cast(int, service.data.get(ATTR_POSITION))
-            code = cast(str, service.data.get(ATTR_CODE))
-            name = cast(str, service.data.get(ATTR_NAME))
-            await lock.set_code(pos, code, name)
-            _LOGGER.debug("Set code at %s to %s for %s", pos, code, entity_id)
-
-        async def set_code_length(service: ServiceCall) -> None:
-            entity_id = cast(str, service.data.get(ATTR_ENTITY_ID))
-            lock = get_entity(entity_id)
-            if lock:
-                length = cast(int, service.data.get(ATTR_LENGTH))
-                await lock.set_code_length(length)
-                _LOGGER.debug("Set code length for %s to %d", entity_id, length)
-
-        hass.services.async_register(
-            DOMAIN, SERVICE_CLEAR_CODE, clear_code, schema=CLEAR_CODE_SCHEMA
-        )
-        hass.services.async_register(
-            DOMAIN, SERVICE_SET_CODE, set_code, schema=SET_CODE_SCHEMA
-        )
-        hass.services.async_register(
-            DOMAIN,
-            SERVICE_SET_CODE_LENGTH,
-            set_code_length,
-            schema=SET_CODE_LENGTH_SCHEMA,
-        )

@@ -14,6 +14,7 @@ from hubitatmaker import (
 
 DOMAIN = "hubitat"
 
+ATTR_ARGUMENTS = "args"
 ATTR_ATTRIBUTE = "attribute"
 ATTR_ALARM = "alarm"
 ATTR_CODE = "code"
@@ -66,6 +67,7 @@ PLATFORMS = [
 ]
 
 SERVICE_CLEAR_CODE = "clear_code"
+SERVICE_SEND_COMMAND = "send_command"
 SERVICE_SET_CODE = "set_code"
 SERVICE_SET_CODE_LENGTH = "set_code_length"
 SERVICE_SET_ENTRY_DELAY = "set_entry_delay"

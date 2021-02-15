@@ -426,9 +426,11 @@ class HubitatEntity(HubitatBase, Entity):
         """Fetch new data for this device."""
         await self._hub.refresh_device(self.device_id)
 
-    async def send_command(self, command: str, *args: Union[int, str]) -> None:
+    async def send_command(
+        self, command: str, *args: Optional[Union[int, str]]
+    ) -> None:
         """Send a command to this device."""
-        arg = ",".join([str(a) for a in args])
+        arg = ",".join([str(a) for a in args]) if args else None
         await self._hub.send_command(self.device_id, command, arg)
         _LOGGER.debug("sent %s to %s", command, self.device_id)
 

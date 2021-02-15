@@ -1,7 +1,7 @@
 """Support for Hubitat security keypads."""
 
 from logging import getLogger
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional
 
 from hubitatmaker.const import (
     ATTR_ALARM as HE_ATTR_ALARM,
@@ -30,7 +30,6 @@ from hubitatmaker.const import (
     STATE_DISARMED,
 )
 from hubitatmaker.types import Device
-import voluptuous as vol
 
 from homeassistant.components.alarm_control_panel import (
     SUPPORT_ALARM_ARM_AWAY,
@@ -41,57 +40,26 @@ from homeassistant.components.alarm_control_panel import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
-    ATTR_ENTITY_ID,
     STATE_ALARM_ARMED_AWAY,
     STATE_ALARM_ARMED_HOME,
     STATE_ALARM_ARMED_NIGHT,
     STATE_ALARM_DISARMED,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.helpers import config_validation as cv
+from homeassistant.core import HomeAssistant
 
 from .const import (
     ATTR_ALARM,
-    ATTR_CODE,
     ATTR_CODE_LENGTH,
     ATTR_CODES,
-    ATTR_DELAY,
     ATTR_ENTRY_DELAY,
     ATTR_EXIT_DELAY,
-    ATTR_LENGTH,
     ATTR_MAX_CODES,
-    ATTR_NAME,
-    ATTR_POSITION,
-    DOMAIN,
-    SERVICE_CLEAR_CODE,
-    SERVICE_SET_CODE,
-    SERVICE_SET_CODE_LENGTH,
-    SERVICE_SET_ENTRY_DELAY,
-    SERVICE_SET_EXIT_DELAY,
 )
 from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
-
-CLEAR_CODE_SCHEMA = vol.Schema(
-    {vol.Required(ATTR_ENTITY_ID): cv.entity_id, vol.Required(ATTR_POSITION): int}
-)
-SET_CODE_LENGTH_SCHEMA = vol.Schema(
-    {vol.Required(ATTR_ENTITY_ID): cv.entity_id, vol.Required(ATTR_LENGTH): int}
-)
-SET_CODE_SCHEMA = vol.Schema(
-    {
-        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
-        vol.Required(ATTR_POSITION): vol.Coerce(int),
-        vol.Required(ATTR_CODE): vol.Coerce(str),
-        vol.Optional(ATTR_NAME): str,
-    }
-)
-SET_DELAY_SCHEMA = vol.Schema(
-    {vol.Required(ATTR_ENTITY_ID): cv.entity_id, vol.Required(ATTR_DELAY): int}
-)
 
 
 class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
@@ -252,7 +220,7 @@ async def async_setup_entry(
     async_add_entities: EntityAdder,
 ) -> None:
     """Initialize security keypad devices."""
-    keypads = await create_and_add_entities(
+    await create_and_add_entities(
         hass,
         entry,
         async_add_entities,
@@ -260,58 +228,3 @@ async def async_setup_entry(
         HubitatSecurityKeypad,
         is_security_keypad,
     )
-
-    if len(keypads) > 0:
-
-        def get_entity(service: ServiceCall) -> HubitatSecurityKeypad:
-            entity_id = service.data.get(ATTR_ENTITY_ID)
-            for keypad in keypads:
-                if keypad.entity_id == entity_id:
-                    return keypad
-            raise Exception(f"Invalid entity: {entity_id}")
-
-        async def clear_code(service: ServiceCall) -> None:
-            keypad = get_entity(service)
-            pos = cast(int, service.data.get(ATTR_POSITION))
-            await keypad.clear_code(pos)
-
-        async def set_code(service: ServiceCall) -> None:
-            keypad = get_entity(service)
-            pos = cast(int, service.data.get(ATTR_POSITION))
-            code = cast(str, service.data.get(ATTR_CODE))
-            name = cast(str, service.data.get(ATTR_NAME))
-            await keypad.set_code(pos, code, name)
-
-        async def set_code_length(service: ServiceCall) -> None:
-            keypad = get_entity(service)
-            length = cast(int, service.data.get(ATTR_LENGTH))
-            await keypad.set_code_length(length)
-
-        async def set_entry_delay(service: ServiceCall) -> None:
-            keypad = get_entity(service)
-            delay = cast(int, service.data.get(ATTR_LENGTH))
-            await keypad.set_entry_delay(delay)
-
-        async def set_exit_delay(service: ServiceCall) -> None:
-            keypad = get_entity(service)
-            delay = cast(int, service.data.get(ATTR_LENGTH))
-            await keypad.set_exit_delay(delay)
-
-        hass.services.async_register(
-            DOMAIN, SERVICE_CLEAR_CODE, clear_code, schema=CLEAR_CODE_SCHEMA
-        )
-        hass.services.async_register(
-            DOMAIN, SERVICE_SET_CODE, set_code, schema=SET_CODE_SCHEMA
-        )
-        hass.services.async_register(
-            DOMAIN,
-            SERVICE_SET_CODE_LENGTH,
-            set_code_length,
-            schema=SET_CODE_LENGTH_SCHEMA,
-        )
-        hass.services.async_register(
-            DOMAIN, SERVICE_SET_ENTRY_DELAY, set_entry_delay, schema=SET_DELAY_SCHEMA
-        )
-        hass.services.async_register(
-            DOMAIN, SERVICE_SET_EXIT_DELAY, set_exit_delay, schema=SET_DELAY_SCHEMA
-        )
