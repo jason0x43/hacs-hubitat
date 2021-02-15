@@ -13,6 +13,7 @@ This integration uses [Hubitat’s](hubitat.com) [Maker API](https://docs.hubita
 * [Setup](#setup)
   * [Event server](#event-server)
   * [Device types](#device-types)
+* [Services](#services)
 * [Event-emitting devices](#event-emitting-devices)
 * [Updating](#updating)
 * [Troubleshooting](#troubleshooting)
@@ -63,13 +64,13 @@ In HACS, go to Integrations, and then click the orange '+' button in the lower r
 
 ### Manually
 
-Clone this repository and copy the `custom_components/hubitat` folder into your `<config>/custom_components/` directory (so you end up with `<config>/custom_components/hubitat`). Be sure to copy the entire directory, including the (possibly hidden) `.translations` subdirectory.
+Clone this repository and copy the `custom_components/hubitat` folder into your `<config>/custom_components/` directory (so you end up with `<config>/custom_components/hubitat`).
 
 ## Setup
 
 First, create a Maker API instance in the Hubitat UI. Add whatever devices you’d like to make available to Home Assistant.
 
-To configure the hubitat integration, go to Configuration -> Integrations in the Home Assistant UI and click the “+” button to add a new integration. Pick “Hubitat”, then provide:
+To configure the Hubitat integration, go to Configuration -> Integrations in the Home Assistant UI and click the “+” button to add a new integration. Pick “Hubitat”, then provide:
 
 - The address of the hub (e.g., `http://10.0.1.99` or just `10.0.1.99` if you’re not using https)
 - The app ID of the Maker API instance (the 3 or 4 digit number after `/apps/api/` in any of the Maker API URLs)
@@ -85,6 +86,69 @@ To receive these events, the integration starts up a Python-based web server and
 ### Device types
 
 The integration assigns Home Assistant device classes based on the capabilities reported by Hubitat. Sometimes the device type is ambiguous; a switchable outlet and a light switch may both only implement Hubitat’s [Switch](https://docs.hubitat.com/index.php?title=Driver_Capability_List#Switch) capability, and will therefore look like the same type of device to the integration. In some of these cases, the integration guesses the device class based on the device’s label (e.g., a switch named “Office Lamp” would be setup as a light in Home Assistant). This heuristic behavior is currently only used for lights and switches.
+
+## Services
+
+This integration adds several service calls to Home Assistant.
+
+- Delete the alarm code at a given position in a lock or keypad
+  ```yaml
+  service: hubitat.clear_code
+  data:
+    entity_id: lock.some_lock
+    position: 1
+  ```
+- Set a user code for a lock or keypad
+  ```yaml
+  service: hubitat.set_code
+  data:
+    entity_id: lock.some_lock
+    position: 1
+    code: 5213
+    name: Guests
+  ```
+- Set the length of user codes for a lock or keypad
+  ```yaml
+  service: hubitat.set_code_length
+  data:
+    entity_id: lock.some_lock
+    length: 4
+  ```
+- Set the entry delay for a security keypad in seconds
+  ```yaml
+  service: hubitat.set_entry_delay
+  data:
+    entity_id: alarm_control_panel.some_alarm
+    delay: 30
+  ```
+- Set the exit delay for a security keypad in seconds
+  ```yaml
+  service: hubitat.set_exit_delay
+  data:
+    entity_id: alarm_control_panel.some_alarm
+    delay: 30
+  ```
+- Send a command to a Hubitat device
+  ```yaml
+  service: hubitat.send_command
+  data:
+    entity_id: switch.some_switch
+    command: on
+  ```
+  ```yaml
+  service: hubitat.send_command
+  data:
+    entity_id: light.some_light
+    command: setHue
+    args: 75
+  ```
+  ```yaml
+  service: hubitat.send_command
+  data:
+    entity_id: light.some_light
+    command: setLevel
+    args: [50, 3]
+  ```
 
 ## Event-emitting devices
 

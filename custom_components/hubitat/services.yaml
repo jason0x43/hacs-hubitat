@@ -49,18 +49,6 @@ set_exit_delay:
       description: Delay in seconds
       example: 30
 
-alarm_siren_on:
-  description: Activate an alarm siren
-  fields:
-    entity_id:
-      description: Entity ID of an alarm
-
-alarm_strobe_on:
-  description: Activate an alarm strobe light
-  fields:
-    entity_id:
-      description: Entity ID of an alarm
-
 send_command:
   description: Send a command to a Hubitat device
   fields:

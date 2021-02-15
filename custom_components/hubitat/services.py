@@ -75,7 +75,9 @@ def async_register_services(
         cmd = cast(str, service.data.get(ATTR_COMMAND))
         args = cast(str, service.data.get(ATTR_ARGUMENTS))
         if args is not None:
-            await entity.send_command(cmd, args)
+            if not isinstance(args, list):
+                args = [args]
+            await entity.send_command(cmd, *args)
         else:
             await entity.send_command(cmd)
 
