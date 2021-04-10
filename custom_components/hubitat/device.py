@@ -22,6 +22,7 @@ from homeassistant.helpers.entity import Entity
 
 from .const import (
     ATTR_ATTRIBUTE,
+    ATTR_HA_DEVICE_ID,
     ATTR_HUB,
     CONF_APP_ID,
     CONF_HUBITAT_EVENT,
@@ -405,6 +406,7 @@ class HubitatBase:
             evt = dict(event)
             evt[ATTR_ATTRIBUTE] = _TRIGGER_ATTR_MAP[event.attribute]
             evt[ATTR_HUB] = self._hub.id
+            evt[ATTR_HA_DEVICE_ID] = self._id
             self._hub.hass.bus.async_fire(CONF_HUBITAT_EVENT, evt)
             _LOGGER.debug("Emitted event %s", evt)
 
