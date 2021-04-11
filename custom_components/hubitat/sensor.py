@@ -1,5 +1,7 @@
 """Hubitat sensor entities."""
 
+from datetime import datetime
+from logging import getLogger
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from hubitatmaker import (
@@ -23,13 +25,22 @@ from homeassistant.components.sensor import (
     DEVICE_CLASS_TEMPERATURE,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import POWER_WATT, PRESSURE_MBAR, TEMP_CELSIUS, TEMP_FAHRENHEIT
+from homeassistant.const import (
+    DEVICE_CLASS_TIMESTAMP,
+    POWER_WATT,
+    PRESSURE_MBAR,
+    TEMP_CELSIUS,
+    TEMP_FAHRENHEIT,
+)
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 
 from .const import TEMP_F
 from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .types import EntityAdder
+
+_LOGGER = getLogger(__name__)
 
 
 class HubitatSensor(HubitatEntity):
@@ -172,6 +183,50 @@ class HubitatPressureSensor(HubitatSensor):
         self._device_class = DEVICE_CLASS_PRESSURE
 
 
+class HubitatUpdateSensor(HubitatEntity):
+    """
+    A sensor that reports the last time a state update was received for a
+    device.
+    """
+
+    _last_converted_update: Optional[float] = None
+    _last_update_str: Optional[str] = None
+
+    @property
+    def device_class(self) -> Optional[str]:
+        """Return this sensor's device class."""
+        return DEVICE_CLASS_TIMESTAMP
+
+    @property
+    def name(self) -> str:
+        """Return this sensor's display name."""
+        return f"{super().name} last update time"
+
+    @property
+    def state(self) -> Union[float, int, str, None]:
+        """Return this sensor's current state."""
+        if self._last_converted_update != self.last_update:
+            # Cache the converted last_update time so we're not constantly
+            # doing that
+            try:
+                dt = datetime.fromtimestamp(self.last_update)
+                self._last_update_str = dt_util.as_utc(dt).isoformat()
+                self._last_converted_update = self.last_update
+            except Exception as e:
+                _LOGGER.warn("Error parsing last update time", e)
+        return self._last_update_str
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID for this sensor."""
+        return f"{super().unique_id}::sensor::last_update"
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Update sensors are disabled by default."""
+        return False
+
+
 _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatSensor]], ...] = (
     (ATTR_BATTERY, HubitatBatterySensor),
     (ATTR_HUMIDITY, HubitatHumiditySensor),
@@ -184,12 +239,25 @@ _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatSensor]], ...] = (
 )
 
 
+def is_update_sensor(
+    device: Device, overrides: Optional[Dict[str, str]] = None
+) -> bool:
+    """Every device can have an update sensor."""
+    return True
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
     async_add_entities: EntityAdder,
 ) -> None:
     """Initialize sensor devices."""
+
+    # Add an update sensor for every device
+    await create_and_add_entities(
+        hass, entry, async_add_entities, "sensor", HubitatUpdateSensor, is_update_sensor
+    )
+
     for attr in _SENSOR_ATTRS:
 
         def is_sensor(

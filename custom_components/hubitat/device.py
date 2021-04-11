@@ -400,6 +400,11 @@ class HubitatBase:
             return None
         return str(val)
 
+    @property
+    def last_update(self) -> float:
+        """Return the last update time of this device."""
+        return self._device.last_update
+
     def handle_event(self, event: Event) -> None:
         """Handle an event received from the Hubitat hub."""
         if event.attribute in _TRIGGER_ATTRS:
