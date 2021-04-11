@@ -75,8 +75,12 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
         )
     )
 
-    await get_hub(hass, config_entry.entry_id).unload()
+    hub = get_hub(hass, config_entry.entry_id)
 
+    hub.stop()
+    _LOGGER.debug(f"Stopped event server for {config_entry.entry_id}")
+
+    await hub.unload()
     _LOGGER.debug(f"Unloaded all components for {config_entry.entry_id}")
 
     if unload_ok:
