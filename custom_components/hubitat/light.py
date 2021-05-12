@@ -3,9 +3,16 @@
 import json
 from logging import getLogger
 import re
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from hubitatmaker import (
+    ATTR_COLOR_MODE as HE_ATTR_COLOR_MODE,
+    ATTR_COLOR_NAME as HE_ATTR_COLOR_NAME,
+    ATTR_COLOR_TEMP as HE_ATTR_COLOR_TEMP,
+    ATTR_HUE as HE_ATTR_HUE,
+    ATTR_LEVEL as HE_ATTR_LEVEL,
+    ATTR_SATURATION as HE_ATTR_SATURATION,
+    ATTR_SWITCH as HE_ATTR_SWITCH,
     CAP_COLOR_CONTROL,
     CAP_COLOR_TEMP,
     CAP_LIGHT,
@@ -16,18 +23,21 @@ from hubitatmaker import (
     CMD_SET_COLOR,
     CMD_SET_COLOR_TEMP,
     CMD_SET_LEVEL,
-    COLOR_MODE_CT,
-    COLOR_MODE_RGB,
+    COLOR_MODE_CT as HE_COLOR_MODE_CT,
+    COLOR_MODE_RGB as HE_COLOR_MODE_RGB,
     Device,
 )
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
-    ATTR_COLOR_NAME,
     ATTR_COLOR_TEMP,
     ATTR_FLASH,
     ATTR_HS_COLOR,
     ATTR_TRANSITION,
+    COLOR_MODE_BRIGHTNESS,
+    COLOR_MODE_COLOR_TEMP,
+    COLOR_MODE_HS,
+    COLOR_MODE_ONOFF,
     SUPPORT_BRIGHTNESS,
     SUPPORT_COLOR,
     SUPPORT_COLOR_TEMP,
@@ -38,7 +48,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import color as color_util
 
-from .const import ATTR_COLOR_MODE
 from .cover import is_cover
 from .device import HubitatEntity
 from .entities import create_and_add_entities
@@ -53,17 +62,22 @@ class HubitatLight(HubitatEntity, LightEntity):
     @property
     def color_mode(self) -> Optional[str]:
         """Return this light's color mode."""
-        return self.get_str_attr("colorMode")
+        he_color_mode = self.get_str_attr(HE_ATTR_COLOR_MODE)
+        if he_color_mode == HE_COLOR_MODE_CT:
+            return COLOR_MODE_COLOR_TEMP
+        if he_color_mode == HE_COLOR_MODE_RGB:
+            return COLOR_MODE_HS
+        return None
 
     @property
     def color_name(self) -> Optional[str]:
         """Return the name of this light's current color."""
-        return self.get_str_attr("colorName")
+        return self.get_str_attr(HE_ATTR_COLOR_NAME)
 
     @property
     def brightness(self) -> Optional[int]:
         """Return the level of this light."""
-        level = self.get_int_attr("level")
+        level = self.get_int_attr(HE_ATTR_LEVEL)
         if level is None:
             return None
         return int(255 * level / 100)
@@ -72,47 +86,52 @@ class HubitatLight(HubitatEntity, LightEntity):
     def color_temp(self) -> Optional[float]:
         """Return the CT color value in mireds."""
         mode = self.color_mode
-        if mode and mode != COLOR_MODE_CT:
+        if mode and mode != COLOR_MODE_COLOR_TEMP:
             return None
 
-        temp = self.get_int_attr("colorTemperature")
+        temp = self.get_int_attr(HE_ATTR_COLOR_TEMP)
         if temp is None:
             return None
 
         return color_util.color_temperature_kelvin_to_mired(temp)
 
     @property
-    def hs_color(self) -> Optional[List[float]]:
+    def hs_color(self) -> Optional[Tuple[float, float]]:
         """Return the hue and saturation color value [float, float]."""
         mode = self.color_mode
-        if mode is not None and mode != COLOR_MODE_RGB:
+        if mode and mode != COLOR_MODE_HS:
             return None
 
-        hue = self.get_float_attr("hue")
-        sat = self.get_float_attr("saturation")
+        hue = self.get_float_attr(HE_ATTR_HUE)
+        sat = self.get_float_attr(HE_ATTR_SATURATION)
         if hue is None or sat is None:
             return None
 
         hass_hue = 360 * hue / 100
-        return [hass_hue, sat]
+        return (hass_hue, sat)
 
     @property
     def is_on(self) -> bool:
         """Return True if the light is on."""
-        return self.get_str_attr("switch") == "on"
+        return self.get_str_attr(HE_ATTR_SWITCH) == "on"
 
     @property
-    def state_attributes(self):
-        """Return state attributes."""
-        attrs = super().state_attributes
+    def supported_color_modes(self) -> set:
+        caps = self._device.capabilities
+        supported_modes = set()
 
-        if attrs:
-            if self.color_mode is not None:
-                attrs[ATTR_COLOR_MODE] = self.color_mode
-            if self.color_name is not None:
-                attrs[ATTR_COLOR_NAME] = self.color_name
+        if CAP_COLOR_CONTROL in caps:
+            supported_modes.add(COLOR_MODE_HS)
+        if CAP_COLOR_TEMP in caps:
+            supported_modes.add(COLOR_MODE_COLOR_TEMP)
 
-        return attrs
+        if CAP_SWITCH_LEVEL in caps and not supported_modes:
+            supported_modes.add(COLOR_MODE_BRIGHTNESS)
+
+        if not supported_modes:
+            supported_modes.add(COLOR_MODE_ONOFF)
+
+        return supported_modes
 
     @property
     def supported_features(self) -> int:
@@ -121,12 +140,16 @@ class HubitatLight(HubitatEntity, LightEntity):
         caps = self._device.capabilities
         cmds = self._device.commands
 
+        # deprecated, replaced by color modes
         if CAP_COLOR_CONTROL in caps:
             features |= SUPPORT_COLOR
+        # deprecated, replaced by color modes
         if CAP_COLOR_TEMP in caps:
             features |= SUPPORT_COLOR_TEMP
+        # deprecated, replaced by color modes
         if CAP_SWITCH_LEVEL in caps:
             features |= SUPPORT_BRIGHTNESS
+
         if CMD_FLASH in cmds:
             features |= SUPPORT_FLASH
 
