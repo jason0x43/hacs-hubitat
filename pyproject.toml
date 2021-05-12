@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hubitat"
-version = "0.6.6"
+version = "0.6.7"
 description = "A Hubitat integration for Home Assistant"
 authors = ["Jason Cheatham <jason@jasoncheatham.com>"]
 packages = [
@@ -8,7 +8,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.7.1"
+python = "^3.8.0"
 
 [tool.poetry.dev-dependencies]
 black = "^20.8b1"
@@ -17,7 +17,7 @@ isort = "^4.3.21"
 pre-commit = "^2.4.0"
 flake8-pyi = "^20.5.0"
 hubitatmaker = "^0.5.2"
-homeassistant = "^0.116.0"
+homeassistant = "^2021.5.1"
 pytest-homeassistant-custom-component = "^0.0.8"
 neovim = "^0.3.1"
 
