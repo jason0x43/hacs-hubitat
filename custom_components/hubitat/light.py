@@ -34,10 +34,6 @@ from homeassistant.components.light import (
     ATTR_FLASH,
     ATTR_HS_COLOR,
     ATTR_TRANSITION,
-    COLOR_MODE_BRIGHTNESS,
-    COLOR_MODE_COLOR_TEMP,
-    COLOR_MODE_HS,
-    COLOR_MODE_ONOFF,
     SUPPORT_BRIGHTNESS,
     SUPPORT_COLOR,
     SUPPORT_COLOR_TEMP,
@@ -52,6 +48,20 @@ from .cover import is_cover
 from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .types import EntityAdder
+
+try:
+    from homeassistant.components.light import (
+        COLOR_MODE_BRIGHTNESS,
+        COLOR_MODE_COLOR_TEMP,
+        COLOR_MODE_HS,
+        COLOR_MODE_ONOFF,
+    )
+except ImportError:
+    COLOR_MODE_BRIGHTNESS = "brightness"
+    COLOR_MODE_COLOR_TEMP = "color_temp"
+    COLOR_MODE_HS = "hs"
+    COLOR_MODE_ONOFF = "onoff"
+
 
 _LOGGER = getLogger(__name__)
 
