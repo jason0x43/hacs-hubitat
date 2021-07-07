@@ -45,6 +45,12 @@ from .light import is_definitely_light, is_light
 from .switch import is_switch
 from .util import get_hub_short_id
 
+try:
+    from homeassistant.data_entry_flow import FlowResult
+except Exception:
+    FlowResult = Dict[str, Any]
+
+
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = vol.Schema(
@@ -75,7 +81,7 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
 
     async def async_step_user(
         self, user_input: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    ) -> FlowResult:
         """Handle the user step."""
         errors: Dict[str, str] = {}
 
@@ -143,13 +149,13 @@ class HubitatOptionsFlow(OptionsFlow):
 
     async def async_step_init(
         self, user_input: Optional[Dict[str, str]] = None
-    ) -> Dict[str, Any]:
+    ) -> FlowResult:
         """Handle integration options."""
         return await self.async_step_user()
 
     async def async_step_user(
         self, user_input: Optional[Dict[str, str]] = None
-    ) -> Dict[str, Any]:
+    ) -> FlowResult:
         """Handle integration options."""
         entry = self.config_entry
         errors: Dict[str, str] = {}
@@ -241,7 +247,7 @@ class HubitatOptionsFlow(OptionsFlow):
 
     async def async_step_remove_devices(
         self, user_input: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    ) -> FlowResult:
         """Handle the device removal step."""
         errors: Dict[str, str] = {}
 
@@ -278,10 +284,10 @@ class HubitatOptionsFlow(OptionsFlow):
 
     async def async_step_override_lights(
         self, user_input: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    ) -> FlowResult:
         """Let the user manually specify some devices as lights."""
 
-        async def next_step() -> Dict[str, Any]:
+        async def next_step() -> FlowResult:
             return await self.async_step_override_switches()
 
         return await self._async_step_override_type(
@@ -290,10 +296,10 @@ class HubitatOptionsFlow(OptionsFlow):
 
     async def async_step_override_switches(
         self, user_input: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    ) -> FlowResult:
         """Let the user manually specify some devices as switches."""
 
-        async def next_step() -> Dict[str, Any]:
+        async def next_step() -> FlowResult:
             # Copy self.options to ensure config entry is recreated
             self.options = {key: self.options[key] for key in self.options}
             self.options[CONF_DEVICE_TYPE_OVERRIDES] = self.overrides
@@ -313,9 +319,9 @@ class HubitatOptionsFlow(OptionsFlow):
         user_input: Optional[Dict[str, Any]],
         platform: str,
         step_id: str,
-        next_step: Callable[[], Awaitable[Dict[str, str]]],
+        next_step: Callable[[], Awaitable[FlowResult]],
         matcher: Callable[[Device], bool],
-    ) -> Dict[str, Any]:
+    ) -> FlowResult:
         errors: Dict[str, str] = {}
 
         assert self.hub is not None
@@ -383,7 +389,7 @@ async def _get_devices(
                 devices.append(dev)
                 break
 
-    devices.sort(key=lambda e: e.name)
+    devices.sort(key=lambda e: e.name or "")
     return devices
 
 

@@ -1,14 +1,10 @@
 from asyncio import Future
 from typing import Awaitable, Dict, Optional
+from unittest.mock import NonCallableMock, call
 
 from custom_components.hubitat.device import Hub
 from hubitatmaker import Device
-from pytest_homeassistant_custom_component.async_mock import (
-    Mock,
-    NonCallableMock,
-    call,
-    patch,
-)
+from pytest_homeassistant_custom_component.common import Mock, patch
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant

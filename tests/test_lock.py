@@ -1,6 +1,6 @@
 from hubitatmaker.const import ATTR_LOCK_CODES
 from hubitatmaker.types import Attribute
-from pytest_homeassistant_custom_component.async_mock import Mock
+from pytest_homeassistant_custom_component.common import Mock
 
 
 def test_normal_lock_codes() -> None:

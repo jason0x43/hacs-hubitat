@@ -2,7 +2,7 @@ from asyncio import Future
 from typing import Awaitable
 
 import pytest
-from pytest_homeassistant_custom_component.async_mock import patch
+from pytest_homeassistant_custom_component.common import patch
 
 
 @patch("custom_components.hubitat.config_flow.HubitatHub")

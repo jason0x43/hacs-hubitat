@@ -1,24 +1,19 @@
-from asyncio import Future
-from typing import Any, Awaitable, List
+from typing import List
+from unittest.mock import call, patch
 
-from pytest_homeassistant_custom_component.async_mock import Mock, call, patch
+import pytest
+from pytest_homeassistant_custom_component.common import Mock
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import Entity
 
 
+@pytest.mark.asyncio
 @patch("custom_components.hubitat.switch.create_and_add_entities")
 @patch("custom_components.hubitat.switch.create_and_add_event_emitters")
 async def test_setup_entry(create_emitters, create_entities) -> None:
-    def _create_entities(*_: Any) -> Awaitable[List[Any]]:
-        future: Future[List[Any]] = Future()
-        future.set_result([])
-        return future
-
-    create_entities.side_effect = _create_entities
-
-    create_emitters.return_value = Future()
-    create_emitters.return_value.set_result(None)
+    create_entities.return_value = []
+    create_emitters.return_value = None
 
     from custom_components.hubitat.switch import (
         async_setup_entry,
@@ -55,6 +50,6 @@ async def test_setup_entry(create_emitters, create_entities) -> None:
         "switch",
         HubitatPowerMeterSwitch,
     )
-    assert create_entities.has_calls([call1, call2, call3])
+    assert await create_entities.has_calls([call1, call2, call3])
 
     assert create_emitters.call_count == 1, "expected 1 call to create emitters"

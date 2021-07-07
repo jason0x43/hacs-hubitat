@@ -18,7 +18,6 @@ from hubitatmaker import (
 import voluptuous as vol
 
 from homeassistant.components.automation import AutomationActionType
-from homeassistant.components.device_automation import TRIGGER_BASE_SCHEMA
 from homeassistant.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
 )
@@ -42,6 +41,14 @@ from .const import (
 )
 from .device import Hub, get_hub
 
+try:
+    from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
+except Exception:
+    from homeassistant.components.device_automation import TRIGGER_BASE_SCHEMA  # type: ignore
+
+    DEVICE_TRIGGER_BASE_SCHEMA = TRIGGER_BASE_SCHEMA
+
+
 # The `event` type moved in HA 0.115
 try:
     from homeassistant.components.homeassistant.triggers import event
@@ -56,7 +63,7 @@ TRIGGER_SUBTYPES = set(
     )
 )
 
-TRIGGER_SCHEMA = TRIGGER_BASE_SCHEMA.extend(
+TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
     {vol.Required(CONF_TYPE): vol.In(TRIGGER_TYPES), vol.Required(CONF_SUBTYPE): str}
 )
 
