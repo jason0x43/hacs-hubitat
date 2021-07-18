@@ -92,7 +92,7 @@ async def create_and_add_event_emitters(
 
 
 async def _migrate_old_unique_ids(
-    hass: HomeAssistant, entities: List[HubitatEntity], platform: str
+    hass: HomeAssistant, entities: List[E], platform: str
 ) -> None:
     """Migrate legacy unique IDs to the current format."""
     _LOGGER.debug("Migrating unique_ids for %s...", platform)
