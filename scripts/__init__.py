@@ -1,12 +1,9 @@
-from subprocess import call, check_output
+from subprocess import call
 
 from hubitatmaker import __version__
-from sys import exit
-from shutil import copy as copyfile, rmtree
+from shutil import copy as copyfile
 from os import chdir, environ
-from os.path import join
 from pathlib import Path
-import toml
 
 
 def init() -> None:
