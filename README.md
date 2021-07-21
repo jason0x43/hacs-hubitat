@@ -30,9 +30,11 @@ The following device types are currently supported. The first level bullets are 
 - binary_sensor
   - acceleration
   - carbon monoxide
+  - connectivity
   - contact
   - moisture
   - motion
+  - presence
   - smoke
 - climate
   - thermostat
