@@ -45,6 +45,9 @@ _LOGGER = getLogger(__name__)
 
 Listener = Callable[[Event], None]
 
+HUB_DEVICE_NAME = "Hub"
+HUB_NAME = "Hubitat Elevation"
+
 
 class Hub:
     """Representation of a Hubitat hub."""
@@ -74,6 +77,8 @@ class Hub:
             self._hub_entity_id = "hubitat.hub"
         else:
             self._hub_entity_id = f"hubitat.hub_{index}"
+
+        self._hub_device_listeners: List[Listener] = []
 
         self.unsub_config_listener = entry.add_update_listener(_update_entry)
 
@@ -123,6 +128,31 @@ class Hub:
         return self._hub.event_url
 
     @property
+    def mode(self) -> Optional[str]:
+        """Return the current mode of this hub."""
+        return self._hub.mode
+
+    @property
+    def modes(self) -> Optional[List[str]]:
+        """Return the available modes of this hub."""
+        return self._hub.modes
+
+    @property
+    def mode_supported(self) -> Optional[bool]:
+        """Return true if this hub supports mode setting and status."""
+        return self._hub.mode_supported
+
+    @property
+    def hsm_status(self) -> Optional[str]:
+        """Return the current HSM status of this hub."""
+        return self._hub.hsm_status
+
+    @property
+    def hsm_supported(self) -> Optional[bool]:
+        """Return true if this hub supports HSM setting and status."""
+        return self._hub.hsm_supported
+
+    @property
     def token(self) -> str:
         """The token used to access the Maker API."""
         return cast(str, self.config_entry.data.get(CONF_ACCESS_TOKEN))
@@ -134,7 +164,10 @@ class Hub:
 
     def add_device_listener(self, device_id: str, listener: Listener) -> None:
         """Add a listener for events for a specific device."""
-        self._hub.add_device_listener(device_id, listener)
+        if device_id == self.id:
+            self._hub_device_listeners.append(listener)
+        else:
+            self._hub.add_device_listener(device_id, listener)
 
     def add_entities(self, entities: Sequence["HubitatEntity"]) -> None:
         """Add entities to this hub."""
@@ -147,6 +180,17 @@ class Hub:
     def remove_device_listeners(self, device_id: str) -> None:
         """Remove all listeners for a specific device."""
         self._hub.remove_device_listeners(device_id)
+        self._hub_device_listeners = []
+
+    async def set_mode(self, mode: str) -> None:
+        """Set the hub mode"""
+        _LOGGER.debug("Setting hub mode to %s", mode)
+        return await self._hub.set_mode(mode)
+
+    async def set_hsm(self, mode: str) -> None:
+        """Set the hub HSM"""
+        _LOGGER.debug("Setting hub HSM to %s", mode)
+        return await self._hub.set_hsm(mode)
 
     def set_temperature_unit(self, temp_unit: str) -> None:
         """Set the hub's temperature units."""
@@ -187,6 +231,30 @@ class Hub:
         hass = self.hass
         config_entry = self.config_entry
 
+        # setup proxy Device representing the hub that can be used for linked
+        # entities
+        self.device = Device(
+            {
+                "id": self.id,
+                "label": HUB_DEVICE_NAME,
+                "name": HUB_DEVICE_NAME,
+                "attributes": [
+                    {
+                        "name": "mode",
+                        "currentValue": None,
+                        "dataType": "ENUM",
+                    },
+                    {
+                        "name": "hsm_status",
+                        "currentValue": None,
+                        "dataType": "ENUM",
+                    },
+                ],
+                "capabilities": [],
+                "commands": [],
+            }
+        )
+
         for platform in PLATFORMS:
             hass.async_create_task(
                 hass.config_entries.async_forward_entry_setup(config_entry, platform)
@@ -206,6 +274,28 @@ class Hub:
             },
         )
 
+        if self.mode_supported:
+
+            def handle_mode_event(event: Event):
+                self.device.update_attr("mode", cast(str, event.value))
+                for listener in self._hub_device_listeners:
+                    listener(event)
+
+            self._hub.add_mode_listener(handle_mode_event)
+            if self.mode:
+                self.device.update_attr("mode", self.mode)
+
+        if self.hsm_supported:
+
+            def handle_hsm_status_event(event: Event):
+                self.device.update_attr("hsm_status", cast(str, event.value))
+                for listener in self._hub_device_listeners:
+                    listener(event)
+
+            self._hub.add_hsm_listener(handle_hsm_status_event)
+            if self.hsm_status:
+                self.device.update_attr("hsm_status", self.hsm_status)
+
         return True
 
     async def async_update_device_registry(self) -> None:
@@ -216,7 +306,7 @@ class Hub:
             connections={(device_registry.CONNECTION_NETWORK_MAC, self._hub.mac)},
             identifiers={(DOMAIN, self.id)},
             manufacturer="Hubitat",
-            name="Hubitat Elevation",
+            name=HUB_NAME,
         )
 
     @staticmethod
@@ -308,7 +398,7 @@ class HubitatBase:
     def __init__(self, hub: Hub, device: Device, temp: Optional[bool] = False) -> None:
         """Initialize a device."""
         self._hub = hub
-        self._device: Device = device
+        self._device = device
         self._id = f"{get_token_hash(hub.token)}::{self._device.id}"
         self._old_ids = [
             f"{self._hub.host}::{self._hub.app_id}::{self._device.id}",
@@ -329,13 +419,18 @@ class HubitatBase:
     @property
     def device_info(self) -> Dict[str, Any]:
         """Return the device info."""
-        return {
+        info: Dict[str, Any] = {
             "identifiers": {(DOMAIN, self.device_id)},
-            "name": self._device.name,
-            "manufacturer": "Hubitat",
-            "model": self.type,
-            "via_device": (DOMAIN, self._hub.id),
         }
+
+        # if this entities device isn't the hub, link it to the hub
+        if self.device_id != self._hub.id:
+            info["name"] = self.name
+            info["via_device"] = ((DOMAIN, self._hub.id),)
+            info["model"] = self.type
+            info["manufacturer"] = "Hubitat"
+
+        return info
 
     @property
     def old_unique_ids(self) -> List[str]:

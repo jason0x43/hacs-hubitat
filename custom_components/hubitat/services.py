@@ -1,3 +1,4 @@
+from logging import getLogger
 from typing import Union, cast
 
 from custom_components.hubitat.device import HubitatEntity, get_hub
@@ -13,7 +14,9 @@ from .const import (
     ATTR_ARGUMENTS,
     ATTR_CODE,
     ATTR_DELAY,
+    ATTR_HUB,
     ATTR_LENGTH,
+    ATTR_MODE,
     ATTR_NAME,
     ATTR_POSITION,
     DOMAIN,
@@ -23,8 +26,12 @@ from .const import (
     SERVICE_SET_CODE_LENGTH,
     SERVICE_SET_ENTRY_DELAY,
     SERVICE_SET_EXIT_DELAY,
+    SERVICE_SET_HSM,
+    SERVICE_SET_HUB_MODE,
 )
 from .lock import HubitatLock
+
+_LOGGER = getLogger(__name__)
 
 CLEAR_CODE_SCHEMA = vol.Schema(
     {vol.Required(ATTR_ENTITY_ID): cv.entity_id, vol.Required(ATTR_POSITION): int}
@@ -49,6 +56,12 @@ SET_CODE_SCHEMA = vol.Schema(
 )
 SET_DELAY_SCHEMA = vol.Schema(
     {vol.Required(ATTR_ENTITY_ID): cv.entity_id, vol.Required(ATTR_DELAY): int}
+)
+SET_HSM_SCHEMA = vol.Schema(
+    {vol.Required(ATTR_COMMAND): str, vol.Optional(ATTR_HUB): str}
+)
+SET_HUB_MODE_SCHEMA = vol.Schema(
+    {vol.Required(ATTR_MODE): str, vol.Optional(ATTR_HUB): str}
 )
 
 
@@ -103,6 +116,38 @@ def async_register_services(
         delay = cast(int, service.data.get(ATTR_LENGTH))
         await entity.set_exit_delay(delay)
 
+    async def set_hsm(service: ServiceCall) -> None:
+        target_hub = hub
+        if ATTR_HUB in service.data:
+            hub_id = cast(str, service.data.get(ATTR_HUB)).lower()
+            found_hub = False
+            for _hub in hass.data[DOMAIN].values():
+                if _hub.id == hub_id:
+                    found_hub = True
+                    target_hub = _hub
+            if not found_hub:
+                _LOGGER.error("Could not find a hub with ID %s", hub_id)
+                return
+
+        command = cast(str, service.data.get(ATTR_COMMAND))
+        await target_hub.set_hsm(command)
+
+    async def set_hub_mode(service: ServiceCall) -> None:
+        target_hub = hub
+        if ATTR_HUB in service.data:
+            hub_id = cast(str, service.data.get(ATTR_HUB)).lower()
+            found_hub = False
+            for _hub in hass.data[DOMAIN].values():
+                if _hub.id == hub_id:
+                    found_hub = True
+                    target_hub = _hub
+            if not found_hub:
+                _LOGGER.error("Could not find a hub with ID %s", hub_id)
+                return
+
+        mode = cast(str, service.data.get(ATTR_MODE))
+        await target_hub.set_mode(mode)
+
     hass.services.async_register(
         DOMAIN, SERVICE_CLEAR_CODE, clear_code, schema=CLEAR_CODE_SCHEMA
     )
@@ -124,6 +169,12 @@ def async_register_services(
     hass.services.async_register(
         DOMAIN, SERVICE_SET_EXIT_DELAY, set_exit_delay, schema=SET_DELAY_SCHEMA
     )
+    hass.services.async_register(
+        DOMAIN, SERVICE_SET_HSM, set_hsm, schema=SET_HSM_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_SET_HUB_MODE, set_hub_mode, schema=SET_HUB_MODE_SCHEMA
+    )
 
 
 def async_remove_services(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
@@ -133,3 +184,5 @@ def async_remove_services(hass: HomeAssistant, config_entry: ConfigEntry) -> Non
     hass.services.async_remove(DOMAIN, SERVICE_SET_ENTRY_DELAY)
     hass.services.async_remove(DOMAIN, SERVICE_SET_EXIT_DELAY)
     hass.services.async_remove(DOMAIN, SERVICE_SEND_COMMAND)
+    hass.services.async_remove(DOMAIN, SERVICE_SET_HSM)
+    hass.services.async_remove(DOMAIN, SERVICE_SET_HUB_MODE)

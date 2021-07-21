@@ -98,3 +98,47 @@ send_command:
         values
       selector:
         text:
+
+set_hsm:
+  description: Arm or disarm a hub’s HSM
+  fields:
+    hub:
+      name: Hub ID
+      description: >-
+        The ID of a hub (first 8 digits of the Maker API token). This is only
+        needed if you have multiple hubs.
+      example: ab12cd34
+      selector: 
+        text:
+    command:
+      name: Command
+      description: The HSM command to send
+      required: true
+      selector:
+        select:
+          options:
+            - 'armAway'
+            - 'armHome'
+            - 'armNight'
+            - 'disarm'
+            - 'disarmAll'
+
+set_hub_mode:
+  description: Set a hub’s mode
+  fields:
+    hub:
+      name: Hub ID
+      description: >-
+        The ID of a hub (first 8 digits of the Maker API token). This is only
+        needed if you have multiple hubs.
+      example: ab12cd34
+      selector:
+        text:
+    mode:
+      name: Mode
+      description: >-
+        The desired mode. Typical values are Day, Night, and Away, but your hub
+        may support other values.
+      required: true
+      selector:
+        text:

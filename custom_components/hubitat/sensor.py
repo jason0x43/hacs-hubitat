@@ -35,8 +35,14 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
-from .const import TEMP_F
-from .device import HubitatEntity
+from .const import (
+    ATTR_HSM_STATUS,
+    ATTR_MODE,
+    DEVICE_TYPE_HUB_HSM_STATUS,
+    DEVICE_TYPE_HUB_MODE,
+    TEMP_F,
+)
+from .device import HubitatEntity, get_hub
 from .entities import create_and_add_entities
 from .types import EntityAdder
 
@@ -47,6 +53,7 @@ class HubitatSensor(HubitatEntity):
     """A generic Hubitat sensor."""
 
     _attribute: str
+    _attribute_name: Optional[str]
     _units: str
     _device_class: Optional[str]
 
@@ -58,7 +65,10 @@ class HubitatSensor(HubitatEntity):
     @property
     def name(self) -> str:
         """Return this sensor's display name."""
-        return f"{super().name} {self._attribute}"
+        attr_name = getattr(self, "_attribute_name", None) or self._attribute.replace(
+            "_", " "
+        )
+        return f"{super().name} {attr_name}"
 
     @property
     def state(self) -> Union[float, int, str, None]:
@@ -227,6 +237,31 @@ class HubitatUpdateSensor(HubitatEntity):
         return False
 
 
+class HubitatHsmSensor(HubitatSensor):
+    """
+    A sensor that reports a hub's HSM status.
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        """Initialize an hsm status sensor."""
+        super().__init__(*args, **kwargs)
+        self._attribute = ATTR_HSM_STATUS
+        self._device_class = DEVICE_TYPE_HUB_HSM_STATUS
+        self._attribute_name = "HSM status"
+
+
+class HubitatHubModeSensor(HubitatSensor):
+    """
+    A sensor that reports a hub's mode.
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        """Initialize an hsm status sensor."""
+        super().__init__(*args, **kwargs)
+        self._attribute = ATTR_MODE
+        self._device_class = DEVICE_TYPE_HUB_MODE
+
+
 _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatSensor]], ...] = (
     (ATTR_BATTERY, HubitatBatterySensor),
     (ATTR_HUMIDITY, HubitatHumiditySensor),
@@ -253,6 +288,8 @@ async def async_setup_entry(
 ) -> None:
     """Initialize sensor devices."""
 
+    add_hub_entities(hass, entry, async_add_entities)
+
     # Add an update sensor for every device
     await create_and_add_entities(
         hass, entry, async_add_entities, "sensor", HubitatUpdateSensor, is_update_sensor
@@ -268,3 +305,22 @@ async def async_setup_entry(
         await create_and_add_entities(
             hass, entry, async_add_entities, "sensor", attr[1], is_sensor
         )
+
+
+def add_hub_entities(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder
+) -> None:
+    """Add entities for hub services."""
+
+    hub_entities = []
+    hub = get_hub(hass, entry.entry_id)
+
+    if hub.hsm_supported:
+        hub_entities.append(HubitatHsmSensor(hub=hub, device=hub.device))
+
+    if hub.mode_supported:
+        hub_entities.append(HubitatHubModeSensor(hub=hub, device=hub.device))
+
+    if len(hub_entities) > 0:
+        hub.add_entities(hub_entities)
+        async_add_entities(hub_entities)

@@ -5,7 +5,7 @@
   "config_flow": true,
   "documentation": "https://github.com/jason0x43/hacs-hubitat",
   "issue_tracker": "https://github.com/jason0x43/hacs-hubitat/issues",
-  "requirements": ["hubitatmaker>=0.5.6,<0.6.0"],
+  "requirements": ["hubitatmaker>=0.5.7,<0.6.0"],
   "ssdp": [],
   "zeroconf": [],
   "homekit": {},

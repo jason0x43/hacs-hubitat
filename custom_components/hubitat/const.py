@@ -12,6 +12,14 @@ from hubitatmaker import (
     CAP_PUSHABLE_BUTTON,
 )
 
+# select entities aren't supported in HA < 2021.7
+try:
+    import homeassistant.components.select as _  # noqa: F401
+
+    has_select = True
+except Exception:
+    has_select = False
+
 DOMAIN = "hubitat"
 
 ATTR_ARGUMENTS = "args"
@@ -27,10 +35,12 @@ ATTR_HA_DEVICE_ID = "ha_device_id"
 ATTR_DOUBLE_TAPPED = "double_tapped"
 ATTR_ENTRY_DELAY = "entry_delay"
 ATTR_EXIT_DELAY = "exit_delay"
+ATTR_HSM_STATUS = "hsm_status"
 ATTR_HUB = "hub"
 ATTR_LAST_CODE_NAME = "last_code_name"
 ATTR_LENGTH = "length"
 ATTR_MAX_CODES = "max_codes"
+ATTR_MODE = "mode"
 ATTR_NAME = "name"
 ATTR_POSITION = "position"
 
@@ -53,6 +63,9 @@ CONF_UNLOCKED_WITH_CODE = "code_name"
 CONF_SUBTYPE = "subtype"
 CONF_VALUE = "value"
 
+DEVICE_TYPE_HUB_MODE = "hub_mode"
+DEVICE_TYPE_HUB_HSM_STATUS = "hub_hsm_status"
+
 ICON_ALARM = "mdi:alarm-bell"
 
 PLATFORMS = [
@@ -67,6 +80,9 @@ PLATFORMS = [
     "fan",
 ]
 
+if has_select:
+    PLATFORMS.append("select")
+
 SERVICE_CLEAR_CODE = "clear_code"
 SERVICE_SEND_COMMAND = "send_command"
 SERVICE_SET_CODE = "set_code"
@@ -75,6 +91,8 @@ SERVICE_SET_ENTRY_DELAY = "set_entry_delay"
 SERVICE_SET_EXIT_DELAY = "set_exit_delay"
 SERVICE_ALARM_SIREN_ON = "alarm_siren_on"
 SERVICE_ALARM_STROBE_ON = "alarm_strobe_on"
+SERVICE_SET_HSM = "set_hsm"
+SERVICE_SET_HUB_MODE = "set_hub_mode"
 
 STEP_USER = "user"
 STEP_REMOVE_DEVICES = "remove_devices"
