@@ -259,7 +259,7 @@ def is_light(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool
 
     if is_definitely_light(device):
         return True
-    if CAP_SWITCH in device.capabilities and MATCH_LIGHT.match(device.name):
+    if CAP_SWITCH in device.capabilities and MATCH_LIGHT.search(device.name):
         return True
 
     # A Cover may also have a SwitchLevel capability that can be used to set

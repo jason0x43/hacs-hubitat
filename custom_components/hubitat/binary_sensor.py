@@ -173,7 +173,7 @@ def _get_contact_device_class(device: Device) -> str:
     name = device.name
 
     for matcher in _CONTACT_MATCHERS:
-        if matcher[0].match(name):
+        if matcher[0].search(name):
             return matcher[1]
 
     return DEVICE_CLASS_DOOR
