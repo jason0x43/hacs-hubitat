@@ -48,6 +48,11 @@ class HubitatCover(HubitatEntity, CoverEntity):
     _device_class: Optional[str]
 
     @property
+    def device_class(self) -> Optional[str]:
+        """Return this sensor's device class."""
+        return self._device_class
+
+    @property
     def current_cover_position(self) -> Optional[int]:
         """Return current position of cover."""
         pos = self.get_int_attr(ATTR_POSITION)
