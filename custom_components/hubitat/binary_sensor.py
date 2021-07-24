@@ -39,9 +39,7 @@ _CONTACT_MATCHERS = (
     (re.compile("window", re.IGNORECASE), DEVICE_CLASS_WINDOW),
 )
 
-_PRESENCE_MATCHERS = (
-    (re.compile("presence", re.IGNORECASE), DEVICE_CLASS_PRESENCE),
-)
+_PRESENCE_MATCHERS = ((re.compile("presence", re.IGNORECASE), DEVICE_CLASS_PRESENCE),)
 
 
 class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):
@@ -158,6 +156,7 @@ _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatBinarySensor]], ...] = (
     (ATTR_WATER, HubitatMoistureSensor),
 )
 
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -166,6 +165,7 @@ async def async_setup_entry(
     """Initialize binary sensor entities."""
 
     for attr in _SENSOR_ATTRS:
+
         def is_sensor(
             device: Device, overrides: Optional[Dict[str, str]] = None
         ) -> bool:
