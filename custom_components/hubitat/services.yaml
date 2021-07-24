@@ -3,15 +3,25 @@ clear_code:
   fields:
     entity_id:
       description: Entity ID of a lock or keypad
+      required: true
+      name: Entity
+      selector:
+        entity:
+          integration: hubitat
     position:
       description: Index of code to delete
       example: 1
- 
+
 set_code:
   description: Set a user code for a lock or keypad
   fields:
     entity_id:
       description: Entity ID of a lock or keypad
+      required: true
+      name: Entity
+      selector:
+        entity:
+          integration: hubitat
     position:
       description: Index of code to set
       example: 1
@@ -21,12 +31,17 @@ set_code:
     name:
       description: Friendly name for code
       example: Family
- 
+
 set_code_length:
   description: Set the length of user codes for a lock or keypad
   fields:
     entity_id:
       description: Entity ID of a lock or keypad
+      required: true
+      name: Entity
+      selector:
+        entity:
+          integration: hubitat
     length:
       description: Length of acceptable codes
       example: 4
@@ -36,6 +51,11 @@ set_entry_delay:
   fields:
     entity_id:
       description: Entity ID of a keypad
+      required: true
+      name: Entity
+      selector:
+        entity:
+          integration: hubitat
     delay:
       description: Delay in seconds
       example: 30
@@ -45,6 +65,11 @@ set_exit_delay:
   fields:
     entity_id:
       description: Entity ID of a keypad
+      required: true
+      name: Entity
+      selector:
+        entity:
+          integration: hubitat
     delay:
       description: Delay in seconds
       example: 30
@@ -54,10 +79,22 @@ send_command:
   fields:
     entity_id:
       description: Entity to send command to
+      required: true
+      name: Entity
+      selector:
+        entity:
+          integration: hubitat
     command:
+      name: Command
       description: A command to send
+      required: true
       example: refresh
+      selector: 
+        text:
     args:
+      name: Arguments
       description: >-
-          Optional arguments for command; may be a single value or a list of
-          values
+        Optional arguments for command; may be a single value or a list of
+        values
+      selector:
+        text:
