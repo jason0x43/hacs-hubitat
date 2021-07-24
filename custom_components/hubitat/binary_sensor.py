@@ -15,6 +15,7 @@ from hubitatmaker import (
 )
 
 from homeassistant.components.binary_sensor import (
+    DEVICE_CLASS_CONNECTIVITY,
     DEVICE_CLASS_DOOR,
     DEVICE_CLASS_GARAGE_DOOR,
     DEVICE_CLASS_GAS,
@@ -37,6 +38,8 @@ _CONTACT_MATCHERS = (
     (re.compile("garage door", re.IGNORECASE), DEVICE_CLASS_GARAGE_DOOR),
     (re.compile("window", re.IGNORECASE), DEVICE_CLASS_WINDOW),
 )
+
+_PRESENCE_MATCHERS = ((re.compile("presence", re.IGNORECASE), DEVICE_CLASS_PRESENCE),)
 
 
 class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):
@@ -127,7 +130,11 @@ class HubitatPresenceSensor(HubitatBinarySensor):
 
     _active_state = "present"
     _attribute = ATTR_PRESENCE
-    _device_class = DEVICE_CLASS_PRESENCE
+
+    def __init__(self, hub: Hub, device: Device):
+        """Initialize a presence sensor."""
+        super().__init__(hub=hub, device=device)
+        self._device_class = _get_presence_device_class(device)
 
 
 class HubitatSmokeSensor(HubitatBinarySensor):
@@ -138,6 +145,7 @@ class HubitatSmokeSensor(HubitatBinarySensor):
     _device_class = DEVICE_CLASS_SMOKE
 
 
+# Presence is handled specially in async_setup_entry()
 _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatBinarySensor]], ...] = (
     (ATTR_ACCELERATION, HubitatAccelerationSensor),
     (ATTR_CARBON_MONOXIDE, HubitatCoSensor),
@@ -154,7 +162,7 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: EntityAdder,
 ) -> None:
-    """Initialize light devices."""
+    """Initialize binary sensor entities."""
 
     for attr in _SENSOR_ATTRS:
 
@@ -177,3 +185,14 @@ def _get_contact_device_class(device: Device) -> str:
             return matcher[1]
 
     return DEVICE_CLASS_DOOR
+
+
+def _get_presence_device_class(device: Device) -> str:
+    """Guess the type of presence sensor from the device's label."""
+    name = device.name
+
+    for matcher in _PRESENCE_MATCHERS:
+        if matcher[0].search(name):
+            return matcher[1]
+
+    return DEVICE_CLASS_CONNECTIVITY
