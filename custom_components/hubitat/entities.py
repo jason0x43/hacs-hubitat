@@ -10,7 +10,8 @@ from homeassistant.helpers import entity_registry
 from homeassistant.helpers.entity_registry import EntityRegistry
 
 from .const import DOMAIN
-from .device import HubitatEntity, HubitatEventEmitter, get_hub
+from .device import HubitatEntity, HubitatEventEmitter
+from .hub import get_hub
 from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)

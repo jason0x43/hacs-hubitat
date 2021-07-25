@@ -39,7 +39,7 @@ from .const import (
     DOMAIN,
     TRIGGER_CAPABILITIES,
 )
-from .device import Hub, get_hub
+from .hub import Hub, get_hub
 
 try:
     from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA

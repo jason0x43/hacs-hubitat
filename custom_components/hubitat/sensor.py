@@ -42,8 +42,9 @@ from .const import (
     DEVICE_TYPE_HUB_MODE,
     TEMP_F,
 )
-from .device import HubitatEntity, get_hub
+from .device import HubitatEntity
 from .entities import create_and_add_entities
+from .hub import get_hub
 from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)

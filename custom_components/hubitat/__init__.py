@@ -15,7 +15,7 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant
 
 from .const import CONF_HUBITAT_EVENT, DOMAIN, PLATFORMS
-from .device import Hub, get_hub
+from .hub import Hub, get_hub
 
 _LOGGER = getLogger(__name__)
 

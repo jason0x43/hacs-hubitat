@@ -1,7 +1,6 @@
 from logging import getLogger
 from typing import Union, cast
 
-from custom_components.hubitat.device import HubitatEntity, get_hub
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
@@ -29,6 +28,8 @@ from .const import (
     SERVICE_SET_HSM,
     SERVICE_SET_HUB_MODE,
 )
+from .device import HubitatEntity
+from .hub import get_hub
 from .lock import HubitatLock
 
 _LOGGER = getLogger(__name__)
@@ -75,7 +76,7 @@ def async_register_services(
         entity_id = cast(str, service.data.get(ATTR_ENTITY_ID))
         for entity in hub.entities:
             if entity.entity_id == entity_id:
-                return entity
+                return cast(HubitatEntity, entity)
         raise ValueError(f"Invalid or unknown entity '{entity_id}'")
 
     async def clear_code(service: ServiceCall) -> None:
