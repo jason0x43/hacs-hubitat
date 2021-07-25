@@ -1,4 +1,4 @@
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Protocol
 
 from homeassistant.helpers.entity import Entity
 
@@ -11,7 +11,11 @@ class UpdateableEntity(Entity):
         raise Exception("Must be implemented in a sublcass")
 
 
-class Removable:
+class Removable(Protocol):
     async def async_will_remove_from_hass(self):
         """Remove the entity from HA"""
         raise Exception("Must be implemented in a sublcass")
+
+
+class HasToken(Protocol):
+    token: str

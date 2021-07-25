@@ -12,21 +12,8 @@ from homeassistant.core import callback
 from homeassistant.helpers import device_registry
 from homeassistant.helpers.device_registry import DeviceRegistry
 
-from .const import (
-    ATTR_ATTRIBUTE,
-    ATTR_HA_DEVICE_ID,
-    ATTR_HUB,
-    CONF_HUBITAT_EVENT,
-    DOMAIN,
-    TRIGGER_CAPABILITIES,
-)
-from .util import get_token_hash
-
-# Hubitat attributes that should be emitted as HA events
-_TRIGGER_ATTRS = tuple([v.attr for v in TRIGGER_CAPABILITIES.values()])
-# A mapping from Hubitat attribute names to the attribute names that should be
-# used for HA events
-_TRIGGER_ATTR_MAP = {v.attr: v.event for v in TRIGGER_CAPABILITIES.values()}
+from .const import DOMAIN
+from .util import get_hub_device_id
 
 _LOGGER = getLogger(__name__)
 
@@ -38,17 +25,12 @@ class HubitatBase(Removable):
         """Initialize a device."""
         self._hub = hub
         self._device = device
-        self._id = f"{get_token_hash(hub.token)}::{self._device.id}"
+        self._id = get_hub_device_id(hub, device)
         self._old_ids = [
             f"{self._hub.host}::{self._hub.app_id}::{self._device.id}",
             f"{self._hub.mac}::{self._hub.app_id}::{self._device.id}",
         ]
         self._temp = temp
-
-        # Sometimes entities may be temporary, created only to compute entity
-        # metadata. Don't register device listeners for temprorary entities.
-        if not temp:
-            self._hub.add_device_listener(self._device.id, self.handle_event)
 
     @property
     def device_id(self) -> str:
@@ -139,22 +121,21 @@ class HubitatBase(Removable):
         """Return the last update time of this device."""
         return self._device.last_update
 
-    def handle_event(self, event: Event) -> None:
-        """Handle an event received from the Hubitat hub."""
-        if event.attribute in _TRIGGER_ATTRS:
-            evt = dict(event)
-            evt[ATTR_ATTRIBUTE] = _TRIGGER_ATTR_MAP[event.attribute]
-            evt[ATTR_HUB] = self._hub.id
-            evt[ATTR_HA_DEVICE_ID] = self._id
-            self._hub.hass.bus.async_fire(CONF_HUBITAT_EVENT, evt)
-            _LOGGER.debug("Emitted event %s", evt)
-
 
 class HubitatEntity(HubitatBase, UpdateableEntity):
     """An entity related to a Hubitat device."""
 
     # Hubitat will push device updates
     should_poll = False
+
+    def __init__(self, hub: Hub, device: Device, temp: Optional[bool] = False) -> None:
+        """Initialize an entity."""
+        super().__init__(hub, device, temp)
+
+        # Sometimes entities may be temporary, created only to compute entity
+        # metadata. Don't register device listeners for temprorary entities.
+        if not temp:
+            self._hub.add_device_listener(self._device.id, self.handle_event)
 
     @property
     def is_disabled(self) -> bool:
@@ -178,7 +159,6 @@ class HubitatEntity(HubitatBase, UpdateableEntity):
     def handle_event(self, event: Event) -> None:
         """Handle a device event."""
         self.update_state()
-        super().handle_event(event)
 
     def update_state(self) -> None:
         """Request that Home Assistant update this device's state."""

@@ -1,16 +1,21 @@
 from logging import getLogger
-from typing import Callable, List, Mapping, Optional, Sequence, Union, cast
+from typing import Callable, Dict, List, Mapping, Optional, Sequence, Union, cast
 
 from custom_components.hubitat.const import (
+    ATTR_ATTRIBUTE,
+    ATTR_HA_DEVICE_ID,
+    ATTR_HUB,
     CONF_APP_ID,
+    CONF_HUBITAT_EVENT,
     CONF_SERVER_PORT,
     CONF_SERVER_URL,
     DOMAIN,
     PLATFORMS,
     TEMP_F,
+    TRIGGER_CAPABILITIES,
 )
 from custom_components.hubitat.types import Removable, UpdateableEntity
-from custom_components.hubitat.util import get_hub_short_id
+from custom_components.hubitat.util import get_hub_device_id, get_hub_short_id
 from hubitatmaker import Device, Event, Hub as HubitatHub
 
 from homeassistant.config_entries import ConfigEntry
@@ -34,6 +39,13 @@ HUB_DEVICE_NAME = "Hub"
 HUB_NAME = "Hubitat Elevation"
 
 
+# Hubitat attributes that should be emitted as HA events
+_TRIGGER_ATTRS = tuple([v.attr for v in TRIGGER_CAPABILITIES.values()])
+# A mapping from Hubitat attribute names to the attribute names that should be
+# used for HA events
+_TRIGGER_ATTR_MAP = {v.attr: v.event for v in TRIGGER_CAPABILITIES.values()}
+
+
 class Hub:
     """Representation of a Hubitat hub."""
 
@@ -48,6 +60,7 @@ class Hub:
 
         self.hass = hass
         self.config_entry = entry
+        self.token = cast(str, self.config_entry.data.get(CONF_ACCESS_TOKEN))
         self.entities: List[UpdateableEntity] = []
         self.event_emitters: List[Removable] = []
 
@@ -62,8 +75,6 @@ class Hub:
             self._hub_entity_id = "hubitat.hub"
         else:
             self._hub_entity_id = f"hubitat.hub_{index}"
-
-        self._hub_device_listeners: List[Listener] = []
 
         self.unsub_config_listener = entry.add_update_listener(_update_entry)
 
@@ -138,11 +149,6 @@ class Hub:
         return self._hub.hsm_supported
 
     @property
-    def token(self) -> str:
-        """The token used to access the Maker API."""
-        return cast(str, self.config_entry.data.get(CONF_ACCESS_TOKEN))
-
-    @property
     def temperature_unit(self) -> str:
         """The units used for temperature values."""
         return self._temperature_unit
@@ -152,7 +158,9 @@ class Hub:
         if device_id == self.id:
             self._hub_device_listeners.append(listener)
         else:
-            self._hub.add_device_listener(device_id, listener)
+            if device_id not in self._device_listeners:
+                self._device_listeners[device_id] = []
+            self._device_listeners[device_id].append(listener)
 
     def add_entities(self, entities: Sequence[UpdateableEntity]) -> None:
         """Add entities to this hub."""
@@ -164,7 +172,7 @@ class Hub:
 
     def remove_device_listeners(self, device_id: str) -> None:
         """Remove all listeners for a specific device."""
-        self._hub.remove_device_listeners(device_id)
+        self._device_listeners[device_id] = []
         self._hub_device_listeners = []
 
     async def set_mode(self, mode: str) -> None:
@@ -185,6 +193,8 @@ class Hub:
     def stop(self) -> None:
         """Stop the hub."""
         self._hub.stop()
+        self._device_listeners = {}
+        self._hub_device_listeners = []
 
     async def unload(self) -> None:
         """Unload the hub."""
@@ -211,6 +221,9 @@ class Hub:
         )
 
         await self._hub.start()
+
+        self._hub_device_listeners: List[Listener] = []
+        self._device_listeners: Dict[str, List[Listener]] = {}
 
         hub = self._hub
         hass = self.hass
@@ -239,6 +252,12 @@ class Hub:
                 "commands": [],
             }
         )
+
+        # Add a listener for every device exported by the hub. The listener
+        # will re-export the Hubitat event as a hubitat_event in HA if it
+        # matches a trigger condition.
+        for device_id in hub.devices:
+            hub.add_device_listener(device_id, self.handle_event)
 
         for platform in PLATFORMS:
             hass.async_create_task(
@@ -375,6 +394,19 @@ class Hub:
         """Set the port that the event listener server will listen on."""
         _LOGGER.debug("Setting event server URL to %s", url)
         await self._hub.set_event_url(url)
+
+    def handle_event(self, event: Event) -> None:
+        """Handle events received from the Hubitat hub."""
+        if self._device_listeners[event.device_id]:
+            for listener in self._device_listeners[event.device_id]:
+                listener(event)
+        if event.attribute in _TRIGGER_ATTRS:
+            evt = dict(event)
+            evt[ATTR_ATTRIBUTE] = _TRIGGER_ATTR_MAP[event.attribute]
+            evt[ATTR_HUB] = self.id
+            evt[ATTR_HA_DEVICE_ID] = get_hub_device_id(self, event.device_id)
+            self.hass.bus.async_fire(CONF_HUBITAT_EVENT, evt)
+            _LOGGER.debug("Emitted event %s", evt)
 
 
 async def _update_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
