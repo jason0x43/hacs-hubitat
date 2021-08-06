@@ -44,9 +44,9 @@ class HubitatBase(Removable):
             "identifiers": {(DOMAIN, self.device_id)},
         }
 
-        # if this entities device isn't the hub, link it to the hub
+        # if this entity's device isn't the hub, link it to the hub
         if self.device_id != self._hub.id:
-            info["name"] = self.name
+            info["name"] = self._device.name
             info["via_device"] = ((DOMAIN, self._hub.id),)
             info["model"] = self.type
             info["manufacturer"] = "Hubitat"
