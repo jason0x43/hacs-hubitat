@@ -107,7 +107,7 @@ class HubitatAlarm(HubitatSwitch):
     @property
     def name(self) -> str:
         """Return this alarm's display name."""
-        return f"{super().name} alarm"
+        return f"{super().name.title()} Alarm"
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the alarm."""

@@ -57,7 +57,7 @@ class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):
     @property
     def name(self) -> str:
         """Return the display name for this sensor."""
-        return f"{super().name} {self._attribute}"
+        return f"{super().name} {self._attribute}".title()
 
     @property
     def old_unique_ids(self) -> List[str]:

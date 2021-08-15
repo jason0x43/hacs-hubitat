@@ -23,7 +23,7 @@ class HubitatSelect(HubitatEntity, SelectEntity):
     @property
     def name(self) -> str:
         """Return this select's display name."""
-        return f"{super().name} {self._attribute}"
+        return f"{super().name} {self._attribute}".title()
 
     @property
     def current_option(self) -> Union[str, None]:

@@ -69,7 +69,7 @@ class HubitatSensor(HubitatEntity):
         attr_name = getattr(self, "_attribute_name", None) or self._attribute.replace(
             "_", " "
         )
-        return f"{super().name} {attr_name}"
+        return f"{super().name} {attr_name}".title()
 
     @property
     def state(self) -> Union[float, int, str, None]:
@@ -211,7 +211,7 @@ class HubitatUpdateSensor(HubitatEntity):
     @property
     def name(self) -> str:
         """Return this sensor's display name."""
-        return f"{super().name} last update time"
+        return f"{super().name.title()} Last Update Time"
 
     @property
     def state(self) -> Union[float, int, str, None]:
