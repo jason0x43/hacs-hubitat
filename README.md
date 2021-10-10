@@ -10,17 +10,18 @@ Hubitat devices available for use with Home Assistant.
 
 * [Features](#features)
 * [Installation](#installation)
-	* [HACS](#hacs)
-	* [Manually](#manually)
+  * [HACS](#hacs)
+  * [Manually](#manually)
 * [Setup](#setup)
-	* [Event server](#event-server)
-	* [Device types](#device-types)
+  * [Event server](#event-server)
+  * [Device types](#device-types)
 * [Services](#services)
 * [Event-emitting devices](#event-emitting-devices)
 * [Updating](#updating)
 * [Troubleshooting](#troubleshooting)
-	* [Checking device capabilities](#checking-device-capabilities)
-	* [Logging](#logging)
+  * [Checking device capabilities](#checking-device-capabilities)
+  * [Logging](#logging)
+  * [HSM status or modes not updating](#hsm-status-or-modes-not-updating)
 * [Developing](#developing)
 
 <!-- vim-markdown-toc -->
@@ -399,6 +400,10 @@ messages for other components), like:
 2020-05-19 08:28:18 DEBUG (MainThread) [hubitatmaker.hub] Sending command off() to 1510
 ...
 ```
+
+### HSM status or modes not updating
+
+Ensure that the ”POST location events?” toggle is enabled in your Maker API app in Hubitat.
 
 ## Developing
 
