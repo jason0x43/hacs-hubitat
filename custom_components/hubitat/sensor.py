@@ -6,6 +6,8 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from hubitatmaker import (
     ATTR_BATTERY,
+    ATTR_ENERGY,
+    ATTR_ENERGY_SOURCE,
     ATTR_HUMIDITY,
     ATTR_ILLUMINANCE,
     ATTR_POWER,
@@ -18,6 +20,7 @@ from hubitatmaker.types import Device
 
 from homeassistant.components.sensor import (
     DEVICE_CLASS_BATTERY,
+    DEVICE_CLASS_ENERGY,
     DEVICE_CLASS_HUMIDITY,
     DEVICE_CLASS_ILLUMINANCE,
     DEVICE_CLASS_POWER,
@@ -27,6 +30,7 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     DEVICE_CLASS_TIMESTAMP,
+    ENERGY_KILO_WATT_HOUR,
     POWER_WATT,
     PRESSURE_MBAR,
     TEMP_CELSIUS,
@@ -108,6 +112,25 @@ class HubitatBatterySensor(HubitatSensor):
         self._units = "%"
         self._device_class = DEVICE_CLASS_BATTERY
 
+class HubitatEnergySensor(HubitatSensor):
+    """A energy sensor."""
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        """Initialize a energy sensor."""
+        super().__init__(*args, **kwargs)
+        self._attribute = ATTR_ENERGY
+        self._units = ENERGY_KILO_WATT_HOUR
+        self._device_class = DEVICE_CLASS_ENERGY
+
+
+class HubitatEnergySourceSensor(HubitatSensor):
+    """A energy source sensor."""
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        """Initialize a energy source sensor."""
+        super().__init__(*args, **kwargs)
+        self._attribute = ATTR_ENERGY_SOURCE
+        self._device_class = DEVICE_CLASS_ENERGY
 
 class HubitatHumiditySensor(HubitatSensor):
     """A humidity sensor."""
@@ -265,6 +288,8 @@ class HubitatHubModeSensor(HubitatSensor):
 
 _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatSensor]], ...] = (
     (ATTR_BATTERY, HubitatBatterySensor),
+    (ATTR_ENERGY, HubitatEnergySensor),
+    (ATTR_ENERGY_SOURCE, HubitatEnergySourceSensor),    
     (ATTR_HUMIDITY, HubitatHumiditySensor),
     (ATTR_ILLUMINANCE, HubitatIlluminanceSensor),
     (ATTR_POWER, HubitatPowerSensor),
