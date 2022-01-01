@@ -1,11 +1,11 @@
 from asyncio import Future
-from typing import Awaitable
-
 import pytest
-from pytest_homeassistant_custom_component.common import patch
+from typing import Awaitable
+from unittest.mock import patch
 
 
 @patch("custom_components.hubitat.config_flow.HubitatHub")
+@pytest.mark.asyncio
 async def test_validate_input(HubitatHub) -> None:
     check_called = False
 

@@ -1,12 +1,12 @@
 """Classes for managing Hubitat devices."""
 
+from hubitatmaker import Device, Event
 from json import loads
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Union, cast
 
 from custom_components.hubitat.hub import Hub
 from custom_components.hubitat.types import Removable, UpdateableEntity
-from hubitatmaker import Device, Event
 
 from homeassistant.core import callback
 from homeassistant.helpers import device_registry
@@ -125,9 +125,6 @@ class HubitatBase(Removable):
 class HubitatEntity(HubitatBase, UpdateableEntity):
     """An entity related to a Hubitat device."""
 
-    # Hubitat will push device updates
-    should_poll = False
-
     def __init__(self, hub: Hub, device: Device, temp: Optional[bool] = False) -> None:
         """Initialize an entity."""
         super().__init__(hub, device, temp)
@@ -136,6 +133,11 @@ class HubitatEntity(HubitatBase, UpdateableEntity):
         # metadata. Don't register device listeners for temprorary entities.
         if not temp:
             self._hub.add_device_listener(self._device.id, self.handle_event)
+
+    @property
+    def should_poll(self) -> bool:
+        # Hubitat will push device updates
+        return False
 
     @property
     def is_disabled(self) -> bool:

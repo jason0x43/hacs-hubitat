@@ -3,7 +3,7 @@ repos:
   hooks:
   - id: black
     name: black
-    entry: poetry run black
+    entry: pdm run black
     args:
       - --safe
       - --quiet
@@ -15,7 +15,7 @@ repos:
   hooks:
   - id: flake8
     name: flake8
-    entry: poetry run flake8
+    entry: pdm run flake8
     language: system
     types: [python]
     require_serial: true
@@ -24,7 +24,7 @@ repos:
   hooks:
   - id: isort
     name: isort
-    entry: poetry run isort
+    entry: pdm run isort
     language: system
     types: [python]
     require_serial: true

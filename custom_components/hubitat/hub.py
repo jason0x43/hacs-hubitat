@@ -1,3 +1,4 @@
+from hubitatmaker import Device, Event, Hub as HubitatHub
 from logging import getLogger
 from typing import Callable, Dict, List, Mapping, Optional, Sequence, Union, cast
 
@@ -16,7 +17,6 @@ from custom_components.hubitat.const import (
 )
 from custom_components.hubitat.types import Removable, UpdateableEntity
 from custom_components.hubitat.util import get_hub_device_id, get_hub_short_id
-from hubitatmaker import Device, Event, Hub as HubitatHub
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -119,7 +119,7 @@ class Hub:
         return self._hub.port
 
     @property
-    def event_url(self) -> str:
+    def event_url(self) -> Optional[str]:
         """The event URL that Hubitat should POST events to."""
         return self._hub.event_url
 

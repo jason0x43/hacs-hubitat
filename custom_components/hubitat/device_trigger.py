@@ -1,9 +1,4 @@
 """Provide automation triggers for certain types of Hubitat device."""
-from itertools import chain
-from json import loads
-import logging
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, cast
-
 from hubitatmaker import (
     ATTR_DEVICE_ID,
     ATTR_LOCK_CODES,
@@ -15,9 +10,16 @@ from hubitatmaker import (
     CAP_PUSHABLE_BUTTON,
     Device,
 )
+from itertools import chain
+from json import loads
+import logging
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, cast
 import voluptuous as vol
 
-from homeassistant.components.automation import AutomationActionType
+from homeassistant.components.automation import (
+    AutomationActionType,
+    AutomationTriggerInfo,
+)
 from homeassistant.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
 )
@@ -145,7 +147,7 @@ async def async_attach_trigger(
     hass: HomeAssistant,
     config: ConfigType,
     action: AutomationActionType,
-    automation_info: Dict[str, Any],
+    automation_info: AutomationTriggerInfo,
 ) -> Callable[[], None]:
     """Attach a trigger."""
     result = await get_hubitat_device(hass, config[CONF_DEVICE_ID])

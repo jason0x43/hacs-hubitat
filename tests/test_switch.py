@@ -1,8 +1,6 @@
-from typing import List
-from unittest.mock import call, patch
-
 import pytest
-from pytest_homeassistant_custom_component.common import Mock
+from typing import List
+from unittest.mock import Mock, call, patch
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import Entity

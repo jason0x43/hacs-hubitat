@@ -1,3 +1,5 @@
 .vim/
 .venv/
 *.pyc
+__pypackages__
+.pdm.toml

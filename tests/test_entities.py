@@ -1,10 +1,10 @@
 from asyncio import Future
+from hubitatmaker import Device
+import pytest
 from typing import Awaitable, Dict, Optional
-from unittest.mock import NonCallableMock, call
+from unittest.mock import Mock, NonCallableMock, call, patch
 
 from custom_components.hubitat.device import Hub
-from hubitatmaker import Device
-from pytest_homeassistant_custom_component.common import Mock, patch
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -25,6 +25,7 @@ def mock_get_reg(_: HomeAssistant) -> Awaitable[EntityRegistry]:
     "custom_components.hubitat.entities.entity_registry.async_get_registry",
     new=mock_get_reg,
 )
+@pytest.mark.asyncio
 async def test_entity_migration(get_hub: Mock) -> None:
     mock_device_1 = NonCallableMock(type="switch", attributes=["state"])
     mock_device_2 = NonCallableMock(type="fan", attributes=["state"])
@@ -62,6 +63,7 @@ async def test_entity_migration(get_hub: Mock) -> None:
 
 @patch("custom_components.hubitat.entities.get_hub")
 @patch("custom_components.hubitat.entities.HubitatEventEmitter")
+@pytest.mark.asyncio
 async def test_add_event_emitters(HubitatEventEmitter: Mock, get_hub: Mock) -> None:
     mock_device_1 = NonCallableMock(type="switch", attributes=["state"])
     mock_device_2 = NonCallableMock(type="button", attributes=["state"])
