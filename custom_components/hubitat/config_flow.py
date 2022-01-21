@@ -1,8 +1,5 @@
 """Config flow for Hubitat integration."""
 from copy import deepcopy
-import logging
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Union, cast
-
 from hubitatmaker import (
     ConnectionError,
     Hub as HubitatHub,
@@ -11,6 +8,8 @@ from hubitatmaker import (
     RequestError,
 )
 from hubitatmaker.types import Device
+import logging
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Union, cast
 import voluptuous as vol
 from voluptuous.schema_builder import Schema
 
@@ -335,14 +334,17 @@ class HubitatOptionsFlow(OptionsFlow):
 
         existing_overrides = self.options.get(CONF_DEVICE_TYPE_OVERRIDES)
         default_value = []
-        if existing_overrides:
-            default_value = [
-                id for id in existing_overrides if existing_overrides[id] == platform
-            ]
 
         possible_overrides = {
             id: devices[id].name for id in devices if matcher(devices[id])
         }
+
+        if existing_overrides:
+            default_value = [
+                id
+                for id in existing_overrides
+                if existing_overrides[id] == platform and id in possible_overrides
+            ]
 
         device_schema = vol.Schema(
             {
