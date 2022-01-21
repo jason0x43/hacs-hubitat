@@ -1,7 +1,5 @@
 """Support for Hubitat thermostats."""
 
-from typing import Any, Dict, List, Optional
-
 from hubitatmaker import (
     CAP_THERMOSTAT,
     CMD_AUTO,
@@ -17,6 +15,9 @@ from hubitatmaker import (
     CMD_SET_HEATING_SETPOINT,
     Device,
 )
+from typing import Any, Dict, List, Optional
+
+from custom_components.hubitat.const import TEMP_F
 
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
@@ -97,9 +98,6 @@ HASS_ACTIONS = [
     CURRENT_HVAC_IDLE,
     CURRENT_HVAC_OFF,
 ]
-
-UNIT_FAHRENHEIT = "F"
-UNIT_CELSIUS = "C"
 
 PRESENCE_PRESENT = "present"
 PRESENCE_AWAY = "not present"
@@ -230,16 +228,11 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
     def temperature_unit(self) -> str:
         """Return the unit of measurement used by the platform."""
         unit = self.get_str_attr(ATTR_TEMP_UNIT)
-        if unit == UNIT_FAHRENHEIT:
+        if unit == TEMP_F:
             return TEMP_FAHRENHEIT
-        if unit == UNIT_CELSIUS:
+        if unit == TEMP_F:
             return TEMP_CELSIUS
-
-        # Guess the scale based on the current reported temperature
-        temp = self.current_temperature
-        if temp is None or temp > 50:
-            return TEMP_FAHRENHEIT
-        return TEMP_CELSIUS
+        return TEMP_FAHRENHEIT if self._hub.temperature_unit == TEMP_F else TEMP_CELSIUS
 
     @property
     def precision(self) -> Optional[float]:
