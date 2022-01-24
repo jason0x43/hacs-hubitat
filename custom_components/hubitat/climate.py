@@ -17,7 +17,7 @@ from hubitatmaker import (
 )
 from typing import Any, Dict, List, Optional
 
-from custom_components.hubitat.const import TEMP_F
+from custom_components.hubitat.const import TEMP_C, TEMP_F
 
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
@@ -230,7 +230,7 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         unit = self.get_str_attr(ATTR_TEMP_UNIT)
         if unit == TEMP_F:
             return TEMP_FAHRENHEIT
-        if unit == TEMP_F:
+        if unit == TEMP_C:
             return TEMP_CELSIUS
         return TEMP_FAHRENHEIT if self._hub.temperature_unit == TEMP_F else TEMP_CELSIUS
 
