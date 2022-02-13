@@ -1,8 +1,5 @@
 """Support for Hubitat security keypads."""
 
-from logging import getLogger
-from typing import Any, Dict, List, Optional
-
 from hubitatmaker.const import (
     ATTR_ALARM as HE_ATTR_ALARM,
     ATTR_CODE_CHANGED as HE_ATTR_CODE_CHANGED,
@@ -30,6 +27,8 @@ from hubitatmaker.const import (
     STATE_DISARMED,
 )
 from hubitatmaker.types import Device
+from logging import getLogger
+from typing import Any, Dict, List, Optional
 
 from homeassistant.components.alarm_control_panel import (
     SUPPORT_ALARM_ARM_AWAY,
@@ -98,7 +97,7 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
         return self.get_json_attr(HE_ATTR_LOCK_CODES)
 
     @property
-    def device_state_attributes(self) -> Dict[str, Any]:
+    def extra_state_attributes(self) -> Dict[str, Any]:
         """Return the state attributes."""
         return {
             ATTR_ALARM: self.alarm,

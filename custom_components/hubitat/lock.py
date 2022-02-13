@@ -1,5 +1,3 @@
-from typing import Any, Dict, List, Optional, Union
-
 from hubitatmaker import (
     ATTR_CODE_LENGTH as HM_ATTR_CODE_LENGTH,
     ATTR_LAST_CODE_NAME as HM_ATTR_LAST_CODE_NAME,
@@ -15,6 +13,7 @@ from hubitatmaker import (
     STATE_LOCKED,
     Device,
 )
+from typing import Any, Dict, List, Optional, Union
 
 from homeassistant.components.lock import LockEntity
 from homeassistant.config_entries import ConfigEntry
@@ -66,7 +65,7 @@ class HubitatLock(HubitatEntity, LockEntity):
         return self.get_int_attr(HM_ATTR_MAX_CODES)
 
     @property
-    def device_state_attributes(self) -> Dict[str, Any]:
+    def extra_state_attributes(self) -> Dict[str, Any]:
         """Return the state attributes."""
         return {
             ATTR_CODES: self.codes,
