@@ -1,0 +1,94 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "O hub já está configurado"
+        },
+        "error": {
+            "cannot_connect": "Falha ao conectar, tente novamente",
+            "invalid_access_token": "O token de acesso é inválido",
+            "invalid_event_url": "URL de evento inválido",
+            "invalid_hub_config": "Configuração de hub inválida",
+            "request_error": "Erro de comunicação com o hub",
+            "unknown": "Erro inesperado"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "access_token": "Token de acesso da API Maker",
+                    "app_id": "ID do aplicativo da API Maker",
+                    "host": "Endereço do hub",
+                    "server_port": "Porta do servidor de eventos (opcional)",
+                    "server_url": "URL do servidor de eventos (opcional)",
+                    "temperature_unit": "Unidades de temperatura (opcional)"
+                },
+                "description": "Coloque o endereço IP ou o nome do host do hub Hubitat, junto com o ID do aplicativo de sua instância da API Maker. Opcionalmente, forneça um número de porta para o servidor de eventos da integração escutar, as unidades usadas para sensores de temperatura (F por padrão) e/ou a URL para a qual o Hubitat deve enviar eventos.",
+                "title": "Conecte-se ao seu hub Hubitat"
+            }
+        },
+        "title": "Hubitat"
+    },
+    "device_automation": {
+        "trigger_subtype": {
+            "1": "1",
+            "2": "2",
+            "3": "3",
+            "4": "4",
+            "5": "5",
+            "6": "6",
+            "7": "7",
+            "8": "8"
+        },
+        "trigger_type": {
+            "double_tapped": "Botão {subtype} tocado duas vezes",
+            "held": "Botão {subtype} retido",
+            "pushed": "Botão {subtype} pressionado",
+            "code_name": "Desbloqueado com código \"{subtype}\""
+        }
+    },
+    "options": {
+        "error": {
+            "cannot_connect": "Falha ao conectar, tente novamente",
+            "invalid_access_token": "O token de acesso é inválido",
+            "invalid_event_url": "URL de evento inválido",
+            "invalid_hub_config": "Configuração de hub inválida",
+            "request_error": "Erro de comunicação com o hub",
+            "unknown": "Erro inesperado"
+        },
+        "step": {
+            "override_lights": {
+              "data": {
+                "devices": "Interruptores que deveriam ser luzes"
+              },
+              "description": "Os seguintes dispositivos foram classificados automaticamente como interruptores. Selecione qualquer um que deve ser luzes em vez disso.",
+              "title": "Interruptores -> Luzes"
+            },
+            "override_switches": {
+              "data": {
+                "devices": "Luzes que deveriam ser interruptores"
+              },
+              "description": "Os seguintes dispositivos foram automaticamente classificados como luzes. Selecione qualquer um que deva ser interruptor.",
+              "title": "Luzes -> Interruptores"
+            },
+            "remove_devices": {
+                "data": {
+                    "devices": "Dispositivos para remover"
+                },
+                "description": "Selecione todos os dispositivos gerenciados por esta integração que você deseja remover. Normalmente, isso seria qualquer dispositivo que não estivesse mais sendo compartilhado pelo Hubitat.",
+                "title": "Remover dispositivos"
+            },
+            "user": {
+                "data": {
+                    "host": "Endereço do Hub",
+                    "app_id": "ID do aplicativo da API Maker",
+                    "access_token": "Token de acesso da API Maker",
+                    "remove_devices": "Remover dispositivos",
+                    "server_port": "Porta do servidor de eventos (opcional)",
+                    "server_url": "URL do servidor de eventos (opcional)",
+                    "temperature_unit": "Unidades de temperatura (opcional)"
+                },
+                "description": "Configure as opções para Hubitat. Observe que alterar o ID do aplicativo Maker API fará com que a integração redescubra seus dispositivos.",
+                "title": "Opções do Hubitat"
+            }
+        }
+    }
+}
