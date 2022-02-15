@@ -19,6 +19,8 @@
                     "host": "Hub address",
                     "server_port": "Event server port (optional)",
                     "server_url": "Event server URL (optional)",
+                    "server_ssl_cert": "Event server SSL certificate (optional)",
+                    "server_ssl_key": "Event server SSL private key (optional)",
                     "temperature_unit": "Temperature units (optional)"
                 },
                 "description": "Provide the IP address or hostname of your Hubitat hub, along with the app ID of its Maker API instance. Optionally, provide a port number for the integration's event server to listen on, the units used for temperature sensors (F by default), and/or the URL that Hubitat should POST events to.",
@@ -84,6 +86,8 @@
                     "remove_devices": "Remove devices",
                     "server_port": "Event server port (optional)",
                     "server_url": "Event server URL (optional)",
+                    "server_ssl_cert": "Event server SSL certificate (optional)",
+                    "server_ssl_key": "Event server SSL private key (optional)",
                     "temperature_unit": "Temperature units (optional)"
                 },
                 "description": "Configure options for Hubitat. Note that changing the Maker API app ID will cause the integration to rediscover your devices.",

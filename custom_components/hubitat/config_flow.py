@@ -32,6 +32,8 @@ from .const import (
     CONF_DEVICES,
     CONF_SERVER_PORT,
     CONF_SERVER_URL,
+    CONF_SERVER_SSL_CERT,
+    CONF_SERVER_SSL_KEY,
     DOMAIN,
     STEP_OVERRIDE_LIGHTS,
     STEP_OVERRIDE_SWITCHES,
@@ -59,6 +61,8 @@ CONFIG_SCHEMA = vol.Schema(
         vol.Required(CONF_ACCESS_TOKEN): str,
         vol.Optional(CONF_SERVER_URL): str,
         vol.Optional(CONF_SERVER_PORT): int,
+        vol.Optional(CONF_SERVER_SSL_CERT): str,
+        vol.Optional(CONF_SERVER_SSL_KEY): str,
         vol.Optional(CONF_TEMPERATURE_UNIT, default=TEMP_F): vol.In([TEMP_F, TEMP_C]),
     }
 )
@@ -169,6 +173,8 @@ class HubitatOptionsFlow(OptionsFlow):
                     CONF_ACCESS_TOKEN: entry.data.get(CONF_ACCESS_TOKEN),
                     CONF_SERVER_PORT: user_input.get(CONF_SERVER_PORT),
                     CONF_SERVER_URL: user_input.get(CONF_SERVER_URL),
+                    CONF_SERVER_SSL_CERT: user_input.get(CONF_SERVER_SSL_CERT),
+                    CONF_SERVER_SSL_KEY: user_input.get(CONF_SERVER_SSL_KEY),
                 }
 
                 info = await _validate_input(check_input)
@@ -177,6 +183,8 @@ class HubitatOptionsFlow(OptionsFlow):
                 self.options[CONF_HOST] = user_input[CONF_HOST]
                 self.options[CONF_SERVER_PORT] = user_input.get(CONF_SERVER_PORT)
                 self.options[CONF_SERVER_URL] = user_input.get(CONF_SERVER_URL)
+                self.options[CONF_SERVER_SSL_CERT] = user_input.get(CONF_SERVER_SSL_CERT)
+                self.options[CONF_SERVER_SSL_KEY] = user_input.get(CONF_SERVER_SSL_KEY)
                 self.options[CONF_TEMPERATURE_UNIT] = user_input[CONF_TEMPERATURE_UNIT]
 
                 _LOGGER.debug("Moving to device removal step")
@@ -232,6 +240,22 @@ class HubitatOptionsFlow(OptionsFlow):
                             )
                         },
                     ): int,
+                    vol.Optional(
+                        CONF_SERVER_SSL_CERT,
+                        description={
+                            "suggested_value": entry.options.get(
+                                CONF_SERVER_SSL_CERT, entry.data.get(CONF_SERVER_SSL_CERT)
+                            )
+                        },
+                    ): str,
+                    vol.Optional(
+                        CONF_SERVER_SSL_KEY,
+                        description={
+                            "suggested_value": entry.options.get(
+                                CONF_SERVER_SSL_KEY, entry.data.get(CONF_SERVER_SSL_KEY)
+                            )
+                        },
+                    ): str,
                     vol.Optional(
                         CONF_TEMPERATURE_UNIT,
                         default=entry.options.get(
