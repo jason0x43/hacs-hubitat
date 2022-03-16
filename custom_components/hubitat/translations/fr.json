@@ -18,6 +18,8 @@
                     "host": "L'adresse du Hub",
                     "server_port": "Port du serveur d'événements (facultatif)",
                     "server_url": "URL du serveur d'événements (facultatif)",
+                    "server_ssl_cert": "Certificat SSL du serveur d'événements (facultatif)",
+                    "server_ssl_key": "Clé privée SSL du serveur d'événements (facultatif)",
                     "temperature_unit": "Unités de température (optionnel)",
                     "use_server_url": "Utiliser l'URL du serveur d'événements personnalisé"
                 },
@@ -61,6 +63,8 @@
                     "access_token": "'Maker API' jeton d'accès",
                     "server_port": "Port du serveur d'événements (facultatif)",
                     "server_url": "URL du serveur d'événements (facultatif)",
+                    "server_ssl_cert": "Certificat SSL du serveur d'événements (facultatif)",
+                    "server_ssl_key": "Clé privée SSL du serveur d'événements (facultatif)",
                     "temperature_unit": "Unités de température (optionnel)",
                     "use_server_url": "Utiliser l'URL du serveur d'événements personnalisé"
                 },

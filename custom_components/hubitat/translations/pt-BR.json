@@ -19,6 +19,8 @@
                     "host": "Endereço do hub",
                     "server_port": "Porta do servidor de eventos (opcional)",
                     "server_url": "URL do servidor de eventos (opcional)",
+                    "server_ssl_cert": "Certificado SSL do servidor de eventos (opcional)",
+                    "server_ssl_key": "Chave privada SSL do servidor de eventos (opcional)",
                     "temperature_unit": "Unidades de temperatura (opcional)"
                 },
                 "description": "Coloque o endereço IP ou o nome do host do hub Hubitat, junto com o ID do aplicativo de sua instância da API Maker. Opcionalmente, forneça um número de porta para o servidor de eventos da integração escutar, as unidades usadas para sensores de temperatura (F por padrão) e/ou a URL para a qual o Hubitat deve enviar eventos.",
@@ -84,6 +86,8 @@
                     "remove_devices": "Remover dispositivos",
                     "server_port": "Porta do servidor de eventos (opcional)",
                     "server_url": "URL do servidor de eventos (opcional)",
+                    "server_ssl_cert": "Certificado SSL do servidor de eventos (opcional)",
+                    "server_ssl_key": "Chave privada SSL do servidor de eventos (opcional)",
                     "temperature_unit": "Unidades de temperatura (opcional)"
                 },
                 "description": "Configure as opções para Hubitat. Observe que alterar o ID do aplicativo Maker API fará com que a integração redescubra seus dispositivos.",
