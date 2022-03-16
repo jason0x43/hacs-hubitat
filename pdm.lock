@@ -260,8 +260,9 @@ dependencies = [
 
 [[package]]
 name = "hubitatmaker"
-version = "0.5.8"
-path = "./../hubitatmaker.git"
+version = "0.6.0"
+requires_python = ">=3.8,<4.0"
+path = "../hubitatmaker.git"
 summary = "A library for interfacing with Hubitat via its Maker API"
 dependencies = [
     "aiohttp<4.0.0,>=3.6.2",
@@ -306,7 +307,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "MarkupSafe"
+name = "markupsafe"
 version = "2.0.1"
 requires_python = ">=3.6"
 summary = "Safely add untrusted strings to HTML/XML markup."
@@ -402,7 +403,7 @@ requires_python = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 summary = "passive checker of Python programs"
 
 [[package]]
-name = "PyJWT"
+name = "pyjwt"
 version = "2.1.0"
 requires_python = ">=3.6"
 summary = "JSON Web Token implementation in Python"
@@ -481,7 +482,7 @@ extras = ["idna2008"]
 summary = "Validating URI References per RFC 3986"
 dependencies = [
     "idna",
-    "rfc3986==1.5.0",
+    "rfc3986",
 ]
 
 [[package]]
@@ -562,7 +563,7 @@ dependencies = [
 
 [metadata]
 lock_version = "3.1"
-content_hash = "sha256:d263221bb6eaea4c3b1d965e8ac87c867eaae339aae774d1ff4731107656a6ed"
+content_hash = "sha256:4cb6d9cb71eeda5131c0ae63cc872e3c7f07a496785bcad1284d418dbdba1708"
 
 [metadata.files]
 "aiohttp 3.8.1" = [
