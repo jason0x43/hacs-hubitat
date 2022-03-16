@@ -53,6 +53,8 @@ CONF_DEVICE_TYPE_OVERRIDES = "device_type_overrides"
 CONF_SERVER_PORT = "server_port"
 CONF_SERVER_URL = "server_url"
 CONF_USE_SERVER_URL = "use_server_url"
+CONF_SERVER_SSL_CERT = "server_ssl_cert"
+CONF_SERVER_SSL_KEY = "server_ssl_key"
 
 CONF_BUTTON = "button"
 CONF_BUTTONS = ("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")

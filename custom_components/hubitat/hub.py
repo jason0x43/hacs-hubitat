@@ -2,6 +2,10 @@ from hubitatmaker import Device, Event, Hub as HubitatHub
 from logging import getLogger
 from typing import Callable, Dict, List, Mapping, Optional, Sequence, Union, cast
 
+import os
+import ssl
+from ssl import SSLContext
+
 from custom_components.hubitat.const import (
     ATTR_ATTRIBUTE,
     ATTR_HA_DEVICE_ID,
@@ -10,6 +14,8 @@ from custom_components.hubitat.const import (
     CONF_HUBITAT_EVENT,
     CONF_SERVER_PORT,
     CONF_SERVER_URL,
+    CONF_SERVER_SSL_CERT,
+    CONF_SERVER_SSL_KEY,
     DOMAIN,
     PLATFORMS,
     TEMP_F,
@@ -124,6 +130,11 @@ class Hub:
         return self._hub.event_url
 
     @property
+    def ssl_context(self) -> Optional[SSLContext]:
+        """The SSLContext that the event listener server is using."""
+        return self._hub.ssl_context
+
+    @property
     def mode(self) -> Optional[str]:
         """Return the current mode of this hub."""
         return self._hub.mode
@@ -215,9 +226,17 @@ class Hub:
         if url == "":
             url = None
 
-        _LOGGER.debug("Initializing Hubitat hub with event server on port %s", port)
+        ssl_cert = entry.options.get(CONF_SERVER_SSL_CERT, entry.data.get(CONF_SERVER_SSL_CERT))
+        ssl_key = entry.options.get(CONF_SERVER_SSL_KEY, entry.data.get(CONF_SERVER_SSL_KEY))
+        ssl_context = _create_ssl_context(ssl_cert, ssl_key)
+
+        _LOGGER.debug(
+            "Initializing Hubitat hub with event server on port %s with SSL %s", 
+            port,
+            "disabled" if ssl_context is None else "enabled"
+        )
         self._hub = HubitatHub(
-            self.host, self.app_id, self.token, port=port, event_url=url
+            self.host, self.app_id, self.token, port=port, event_url=url, ssl_context=ssl_context
         )
 
         await self._hub.start()
@@ -347,6 +366,20 @@ class Hub:
             await hub.set_event_url(url)
             _LOGGER.debug("Set event server URL to %s", url)
 
+        ssl_cert = config_entry.options.get(
+            CONF_SERVER_SSL_CERT, config_entry.data.get(CONF_SERVER_SSL_CERT)
+        )
+        ssl_key = config_entry.options.get(
+            CONF_SERVER_SSL_KEY, config_entry.data.get(CONF_SERVER_SSL_KEY)
+        )
+        ssl_context = _create_ssl_context(ssl_cert, ssl_key)
+        await hub.set_ssl_context(ssl_context)
+        _LOGGER.debug(
+            "Set event server SSL cert to %s and SSL key to %s",
+            ssl_cert,
+            ssl_key
+        )
+
         temp_unit = (
             config_entry.options.get(
                 CONF_TEMPERATURE_UNIT, config_entry.data.get(CONF_TEMPERATURE_UNIT)
@@ -389,6 +422,14 @@ class Hub:
         """Set the port that the event listener server will listen on."""
         _LOGGER.debug("Setting event listener port to %s", port)
         await self._hub.set_port(port)
+    
+    async def set_ssl_context(self, ssl_context: Optional[SSLContext]) -> None:
+        """Set the SSLContext that the event listener server will use."""
+        if ssl_context is None:
+            _LOGGER.warn("Disabling SSL for event listener server")
+        else:
+            _LOGGER.warn("Enabling SSL for event listener server")
+        await self._hub.set_ssl_context(ssl_context)
 
     async def set_event_url(self, url: Optional[str]) -> None:
         """Set the port that the event listener server will listen on."""
@@ -416,3 +457,12 @@ async def _update_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
 def get_hub(hass: HomeAssistant, config_entry_id: str) -> Hub:
     """Get the Hub device associated with a given config entry."""
     return hass.data[DOMAIN][config_entry_id]
+
+def _create_ssl_context(ssl_cert: Optional[str], ssl_key: Optional[str]) -> SSLContext:
+    if (ssl_cert is not None and os.path.isfile(ssl_cert)
+            and ssl_key is not None and os.path.isfile(ssl_key)):
+        ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        ssl_context.load_cert_chain(ssl_cert, ssl_key)
+        return ssl_context
+    else:
+        return None
