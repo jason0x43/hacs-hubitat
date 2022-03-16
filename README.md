@@ -62,13 +62,27 @@ Home Assistant platforms, while the sub-bullets are specific device classes.
 
 ## Installation
 
+This component is an _integration_, which is different from an _add on_.
+Integrations are managed through the “Devices & Services” configuration menu
+rather than through “Add-ons, Backups & Supervisor”.
+
+There are two methods for installing this integration. One is to use HACS, a
+tool is used to install and update third party integrations (such as this one).
+The second option is to install this integration manually by cloning the
+repository and copying the integration files to the proper location in your HA
+config directory.
+
 Note that you will need to restart Home Assistant after installion, whichever
 method is used.
 
 ### HACS
 
-In HACS, go to Integrations, and then click the orange '+' button in the lower
-right corner to add an integration. Search for "Hubitat" and install it.
+First, [install HACS](https://hacs.xyz/docs/setup/prerequisites) if you haven't
+already.
+
+Once HACS has been installed and shows up in the sidebar, open it and go to
+Integrations, and then click the orange '+' button in the lower right corner to
+add an integration. Search for “Hubitat” and install it.
 
 ### Manually
 
@@ -79,7 +93,8 @@ Clone this repository and copy the `custom_components/hubitat` folder into your
 ## Setup
 
 First, create a Maker API instance in the Hubitat UI. Add whatever devices you’d
-like to make available to Home Assistant.
+like to make available to Home Assistant. If you plan to use the integration
+over SSL, you‘ll probably want to enable the “Ignore SSL Certificates” toggle.
 
 To configure the Hubitat integration, go to Configuration -> Integrations in the
 Home Assistant UI and click the “+” button to add a new integration. Pick
@@ -92,6 +107,11 @@ Home Assistant UI and click the “+” button to add a new integration. Pick
 - The API access token
 - A port for the event server to listen on (more about this below); this will be
   chosen automatically by default
+- Optionally provide the relative paths to an SSL private key and certificate
+  (e.g., `ssl/localhost-key.pem` and `ssl/localhost.pem`). These are files that
+  you will need to generate using a tool such as `mkcert` or `openssl` If these
+  paths are provided, the event server (described below) will serve over SSL
+  (and _only_ over SSL).
 
 ### Event server
 
@@ -403,7 +423,7 @@ messages for other components), like:
 
 ### HSM status or modes not updating
 
-Ensure that the ”POST location events?” toggle is enabled in your Maker API app in Hubitat.
+Ensure that the “POST location events?” toggle is enabled in your Maker API app in Hubitat.
 
 ## Developing
 
