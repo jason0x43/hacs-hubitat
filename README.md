@@ -102,12 +102,12 @@ Home Assistant UI and click the “+” button to add a new integration. Pick
 
 - The address of the hub (e.g., `http://10.0.1.99` or just `10.0.1.99` if you’re
   not using https)
-- The app ID of the Maker API instance (the 3 or 4 digit number after
+- The app ID of the Maker API instance (the 2, 3 or 4 digit number after
   `/apps/api/` in any of the Maker API URLs)
 - The API access token
-- A port for the event server to listen on (more about this below); this will be
+- Optional: A port for the event server to listen on (more about this below); this will be
   chosen automatically by default
-- Optionally provide the relative paths to an SSL private key and certificate
+- Optional: Provide the relative paths to an SSL private key and certificate
   (e.g., `ssl/localhost-key.pem` and `ssl/localhost.pem`). These are files that
   you will need to generate using a tool such as `mkcert` or `openssl` If these
   paths are provided, the event server (described below) will serve over SSL
@@ -123,6 +123,8 @@ To receive these events, the integration starts up a Python-based web server and
 updates the POST URL setting in the Maker API instance. Note that for this to
 work, Hubitat must be able to see your Home Assistant server on your local
 network.
+
+Please note that Home Assistant Restarts are important! If a new device from the Maker App (Hubitat) is added, Home Assistant will not be able to receive events until a restart. For example, if at Time X you have your Front Patio & Rear Patio Switches exposed to Home Assistant, but you then add another Switch at Time Y, Home Assistant will be able to receive "Events" until a Restart. The behavior will be such that you can Turn On a Switch (using the example) but you will not know the state after it is on until a restart. Think of this as fire and forget. Restart Home Assistant each time you update the Maker App or add a device!
 
 ### Device types
 
