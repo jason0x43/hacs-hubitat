@@ -41,7 +41,7 @@ class HubitatBase(Removable):
     def device_info(self) -> Dict[str, Any]:
         """Return the device info."""
         info: Dict[str, Any] = {
-            "identifiers": {(DOMAIN, self.device_id)},
+            "identifiers": {(DOMAIN, self._hub.id, self.device_id)},
         }
 
         # if this entity's device isn't the hub, link it to the hub

@@ -482,8 +482,14 @@ extras = ["idna2008"]
 summary = "Validating URI References per RFC 3986"
 dependencies = [
     "idna",
-    "rfc3986",
+    "rfc3986<2,>=1.3",
 ]
+
+[[package]]
+name = "setuptools"
+version = "62.2.0"
+requires_python = ">=3.7"
+summary = "Easily download, build, install, upgrade, and uninstall Python packages"
 
 [[package]]
 name = "six"
@@ -563,7 +569,7 @@ dependencies = [
 
 [metadata]
 lock_version = "3.1"
-content_hash = "sha256:4cb6d9cb71eeda5131c0ae63cc872e3c7f07a496785bcad1284d418dbdba1708"
+content_hash = "sha256:45773f03cea3da4d81fb659f9349f06b41c11302a0e64e550bcf25f5808d0f01"
 
 [metadata.files]
 "aiohttp 3.8.1" = [
@@ -1204,6 +1210,10 @@ content_hash = "sha256:4cb6d9cb71eeda5131c0ae63cc872e3c7f07a496785bcad1284d418db
 "rfc3986 1.5.0" = [
     {file = "rfc3986-1.5.0-py2.py3-none-any.whl", hash = "sha256:a86d6e1f5b1dc238b218b012df0aa79409667bb209e58da56d0b94704e712a97"},
     {file = "rfc3986-1.5.0.tar.gz", hash = "sha256:270aaf10d87d0d4e095063c65bf3ddbc6ee3d0b226328ce21e036f946e421835"},
+]
+"setuptools 62.2.0" = [
+    {file = "setuptools-62.2.0-py3-none-any.whl", hash = "sha256:5534570b9980fc650d45c62877ff603c7aaaf24893371708736cc016bd221c3c"},
+    {file = "setuptools-62.2.0.tar.gz", hash = "sha256:ca6ba73b7fd5f734ae70ece8c4c1f7062b07f3352f6428f6277e27c8f5c64237"},
 ]
 "six 1.16.0" = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},

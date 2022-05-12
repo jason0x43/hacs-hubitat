@@ -1,6 +1,6 @@
 [project]
 name = "hubitat"
-version = "0.7.1"
+version = "0.7.2b1"
 description = "A Hubitat integration for Home Assistant"
 authors = [
     {name = "Jason Cheatham", email = "jason@jasoncheatham.com"},
@@ -33,6 +33,7 @@ dev = [
     "../hubitatmaker.git",
     "homeassistant==2021.12.0",
     "pytest-asyncio>=0.16.0",
+    "setuptools>=62.2.0",
 ]
 
 [build-system]

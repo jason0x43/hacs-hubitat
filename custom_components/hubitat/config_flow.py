@@ -31,9 +31,9 @@ from .const import (
     CONF_DEVICE_TYPE_OVERRIDES,
     CONF_DEVICES,
     CONF_SERVER_PORT,
-    CONF_SERVER_URL,
     CONF_SERVER_SSL_CERT,
     CONF_SERVER_SSL_KEY,
+    CONF_SERVER_URL,
     DOMAIN,
     STEP_OVERRIDE_LIGHTS,
     STEP_OVERRIDE_SWITCHES,
@@ -183,7 +183,9 @@ class HubitatOptionsFlow(OptionsFlow):
                 self.options[CONF_HOST] = user_input[CONF_HOST]
                 self.options[CONF_SERVER_PORT] = user_input.get(CONF_SERVER_PORT)
                 self.options[CONF_SERVER_URL] = user_input.get(CONF_SERVER_URL)
-                self.options[CONF_SERVER_SSL_CERT] = user_input.get(CONF_SERVER_SSL_CERT)
+                self.options[CONF_SERVER_SSL_CERT] = user_input.get(
+                    CONF_SERVER_SSL_CERT
+                )
                 self.options[CONF_SERVER_SSL_KEY] = user_input.get(CONF_SERVER_SSL_KEY)
                 self.options[CONF_TEMPERATURE_UNIT] = user_input[CONF_TEMPERATURE_UNIT]
 
@@ -244,7 +246,8 @@ class HubitatOptionsFlow(OptionsFlow):
                         CONF_SERVER_SSL_CERT,
                         description={
                             "suggested_value": entry.options.get(
-                                CONF_SERVER_SSL_CERT, entry.data.get(CONF_SERVER_SSL_CERT)
+                                CONF_SERVER_SSL_CERT,
+                                entry.data.get(CONF_SERVER_SSL_CERT),
                             )
                         },
                     ): str,
@@ -279,11 +282,23 @@ class HubitatOptionsFlow(OptionsFlow):
         devices: List[DeviceEntry] = await self.hass.async_create_task(
             _get_devices(cast(HomeAssistant, self.hass), self.config_entry)
         )
+        device_map = {d.id: d.name for d in devices}
+        for d in devices:
+            if d.name != "Hubitat Elevation":
+                name = d.name
+                for id in d.identifiers:
+                    if len(id) == 2:
+                        # tag the names of devices that appear to have legacy
+                        # device identifiers (domain + hub_id) so they can be
+                        # manually removed
+                        name = f"{d.name}*"
+                        break
+                device_map[d.id] = name
+            else:
+                device_map[d.id] = d.name
         device_schema = vol.Schema(
             {
-                vol.Optional(CONF_DEVICES, default=[]): cv.multi_select(
-                    {d.id: d.name for d in devices}
-                ),
+                vol.Optional(CONF_DEVICES, default=[]): cv.multi_select(device_map),
             }
         )
 
