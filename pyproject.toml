@@ -6,7 +6,7 @@ authors = [
     {name = "Jason Cheatham", email = "jason@jasoncheatham.com"},
 ]
 dependencies = []
-requires-python = ">=3.8,<4.0"
+requires-python = ">=3.9,<4.0"
 license = {text = "MIT"}
 
 [project.urls]
@@ -30,8 +30,8 @@ dev = [
     "isort>=4.3.21",
     "pre-commit<3.0.0,>=2.4.0",
     "flake8-pyi>=20.5.0",
-    "../hubitatmaker.git",
-    "homeassistant==2021.12.0",
+    "hubitatmaker==0.6.1",
+    "homeassistant==2022.5.5",
     "pytest-asyncio>=0.16.0",
     "setuptools>=62.2.0",
 ]
@@ -43,7 +43,7 @@ build-backend = "pdm.pep517.api"
 [tool.pyright]
 include = ["custom_components/hubitat"]
 exclude = ["**/__pycache__"]
-extraPaths = ["__pypackages__/3.8/lib"]
+extraPaths = ["__pypackages__/3.9/lib"]
 stubPath = "."
 reportDuplicateImport = true
 reportMissingImports = true
