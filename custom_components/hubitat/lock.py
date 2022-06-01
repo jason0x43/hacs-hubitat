@@ -119,6 +119,6 @@ async def async_setup_entry(
     async_add_entities: EntityAdder,
 ) -> None:
     """Initialize lock devices."""
-    await create_and_add_entities(
+    create_and_add_entities(
         hass, entry, async_add_entities, "lock", HubitatLock, is_lock
     )

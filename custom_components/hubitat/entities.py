@@ -1,13 +1,12 @@
+from hubitatmaker import Device
 from logging import getLogger
-from typing import Callable, Dict, List, Optional, Type, TypeVar, cast
+from typing import Callable, Dict, List, Optional, Type, TypeVar
 
 from custom_components.hubitat.util import get_device_overrides
-from hubitatmaker import Device
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry
-from homeassistant.helpers.entity_registry import EntityRegistry
 
 from .const import DOMAIN
 from .device import HubitatEntity, HubitatEventEmitter
@@ -19,7 +18,7 @@ _LOGGER = getLogger(__name__)
 E = TypeVar("E", bound=HubitatEntity)
 
 
-async def create_and_add_entities(
+def create_and_add_entities(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
     async_add_entities: EntityAdder,
@@ -42,7 +41,7 @@ async def create_and_add_entities(
     ]
 
     if len(entities) > 0:
-        await _migrate_old_unique_ids(hass, entities, platform)
+        _migrate_old_unique_ids(hass, entities, platform)
         hub.add_entities(entities)
         async_add_entities(entities)
         _LOGGER.debug(f"Added {EntityClass.__name__} entities: {entities}")
@@ -60,7 +59,7 @@ async def create_and_add_entities(
         for d in original_devices_with_entity
         if d not in devices_with_entity
     ]
-    ereg = cast(EntityRegistry, await entity_registry.async_get_registry(hass))
+    ereg = entity_registry.async_get(hass)
     entity_ids = {ereg.entities[id].unique_id: id for id in ereg.entities}
     for unique_id in entity_ids:
         if unique_id in entity_unique_ids_to_remove:
@@ -70,7 +69,7 @@ async def create_and_add_entities(
     return entities
 
 
-async def create_and_add_event_emitters(
+def create_and_add_event_emitters(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
     is_emitter: Callable[[Device], bool],
@@ -85,19 +84,19 @@ async def create_and_add_event_emitters(
     ]
 
     for emitter in emitters:
-        hass.async_create_task(emitter.update_device_registry())
+        emitter.update_device_registry()
     hub.add_event_emitters(emitters)
     _LOGGER.debug("Added event emitters: %s", emitters)
 
     return emitters
 
 
-async def _migrate_old_unique_ids(
+def _migrate_old_unique_ids(
     hass: HomeAssistant, entities: List[E], platform: str
 ) -> None:
     """Migrate legacy unique IDs to the current format."""
     _LOGGER.debug("Migrating unique_ids for %s...", platform)
-    ereg = cast(EntityRegistry, await entity_registry.async_get_registry(hass))
+    ereg = entity_registry.async_get(hass)
     for entity in entities:
         old_ids = entity.old_unique_ids
         _LOGGER.debug("Checking for existence of entity %s...", old_ids)

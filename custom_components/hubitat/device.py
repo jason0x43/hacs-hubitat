@@ -10,7 +10,7 @@ from custom_components.hubitat.types import Removable, UpdateableEntity
 
 from homeassistant.core import callback
 from homeassistant.helpers import device_registry
-from homeassistant.helpers.device_registry import DeviceRegistry
+from homeassistant.helpers.entity import DeviceInfo
 
 from .const import DOMAIN
 from .util import get_hub_device_id
@@ -38,16 +38,17 @@ class HubitatBase(Removable):
         return self._device.id
 
     @property
-    def device_info(self) -> Dict[str, Any]:
+    def device_info(self) -> DeviceInfo:
         """Return the device info."""
-        info: Dict[str, Any] = {
-            "identifiers": {(DOMAIN, self._hub.id, self.device_id)},
+        info: DeviceInfo = {
+            # "identifiers": {(DOMAIN, self.device_id)},
+            "identifiers": {(DOMAIN, f"{self._hub.id}:{self.device_id}")},
         }
 
         # if this entity's device isn't the hub, link it to the hub
         if self.device_id != self._hub.id:
             info["name"] = self._device.name
-            info["via_device"] = ((DOMAIN, self._hub.id),)
+            info["via_device"] = (DOMAIN, self._hub.id)
             info["model"] = self.type
             info["manufacturer"] = "Hubitat"
 
@@ -171,14 +172,12 @@ class HubitatEntity(HubitatBase, UpdateableEntity):
 class HubitatEventEmitter(HubitatBase):
     """An event emitter related to a Hubitat device."""
 
-    async def update_device_registry(self) -> None:
+    def update_device_registry(self) -> None:
         """Register a device for the event emitter."""
         # Create a device for the emitter since Home Assistant doesn't
         # automatically do that as it does for entities.
         entry = self._hub.config_entry
-        dreg = cast(
-            DeviceRegistry, await device_registry.async_get_registry(self._hub.hass)
-        )
+        dreg = device_registry.async_get(self._hub.hass)
         dreg.async_get_or_create(config_entry_id=entry.entry_id, **self.device_info)
         _LOGGER.debug("Created device for %s", self)
 

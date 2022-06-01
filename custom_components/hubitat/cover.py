@@ -1,6 +1,3 @@
-from logging import getLogger
-from typing import Any, Dict, List, Optional, Tuple, Type
-
 from hubitatmaker import (
     ATTR_DOOR,
     ATTR_LEVEL,
@@ -19,6 +16,8 @@ from hubitatmaker import (
     STATE_PARTIALLY_OPEN,
     Device,
 )
+from logging import getLogger
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 from homeassistant.components.cover import (
     ATTR_POSITION as HA_ATTR_POSITION,
@@ -171,7 +170,7 @@ async def async_setup_entry(
         ) -> bool:
             return _is_cover_type(device, cap[0])
 
-        await create_and_add_entities(
+        create_and_add_entities(
             hass, entry, async_add_entities, "cover", cap[1], is_cover
         )
 

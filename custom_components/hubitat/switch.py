@@ -1,9 +1,5 @@
 """Support for Hubitat switches."""
 
-from logging import getLogger
-import re
-from typing import Any, Dict, List, Optional
-
 from hubitatmaker import (
     CAP_ALARM,
     CAP_DOUBLE_TAPABLE_BUTTON,
@@ -17,6 +13,9 @@ from hubitatmaker import (
     CMD_STROBE,
     Device,
 )
+from logging import getLogger
+import re
+from typing import Any, Dict, List, Optional
 import voluptuous as vol
 
 from homeassistant.components.switch import (
@@ -168,7 +167,7 @@ async def async_setup_entry(
     ) -> bool:
         return is_switch(device, overrides) and not is_energy_meter(device, overrides)
 
-    await create_and_add_entities(
+    create_and_add_entities(
         hass,
         config_entry,
         async_add_entities,
@@ -182,7 +181,7 @@ async def async_setup_entry(
     ) -> bool:
         return is_switch(device, overrides) and is_energy_meter(device, overrides)
 
-    await create_and_add_entities(
+    create_and_add_entities(
         hass,
         config_entry,
         async_add_entities,
@@ -191,9 +190,9 @@ async def async_setup_entry(
         _is_smart_switch,
     )
 
-    await create_and_add_event_emitters(hass, config_entry, is_button_controller)
+    create_and_add_event_emitters(hass, config_entry, is_button_controller)
 
-    alarms = await create_and_add_entities(
+    alarms = create_and_add_entities(
         hass, config_entry, async_add_entities, "switch", HubitatAlarm, is_alarm
     )
 

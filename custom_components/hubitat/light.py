@@ -1,10 +1,5 @@
 """Support for Hubitat lights."""
 
-import json
-from logging import getLogger
-import re
-from typing import Any, Dict, List, Optional, Tuple, Union
-
 from hubitatmaker import (
     ATTR_COLOR_MODE as HE_ATTR_COLOR_MODE,
     ATTR_COLOR_NAME as HE_ATTR_COLOR_NAME,
@@ -27,6 +22,10 @@ from hubitatmaker import (
     COLOR_MODE_RGB as HE_COLOR_MODE_RGB,
     Device,
 )
+import json
+from logging import getLogger
+import re
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -284,6 +283,6 @@ async def async_setup_entry(
     async_add_entities: EntityAdder,
 ) -> None:
     """Initialize light devices."""
-    await create_and_add_entities(
+    create_and_add_entities(
         hass, config_entry, async_add_entities, "light", HubitatLight, is_light
     )

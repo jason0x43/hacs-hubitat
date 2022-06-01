@@ -9,7 +9,7 @@ from hubitatmaker import (
 )
 from hubitatmaker.types import Device
 import logging
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Union, cast
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
 import voluptuous as vol
 from voluptuous.schema_builder import Schema
 
@@ -21,9 +21,10 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_TEMPERATURE_UNIT
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import device_registry
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.device_registry import DeviceEntry, DeviceRegistry
+from homeassistant.helpers.device_registry import DeviceEntry
 
 from .const import (
     CONF_APP_ID,
@@ -45,12 +46,6 @@ from .const import (
 from .light import is_definitely_light, is_light
 from .switch import is_switch
 from .util import get_hub_short_id
-
-try:
-    from homeassistant.data_entry_flow import FlowResult
-except Exception:
-    FlowResult = Dict[str, Any]
-
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -279,9 +274,7 @@ class HubitatOptionsFlow(OptionsFlow):
 
         assert self.hass is not None
 
-        devices: List[DeviceEntry] = await self.hass.async_create_task(
-            _get_devices(cast(HomeAssistant, self.hass), self.config_entry)
-        )
+        devices = _get_devices(self.hass, self.config_entry)
         device_map = {d.id: d.name for d in devices}
         for d in devices:
             if d.name != "Hubitat Elevation":
@@ -304,9 +297,7 @@ class HubitatOptionsFlow(OptionsFlow):
 
         if user_input is not None:
             ids = [id for id in user_input[CONF_DEVICES]]
-            await self.hass.async_create_task(
-                _remove_devices(cast(HomeAssistant, self.hass), ids)
-            )
+            _remove_devices(self.hass, ids)
             return await self.async_step_override_lights()
 
         if len(errors) == 0:
@@ -415,12 +406,10 @@ class HubitatOptionsFlow(OptionsFlow):
         )
 
 
-async def _get_devices(
-    hass: HomeAssistant, config_entry: ConfigEntry
-) -> List[DeviceEntry]:
+def _get_devices(hass: HomeAssistant, config_entry: ConfigEntry) -> List[DeviceEntry]:
     """Return the devices associated with a given config entry."""
-    dreg = cast(DeviceRegistry, await device_registry.async_get_registry(hass))
-    all_devices: Dict[str, DeviceEntry] = dreg.devices
+    dreg = device_registry.async_get(hass)
+    all_devices = dreg.devices
     devices: List[DeviceEntry] = []
 
     for id in all_devices:
@@ -434,10 +423,10 @@ async def _get_devices(
     return devices
 
 
-async def _remove_devices(hass: HomeAssistant, device_ids: List[str]) -> None:
+def _remove_devices(hass: HomeAssistant, device_ids: List[str]) -> None:
     """Remove a list of devices."""
     _LOGGER.debug("Removing devices: %s", device_ids)
-    dreg = cast(DeviceRegistry, await device_registry.async_get_registry(hass))
+    dreg = device_registry.async_get(hass)
     for id in device_ids:
         dreg.async_remove_device(id)
 

@@ -48,6 +48,6 @@ async def test_setup_entry(create_emitters, create_entities) -> None:
         "switch",
         HubitatPowerMeterSwitch,
     )
-    assert await create_entities.has_calls([call1, call2, call3])
+    assert create_entities.has_calls([call1, call2, call3])
 
     assert create_emitters.call_count == 1, "expected 1 call to create emitters"

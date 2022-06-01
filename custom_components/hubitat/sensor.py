@@ -1,9 +1,6 @@
 """Hubitat sensor entities."""
 
 from datetime import datetime
-from logging import getLogger
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
-
 from hubitatmaker import (
     ATTR_BATTERY,
     ATTR_ENERGY,
@@ -17,6 +14,8 @@ from hubitatmaker import (
     ATTR_VOLTAGE,
 )
 from hubitatmaker.types import Device
+from logging import getLogger
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from homeassistant.components.sensor import (
     DEVICE_CLASS_BATTERY,
@@ -112,6 +111,7 @@ class HubitatBatterySensor(HubitatSensor):
         self._units = "%"
         self._device_class = DEVICE_CLASS_BATTERY
 
+
 class HubitatEnergySensor(HubitatSensor):
     """A energy sensor."""
 
@@ -131,6 +131,7 @@ class HubitatEnergySourceSensor(HubitatSensor):
         super().__init__(*args, **kwargs)
         self._attribute = ATTR_ENERGY_SOURCE
         self._device_class = DEVICE_CLASS_ENERGY
+
 
 class HubitatHumiditySensor(HubitatSensor):
     """A humidity sensor."""
@@ -289,7 +290,7 @@ class HubitatHubModeSensor(HubitatSensor):
 _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatSensor]], ...] = (
     (ATTR_BATTERY, HubitatBatterySensor),
     (ATTR_ENERGY, HubitatEnergySensor),
-    (ATTR_ENERGY_SOURCE, HubitatEnergySourceSensor),    
+    (ATTR_ENERGY_SOURCE, HubitatEnergySourceSensor),
     (ATTR_HUMIDITY, HubitatHumiditySensor),
     (ATTR_ILLUMINANCE, HubitatIlluminanceSensor),
     (ATTR_POWER, HubitatPowerSensor),
@@ -317,7 +318,7 @@ async def async_setup_entry(
     add_hub_entities(hass, entry, async_add_entities)
 
     # Add an update sensor for every device
-    await create_and_add_entities(
+    create_and_add_entities(
         hass, entry, async_add_entities, "sensor", HubitatUpdateSensor, is_update_sensor
     )
 
@@ -328,7 +329,7 @@ async def async_setup_entry(
         ) -> bool:
             return attr[0] in device.attributes
 
-        await create_and_add_entities(
+        create_and_add_entities(
             hass, entry, async_add_entities, "sensor", attr[1], is_sensor
         )
 

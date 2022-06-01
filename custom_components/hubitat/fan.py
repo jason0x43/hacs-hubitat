@@ -1,8 +1,5 @@
 """Support for Hubitat fans."""
 
-from logging import getLogger
-from typing import Any, Dict, List, Optional
-
 from hubitatmaker import (
     ATTR_SPEED,
     ATTR_SWITCH,
@@ -17,6 +14,8 @@ from hubitatmaker import (
     STATE_ON,
     Device,
 )
+from logging import getLogger
+from typing import Any, Dict, List, Optional
 
 from homeassistant.components.fan import SUPPORT_SET_SPEED, FanEntity
 from homeassistant.config_entries import ConfigEntry
@@ -100,6 +99,4 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder
 ) -> None:
     """Initialize fan devices."""
-    await create_and_add_entities(
-        hass, entry, async_add_entities, "fan", HubitatFan, is_fan
-    )
+    create_and_add_entities(hass, entry, async_add_entities, "fan", HubitatFan, is_fan)

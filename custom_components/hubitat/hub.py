@@ -1,10 +1,9 @@
 from hubitatmaker import Device, Event, Hub as HubitatHub
 from logging import getLogger
-from typing import Callable, Dict, List, Mapping, Optional, Sequence, Union, cast
-
 import os
 import ssl
 from ssl import SSLContext
+from typing import Callable, Mapping, Optional, Sequence, Union, cast
 
 from custom_components.hubitat.const import (
     ATTR_ATTRIBUTE,
@@ -13,9 +12,9 @@ from custom_components.hubitat.const import (
     CONF_APP_ID,
     CONF_HUBITAT_EVENT,
     CONF_SERVER_PORT,
-    CONF_SERVER_URL,
     CONF_SERVER_SSL_CERT,
     CONF_SERVER_SSL_KEY,
+    CONF_SERVER_URL,
     DOMAIN,
     PLATFORMS,
     TEMP_F,
@@ -35,7 +34,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry
-from homeassistant.helpers.device_registry import DeviceRegistry
+from homeassistant.helpers.device_registry import DeviceEntry
 
 _LOGGER = getLogger(__name__)
 
@@ -67,8 +66,8 @@ class Hub:
         self.hass = hass
         self.config_entry = entry
         self.token = cast(str, self.config_entry.data.get(CONF_ACCESS_TOKEN))
-        self.entities: List[UpdateableEntity] = []
-        self.event_emitters: List[Removable] = []
+        self.entities: list[UpdateableEntity] = []
+        self.event_emitters: list[Removable] = []
 
         self._temperature_unit = (
             entry.options.get(
@@ -140,7 +139,7 @@ class Hub:
         return self._hub.mode
 
     @property
-    def modes(self) -> Optional[List[str]]:
+    def modes(self) -> Optional[list[str]]:
         """Return the available modes of this hub."""
         return self._hub.modes
 
@@ -226,23 +225,32 @@ class Hub:
         if url == "":
             url = None
 
-        ssl_cert = entry.options.get(CONF_SERVER_SSL_CERT, entry.data.get(CONF_SERVER_SSL_CERT))
-        ssl_key = entry.options.get(CONF_SERVER_SSL_KEY, entry.data.get(CONF_SERVER_SSL_KEY))
+        ssl_cert = entry.options.get(
+            CONF_SERVER_SSL_CERT, entry.data.get(CONF_SERVER_SSL_CERT)
+        )
+        ssl_key = entry.options.get(
+            CONF_SERVER_SSL_KEY, entry.data.get(CONF_SERVER_SSL_KEY)
+        )
         ssl_context = _create_ssl_context(ssl_cert, ssl_key)
 
         _LOGGER.debug(
-            "Initializing Hubitat hub with event server on port %s with SSL %s", 
+            "Initializing Hubitat hub with event server on port %s with SSL %s",
             port,
-            "disabled" if ssl_context is None else "enabled"
+            "disabled" if ssl_context is None else "enabled",
         )
         self._hub = HubitatHub(
-            self.host, self.app_id, self.token, port=port, event_url=url, ssl_context=ssl_context
+            self.host,
+            self.app_id,
+            self.token,
+            port=port,
+            event_url=url,
+            ssl_context=ssl_context,
         )
 
         await self._hub.start()
 
-        self._hub_device_listeners: List[Listener] = []
-        self._device_listeners: Dict[str, List[Listener]] = {}
+        self._hub_device_listeners: list[Listener] = []
+        self._device_listeners: dict[str, list[Listener]] = {}
 
         hub = self._hub
         hass = self.hass
@@ -278,6 +286,12 @@ class Hub:
         for device_id in hub.devices:
             hub.add_device_listener(device_id, self.handle_event)
 
+        # Update device identifiers to include the Maker API instance ID to
+        # ensure that devices coming from separate hubs (or Maker API installs)
+        # are handled properly.
+        _update_device_ids(self.id, self.hass)
+
+        # Initialize entities
         for platform in PLATFORMS:
             hass.async_create_task(
                 hass.config_entries.async_forward_entry_setup(config_entry, platform)
@@ -321,9 +335,9 @@ class Hub:
 
         return True
 
-    async def async_update_device_registry(self) -> None:
+    def async_update_device_registry(self) -> None:
         """Add a device for this hub to the device registry."""
-        dreg = cast(DeviceRegistry, await device_registry.async_get_registry(self.hass))
+        dreg = device_registry.async_get(self.hass)
         dreg.async_get_or_create(
             config_entry_id=self.config_entry.entry_id,
             connections={(device_registry.CONNECTION_NETWORK_MAC, self._hub.mac)},
@@ -375,9 +389,7 @@ class Hub:
         ssl_context = _create_ssl_context(ssl_cert, ssl_key)
         await hub.set_ssl_context(ssl_context)
         _LOGGER.debug(
-            "Set event server SSL cert to %s and SSL key to %s",
-            ssl_cert,
-            ssl_key
+            "Set event server SSL cert to %s and SSL key to %s", ssl_cert, ssl_key
         )
 
         temp_unit = (
@@ -422,7 +434,7 @@ class Hub:
         """Set the port that the event listener server will listen on."""
         _LOGGER.debug("Setting event listener port to %s", port)
         await self._hub.set_port(port)
-    
+
     async def set_ssl_context(self, ssl_context: Optional[SSLContext]) -> None:
         """Set the SSLContext that the event listener server will use."""
         if ssl_context is None:
@@ -458,11 +470,91 @@ def get_hub(hass: HomeAssistant, config_entry_id: str) -> Hub:
     """Get the Hub device associated with a given config entry."""
     return hass.data[DOMAIN][config_entry_id]
 
-def _create_ssl_context(ssl_cert: Optional[str], ssl_key: Optional[str]) -> SSLContext:
-    if (ssl_cert is not None and os.path.isfile(ssl_cert)
-            and ssl_key is not None and os.path.isfile(ssl_key)):
+
+def _create_ssl_context(
+    ssl_cert: Optional[str], ssl_key: Optional[str]
+) -> Optional[SSLContext]:
+    if (
+        ssl_cert is not None
+        and os.path.isfile(ssl_cert)
+        and ssl_key is not None
+        and os.path.isfile(ssl_key)
+    ):
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         ssl_context.load_cert_chain(ssl_cert, ssl_key)
         return ssl_context
     else:
         return None
+
+
+def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:
+    dreg = device_registry.async_get(hass)
+    all_devices = [dreg.devices[id] for id in dreg.devices]
+
+    hubitat_devices: list[DeviceEntry] = []
+    for old_dev in all_devices:
+        ids = list(old_dev.identifiers)
+        if len(ids) != 1:
+            continue
+        id_set = ids[0]
+        if id_set[0] == DOMAIN and old_dev.name != HUB_NAME:
+            hubitat_devices.append(old_dev)
+
+    old_devs: dict[str, DeviceEntry] = {}
+    new_devs: dict[str, DeviceEntry] = {}
+    for old_dev in hubitat_devices:
+        # Hubitat devices have 1 identifier tuple
+        id_set = list(old_dev.identifiers)[0]
+
+        if len(id_set) == 3:
+            # devices created by v0.7.2b1 may have 3 values in the ID tuple
+            new_devs[id_set[-1]] = old_dev
+        else:
+            try:
+                # old device identifiers will use the bare Hubitat device ID as
+                # the second value in the tuple
+                int(id_set[1])
+                old_devs[id_set[1]] = old_dev
+            except ValueError:
+                # new device identifiers will use a string with the format
+                # "hub_id:dev_id", like "abc123:23", as the second value
+                dev_id = id_set[1].split(":")[1]
+                try:
+                    int(dev_id)
+                    new_devs[dev_id] = old_dev
+                except ValueError:
+                    _LOGGER.warn(f"Device ID in unknown format: {id_set[1]}")
+
+    # Update any devices with 3-part identifiers to use 2-part identifiers in
+    # the new format
+    for id in new_devs:
+        new_dev = new_devs[id]
+        dev_ids = list(new_dev.identifiers)
+        id_set = dev_ids[0]
+        if len(id_set) == 3:
+            new_ids = {(id_set[0], f"{id_set[1]}:{id_set[2]}")}
+            dreg.async_update_device(new_dev.id, new_identifiers=new_ids)
+            _LOGGER.info(
+                f"Updated identifiers of device {new_dev.identifiers} to {new_ids}"
+            )
+
+    for id in old_devs:
+        old_dev = old_devs[id]
+        if id in new_devs:
+            # A new device exists with the same Hubitat device ID as this old
+            # device; remove the old device
+            dreg.async_remove_device(old_dev.id)
+            _LOGGER.info(
+                f"Removed device {old_dev.identifiers} in favor of {new_devs[id].identifiers}"
+            )
+        else:
+            # No new device exists with the same Hubitat device ID as this old
+            # device; update the identifiers of the old device to use the new
+            # format
+            dev_ids = list(old_dev.identifiers)
+            id_set = dev_ids[0]
+            new_ids = {(id_set[0], f"{hub_id}:{id_set[1]}")}
+            dreg.async_update_device(old_dev.id, new_identifiers=new_ids)
+            _LOGGER.info(
+                f"Updated identifiers of device {old_dev.identifiers} to {new_ids}"
+            )

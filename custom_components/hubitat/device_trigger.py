@@ -25,6 +25,7 @@ from homeassistant.components.device_automation.exceptions import (
 )
 from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry
 from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers.typing import ConfigType
 
@@ -78,13 +79,13 @@ async def async_validate_trigger_config(
     """Validate a trigger config."""
     config = TRIGGER_SCHEMA(config)
 
-    device = await get_device(hass, config[CONF_DEVICE_ID])
+    device = get_device(hass, config[CONF_DEVICE_ID])
     if not device:
         _LOGGER.warning("Missing device")
         raise InvalidDeviceAutomationConfig
 
     if DOMAIN in hass.config.components:
-        hubitat_device, _ = await get_hubitat_device(hass, device.id)
+        hubitat_device, _ = get_hubitat_device(hass, device.id)
         if hubitat_device is None:
             _LOGGER.warning("Invalid Hubitat device")
             raise InvalidDeviceAutomationConfig
@@ -108,7 +109,7 @@ async def async_get_triggers(
     hass: HomeAssistant, device_id: str
 ) -> Sequence[Dict[str, Any]]:
     """List device triggers for Hubitat devices."""
-    device, _ = await get_hubitat_device(hass, device_id)
+    device, _ = get_hubitat_device(hass, device_id)
     if device is None:
         return []
 
@@ -150,7 +151,7 @@ async def async_attach_trigger(
     automation_info: AutomationTriggerInfo,
 ) -> Callable[[], None]:
     """Attach a trigger."""
-    result = await get_hubitat_device(hass, config[CONF_DEVICE_ID])
+    result = get_hubitat_device(hass, config[CONF_DEVICE_ID])
 
     hubitat_device = result[0]
     hub = result[1]
@@ -186,17 +187,17 @@ async def async_attach_trigger(
     )
 
 
-async def get_device(hass: HomeAssistant, device_id: str) -> Optional[DeviceEntry]:
+def get_device(hass: HomeAssistant, device_id: str) -> Optional[DeviceEntry]:
     """Return a Home Assistant device for a given ID."""
-    device_registry = await hass.helpers.device_registry.async_get_registry()
-    return device_registry.async_get(device_id)
+    dreg = device_registry.async_get(hass)
+    return dreg.async_get(device_id)
 
 
-async def get_hubitat_device(
+def get_hubitat_device(
     hass: HomeAssistant, device_id: str
 ) -> Tuple[Optional[Device], Optional[Hub]]:
     """Return a Hubitat device for a given Home Assistant device ID."""
-    device = await get_device(hass, device_id)
+    device = get_device(hass, device_id)
     if device is None:
         return None, None
 

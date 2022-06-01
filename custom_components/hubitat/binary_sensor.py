@@ -1,8 +1,5 @@
 """Hubitat binary sensor entities."""
 
-import re
-from typing import Dict, List, Optional, Tuple, Type
-
 from hubitatmaker import (
     ATTR_ACCELERATION,
     ATTR_CARBON_MONOXIDE,
@@ -13,6 +10,8 @@ from hubitatmaker import (
     ATTR_WATER,
     Device,
 )
+import re
+from typing import Dict, List, Optional, Tuple, Type
 
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_CONNECTIVITY,
@@ -171,7 +170,7 @@ async def async_setup_entry(
         ) -> bool:
             return attr[0] in device.attributes
 
-        await create_and_add_entities(
+        create_and_add_entities(
             hass, config_entry, async_add_entities, "binary_sensor", attr[1], is_sensor
         )
 

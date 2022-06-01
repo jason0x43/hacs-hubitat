@@ -219,7 +219,7 @@ async def async_setup_entry(
     async_add_entities: EntityAdder,
 ) -> None:
     """Initialize security keypad devices."""
-    await create_and_add_entities(
+    create_and_add_entities(
         hass,
         entry,
         async_add_entities,

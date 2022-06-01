@@ -1,8 +1,7 @@
-from asyncio import Future
 from hubitatmaker import Device
 import pytest
-from typing import Awaitable, Dict, Optional
-from unittest.mock import Mock, NonCallableMock, call, patch
+from typing import Dict, Optional
+from unittest.mock import Mock, NonCallableMock, patch
 
 from custom_components.hubitat.device import Hub
 
@@ -11,18 +10,16 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_registry import EntityRegistry
 
 
-def mock_get_reg(_: HomeAssistant) -> Awaitable[EntityRegistry]:
+def mock_get_reg(_: HomeAssistant) -> EntityRegistry:
     MockReg = Mock(spec=EntityRegistry)
     mock_reg = MockReg()
     mock_reg.configure_mock(entities={})
-    future = Future()
-    future.set_result(mock_reg)
-    return future
+    return mock_reg
 
 
 @patch("custom_components.hubitat.entities.get_hub")
 @patch(
-    "custom_components.hubitat.entities.entity_registry.async_get_registry",
+    "custom_components.hubitat.entities.entity_registry.async_get",
     new=mock_get_reg,
 )
 @pytest.mark.asyncio
@@ -51,7 +48,7 @@ async def test_entity_migration(get_hub: Mock) -> None:
 
     mock_async_add_entities = Mock()
 
-    await create_and_add_entities(
+    create_and_add_entities(
         mock_hass,
         mock_entry,
         mock_async_add_entities,
@@ -87,14 +84,9 @@ async def test_add_event_emitters(HubitatEventEmitter: Mock, get_hub: Mock) -> N
 
     is_emitter = Mock(side_effect=mock_is_emitter)
 
-    await create_and_add_event_emitters(mock_hass, mock_entry, is_emitter)
+    create_and_add_event_emitters(mock_hass, mock_entry, is_emitter)
 
     assert HubitatEventEmitter.call_count == 1, "expected 1 emitter to be created"
-    assert mock_hass.async_create_task.call_count == 1, "expected 1 async creations"
-
-    assert mock_hass.async_create_task.has_calls(
-        [call("update_registry")]
-    ), "1 update_device_registry task should have been created"
 
     assert (
         mock_hub.add_event_emitters.call_count == 1

@@ -3,12 +3,12 @@ from asyncio import gather
 from logging import getLogger
 import re
 from typing import Any, Dict
+import voluptuous as vol
 
 from custom_components.hubitat.services import (
     async_register_services,
     async_remove_services,
 )
-import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
@@ -39,7 +39,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     hass.data[DOMAIN][config_entry.entry_id] = hub
 
-    await hub.async_update_device_registry()
+    hub.async_update_device_registry()
 
     async_register_services(hass, config_entry)
 
