@@ -524,7 +524,14 @@ def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:
                     int(dev_id)
                     new_devs[dev_id] = dev
                 except ValueError:
-                    _LOGGER.warn(f"Device ID in unknown format: {id_set[1]}")
+                    hub_id = id_set[1].split(":")[0]
+                    if hub_id == dev_id:
+                        # This is a dummy device with the identifier
+                        # "hub_id:hub_id"; remove it.
+                        dreg.async_remove_device(dev.id)
+                        _LOGGER.info(f"Removed dummy device {dev.identifiers}")
+                    else:
+                        _LOGGER.warn(f"Device ID in unknown format: {id_set[1]}")
 
     # Update any devices with 3-part identifiers to use 2-part identifiers in
     # the new format
