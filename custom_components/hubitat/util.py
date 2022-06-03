@@ -36,9 +36,7 @@ def get_hub_device_id(hub: HasToken, device: Union[str, Device]) -> str:
 
 
 def get_hubitat_device_id(device: DeviceEntry) -> Optional[str]:
-    for ids in device.identifiers:
-        id_set = ids[0]
-
+    for id_set in device.identifiers:
         if id_set[0] == DOMAIN:
             # The second identifier is hub_id:device_id
             if ":" in id_set[1]:

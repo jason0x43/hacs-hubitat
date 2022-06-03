@@ -16,6 +16,8 @@ import logging
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, cast
 import voluptuous as vol
 
+from custom_components.hubitat.util import get_hubitat_device_id
+
 from homeassistant.components.automation import (
     AutomationActionType,
     AutomationTriggerInfo,
@@ -201,11 +203,7 @@ def get_hubitat_device(
     if device is None:
         return None, None
 
-    hubitat_id = None
-    for identifier in device.identifiers:
-        if identifier[0] == DOMAIN:
-            hubitat_id = identifier[1]
-            break
+    hubitat_id = get_hubitat_device_id(device)
 
     if hubitat_id is None:
         _LOGGER.debug("Couldn't find Hubitat ID for device %s", device_id)
