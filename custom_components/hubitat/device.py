@@ -40,9 +40,12 @@ class HubitatBase(Removable):
     @property
     def device_info(self) -> DeviceInfo:
         """Return the device info."""
+        dev_identifier = self.device_id
+        if self._hub.id != self.device_id:
+            dev_identifier = f"{self._hub.id}:{self.device_id}"
+
         info: DeviceInfo = {
-            # "identifiers": {(DOMAIN, self.device_id)},
-            "identifiers": {(DOMAIN, f"{self._hub.id}:{self.device_id}")},
+            "identifiers": {(DOMAIN, dev_identifier)},
         }
 
         # if this entity's device isn't the hub, link it to the hub

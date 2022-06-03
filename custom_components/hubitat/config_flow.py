@@ -276,19 +276,6 @@ class HubitatOptionsFlow(OptionsFlow):
 
         devices = _get_devices(self.hass, self.config_entry)
         device_map = {d.id: d.name for d in devices}
-        for d in devices:
-            if d.name != "Hubitat Elevation":
-                name = d.name
-                for id in d.identifiers:
-                    if len(id) == 2:
-                        # tag the names of devices that appear to have legacy
-                        # device identifiers (domain + hub_id) so they can be
-                        # manually removed
-                        name = f"{d.name}*"
-                        break
-                device_map[d.id] = name
-            else:
-                device_map[d.id] = d.name
         device_schema = vol.Schema(
             {
                 vol.Optional(CONF_DEVICES, default=[]): cv.multi_select(device_map),

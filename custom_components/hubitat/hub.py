@@ -492,36 +492,37 @@ def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:
     all_devices = [dreg.devices[id] for id in dreg.devices]
 
     hubitat_devices: list[DeviceEntry] = []
-    for old_dev in all_devices:
-        ids = list(old_dev.identifiers)
+    for dev in all_devices:
+        ids = list(dev.identifiers)
         if len(ids) != 1:
             continue
         id_set = ids[0]
-        if id_set[0] == DOMAIN and old_dev.name != HUB_NAME:
-            hubitat_devices.append(old_dev)
+        if id_set[0] == DOMAIN and id_set[1] != hub_id:
+            hubitat_devices.append(dev)
 
     old_devs: dict[str, DeviceEntry] = {}
     new_devs: dict[str, DeviceEntry] = {}
-    for old_dev in hubitat_devices:
+
+    for dev in hubitat_devices:
         # Hubitat devices have 1 identifier tuple
-        id_set = list(old_dev.identifiers)[0]
+        id_set = list(dev.identifiers)[0]
 
         if len(id_set) == 3:
             # devices created by v0.7.2b1 may have 3 values in the ID tuple
-            new_devs[id_set[-1]] = old_dev
+            new_devs[id_set[-1]] = dev
         else:
             try:
                 # old device identifiers will use the bare Hubitat device ID as
                 # the second value in the tuple
                 int(id_set[1])
-                old_devs[id_set[1]] = old_dev
+                old_devs[id_set[1]] = dev
             except ValueError:
                 # new device identifiers will use a string with the format
                 # "hub_id:dev_id", like "abc123:23", as the second value
                 dev_id = id_set[1].split(":")[1]
                 try:
                     int(dev_id)
-                    new_devs[dev_id] = old_dev
+                    new_devs[dev_id] = dev
                 except ValueError:
                     _LOGGER.warn(f"Device ID in unknown format: {id_set[1]}")
 
@@ -539,22 +540,22 @@ def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:
             )
 
     for id in old_devs:
-        old_dev = old_devs[id]
+        dev = old_devs[id]
         if id in new_devs:
             # A new device exists with the same Hubitat device ID as this old
             # device; remove the old device
-            dreg.async_remove_device(old_dev.id)
+            dreg.async_remove_device(dev.id)
             _LOGGER.info(
-                f"Removed device {old_dev.identifiers} in favor of {new_devs[id].identifiers}"
+                f"Removed device {dev.identifiers} in favor of {new_devs[id].identifiers}"
             )
         else:
             # No new device exists with the same Hubitat device ID as this old
             # device; update the identifiers of the old device to use the new
             # format
-            dev_ids = list(old_dev.identifiers)
+            dev_ids = list(dev.identifiers)
             id_set = dev_ids[0]
             new_ids = {(id_set[0], f"{hub_id}:{id_set[1]}")}
-            dreg.async_update_device(old_dev.id, new_identifiers=new_ids)
+            dreg.async_update_device(dev.id, new_identifiers=new_ids)
             _LOGGER.info(
-                f"Updated identifiers of device {old_dev.identifiers} to {new_ids}"
+                f"Updated identifiers of device {dev.identifiers} to {new_ids}"
             )
