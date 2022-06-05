@@ -497,7 +497,7 @@ def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:
         if len(ids) != 1:
             continue
         id_set = ids[0]
-        if id_set[0] == DOMAIN and id_set[1] != hub_id:
+        if id_set[0] == DOMAIN and dev.name != HUB_NAME:
             hubitat_devices.append(dev)
 
     old_devs: dict[str, DeviceEntry] = {}
@@ -510,30 +510,35 @@ def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:
         if len(id_set) == 3:
             # devices created by v0.7.2b1 may have 3 values in the ID tuple
             new_devs[id_set[-1]] = dev
-        else:
-            try:
-                # old device identifiers will use the bare Hubitat device ID as
-                # the second value in the tuple
-                int(id_set[1])
-                old_devs[id_set[1]] = dev
-            except ValueError:
+        elif len(id_set) == 2:
+            if ":" in id_set[1]:
                 # new device identifiers will use a string with the format
                 # "hub_id:dev_id", like "abc123:23", as the second value
-                dev_id = id_set[1].split(":")[1]
-                try:
-                    int(dev_id)
-                    new_devs[dev_id] = dev
-                except ValueError:
-                    hub_id = id_set[1].split(":")[0]
-                    if hub_id == dev_id:
-                        # This is a dummy device with the identifier
-                        # "hub_id:hub_id"; remove it.
-                        dreg.async_remove_device(dev.id)
-                        _LOGGER.info(f"Removed dummy device {dev.identifiers}")
-                    else:
-                        _LOGGER.warn(f"Device ID in unknown format: {id_set[1]}")
+                hub_id, dev_id = id_set[1].split(":")
 
-    # Update any devices with 3-part identifiers to use 2-part identifiers in
+                if hub_id == dev_id:
+                    # this is a dummy device with the identifier
+                    # "hub_id:hub_id"; remove it.
+                    dreg.async_remove_device(dev.id)
+                    _LOGGER.info(f"Removed dummy device {dev.identifiers}")
+                else:
+                    try:
+                        int(dev_id)
+                        new_devs[dev_id] = dev
+                    except ValueError:
+                        _LOGGER.warn(f"Device ID in unknown format: {id_set[1]}")
+            else:
+                try:
+                    # old device identifiers will use the bare Hubitat device
+                    # ID as the second value in the tuple
+                    int(id_set[1])
+                    old_devs[id_set[1]] = dev
+                except ValueError:
+                    _LOGGER.warn(f"Device ID in unknown format: {id_set[1]}")
+        else:
+            _LOGGER.warn(f"Device identifier in unknown format: {id_set}")
+
+        # Update any devices with 3-part identifiers to use 2-part identifiers in
     # the new format
     for id in new_devs:
         new_dev = new_devs[id]
