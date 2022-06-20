@@ -15,7 +15,7 @@ from hubitatmaker import (
 )
 from logging import getLogger
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 import voluptuous as vol
 
 from homeassistant.components.switch import (
@@ -46,6 +46,11 @@ class HubitatSwitch(HubitatEntity, SwitchEntity):
     """Representation of a Hubitat switch."""
 
     _attribute: str
+
+    @property
+    def device_attrs(self) -> Optional[Sequence[str]]:
+        """Return this entity's associated attributes"""
+        return ("switch", "power")
 
     @property
     def is_on(self) -> bool:

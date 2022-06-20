@@ -15,7 +15,7 @@ from hubitatmaker import (
     CMD_SET_HEATING_SETPOINT,
     Device,
 )
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from custom_components.hubitat.const import TEMP_C, TEMP_F
 
@@ -110,9 +110,27 @@ FAN_MODE_AUTO = "auto"
 FAN_MODE_CIRCULATE = "circulate"
 HASS_FAN_MODES = [FAN_ON, FAN_AUTO]
 
+_device_attrs = (
+    ATTR_COOLING_SETPOINT,
+    ATTR_FAN_MODE,
+    ATTR_HEATING_SETPOINT,
+    ATTR_HUMIDITY,
+    ATTR_MODE,
+    ATTR_NEST_MODE,
+    ATTR_OPERATING_STATE,
+    ATTR_PRESENCE,
+    ATTR_TEMP,
+    ATTR_TEMP_UNIT,
+)
+
 
 class HubitatThermostat(HubitatEntity, ClimateEntity):
     """Representation of a Hubitat switch."""
+
+    @property
+    def device_attrs(self) -> Optional[Sequence[str]]:
+        """Return this entity's associated attributes"""
+        return _device_attrs
 
     @property
     def current_humidity(self) -> Optional[int]:

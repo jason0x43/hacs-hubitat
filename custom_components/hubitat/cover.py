@@ -17,7 +17,7 @@ from hubitatmaker import (
     Device,
 )
 from logging import getLogger
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Type
 
 from homeassistant.components.cover import (
     ATTR_POSITION as HA_ATTR_POSITION,
@@ -45,6 +45,15 @@ class HubitatCover(HubitatEntity, CoverEntity):
     _attribute: str
     _features: int
     _device_class: Optional[str]
+
+    @property
+    def device_attrs(self) -> Optional[Sequence[str]]:
+        """Return this entity's associated attributes"""
+        return (
+            self._attribute,
+            ATTR_LEVEL,
+            ATTR_POSITION,
+        )
 
     @property
     def device_class(self) -> Optional[str]:

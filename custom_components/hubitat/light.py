@@ -25,7 +25,7 @@ from hubitatmaker import (
 import json
 from logging import getLogger
 import re
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -64,9 +64,24 @@ except ImportError:
 
 _LOGGER = getLogger(__name__)
 
+_device_attrs = (
+    HE_ATTR_COLOR_MODE,
+    HE_ATTR_COLOR_NAME,
+    HE_ATTR_COLOR_TEMP,
+    HE_ATTR_HUE,
+    HE_ATTR_LEVEL,
+    HE_ATTR_SATURATION,
+    HE_ATTR_SWITCH,
+)
+
 
 class HubitatLight(HubitatEntity, LightEntity):
     """Representation of a Hubitat light."""
+
+    @property
+    def device_attrs(self) -> Optional[Sequence[str]]:
+        """Return this entity's associated attributes"""
+        return _device_attrs
 
     @property
     def color_mode(self) -> Optional[str]:

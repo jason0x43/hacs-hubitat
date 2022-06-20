@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Sequence, Union
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
@@ -14,6 +14,11 @@ class HubitatSelect(HubitatEntity, SelectEntity):
     _attribute: str
     _options: List[str]
     _device_class: str
+
+    @property
+    def device_attrs(self) -> Optional[Sequence[str]]:
+        """Return this entity's associated attributes"""
+        return (self._attribute,)
 
     @property
     def device_class(self) -> Optional[str]:

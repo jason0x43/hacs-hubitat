@@ -5,14 +5,13 @@ from json import loads
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Union, cast
 
-from custom_components.hubitat.hub import Hub
-from custom_components.hubitat.types import Removable, UpdateableEntity
-
 from homeassistant.core import callback
 from homeassistant.helpers import device_registry
 from homeassistant.helpers.entity import DeviceInfo
 
 from .const import DOMAIN
+from .hub import Hub
+from .types import Removable, UpdateableEntity
 from .util import get_hub_device_id
 
 _LOGGER = getLogger(__name__)
@@ -137,6 +136,10 @@ class HubitatEntity(HubitatBase, UpdateableEntity):
         # metadata. Don't register device listeners for temprorary entities.
         if not temp:
             self._hub.add_device_listener(self._device.id, self.handle_event)
+
+    @property
+    def device_attrs(self) -> Optional[str]:
+        return None
 
     @property
     def should_poll(self) -> bool:

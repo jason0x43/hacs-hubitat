@@ -15,7 +15,7 @@ from hubitatmaker import (
     Device,
 )
 from logging import getLogger
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from homeassistant.components.fan import SUPPORT_SET_SPEED, FanEntity
 from homeassistant.config_entries import ConfigEntry
@@ -27,9 +27,19 @@ from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
+_device_attrs = (
+    ATTR_SWITCH,
+    ATTR_SPEED,
+)
+
 
 class HubitatFan(HubitatEntity, FanEntity):
     """Representation of a Hubitat fan."""
+
+    @property
+    def device_attrs(self) -> Optional[Sequence[str]]:
+        """Return this entity's associated attributes"""
+        return _device_attrs
 
     @property
     def is_on(self) -> bool:

@@ -28,7 +28,7 @@ from hubitatmaker.const import (
 )
 from hubitatmaker.types import Device
 from logging import getLogger
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from homeassistant.components.alarm_control_panel import (
     SUPPORT_ALARM_ARM_AWAY,
@@ -60,9 +60,25 @@ from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
+_device_attrs = (
+    HE_ATTR_ALARM,
+    HE_ATTR_CODE_CHANGED,
+    HE_ATTR_CODE_LENGTH,
+    HE_ATTR_ENTRY_DELAY,
+    HE_ATTR_EXIT_DELAY,
+    HE_ATTR_LOCK_CODES,
+    HE_ATTR_MAX_CODES,
+    HE_ATTR_SECURITY_KEYPAD,
+)
+
 
 class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
     """Representation of a Hubitat security keypad."""
+
+    @property
+    def device_attrs(self) -> Optional[Sequence[str]]:
+        """Return this entity's associated attributes"""
+        return _device_attrs
 
     @property
     def alarm(self) -> Optional[str]:

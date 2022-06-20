@@ -13,7 +13,7 @@ from hubitatmaker import (
     STATE_LOCKED,
     Device,
 )
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 from homeassistant.components.lock import LockEntity
 from homeassistant.config_entries import ConfigEntry
@@ -24,9 +24,22 @@ from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .types import EntityAdder
 
+_device_attrs = (
+    HM_ATTR_CODE_LENGTH,
+    HM_ATTR_LAST_CODE_NAME,
+    HM_ATTR_LOCK,
+    HM_ATTR_LOCK_CODES,
+    HM_ATTR_MAX_CODES,
+)
+
 
 class HubitatLock(HubitatEntity, LockEntity):
     """Representation of a Hubitat lock."""
+
+    @property
+    def device_attrs(self) -> Optional[Sequence[str]]:
+        """Return this entity's associated attributes"""
+        return _device_attrs
 
     @property
     def code_format(self) -> Optional[str]:

@@ -15,7 +15,7 @@ from hubitatmaker import (
 )
 from hubitatmaker.types import Device
 from logging import getLogger
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Type, Union
 
 from homeassistant.components.sensor import (
     DEVICE_CLASS_BATTERY,
@@ -57,9 +57,39 @@ class HubitatSensor(HubitatEntity):
     """A generic Hubitat sensor."""
 
     _attribute: str
-    _attribute_name: Optional[str]
+    _attribute_name: Optional[str] = None
     _units: str
-    _device_class: Optional[str]
+    _device_class: Optional[str] = None
+    _enabled_default: Optional[bool] = None
+
+    def __init__(
+        self,
+        *args: Any,
+        attribute: Optional[str] = None,
+        attribute_name: Optional[str] = None,
+        units: Optional[str] = None,
+        device_class: Optional[str] = None,
+        enabled_default: Optional[bool] = None,
+        **kwargs: Any,
+    ):
+        """Initialize a battery sensor."""
+        super().__init__(*args, **kwargs)
+
+        if attribute is not None:
+            self._attribute = attribute
+        if attribute_name is not None:
+            self._attribute_name = attribute_name
+        if units is not None:
+            self._units = units
+        if device_class is not None:
+            self._device_class = device_class
+        if enabled_default is not None:
+            self._enabled_default = enabled_default
+
+    @property
+    def device_attrs(self) -> Optional[Sequence[str]]:
+        """Return this entity's associated attributes"""
+        return (self._attribute,)
 
     @property
     def device_class(self) -> Optional[str]:
@@ -99,6 +129,13 @@ class HubitatSensor(HubitatEntity):
             return self._units
         except AttributeError:
             return None
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Update sensors are disabled by default."""
+        if self._enabled_default is not None:
+            return self._enabled_default
+        return True
 
 
 class HubitatBatterySensor(HubitatSensor):
@@ -332,6 +369,36 @@ async def async_setup_entry(
         create_and_add_entities(
             hass, entry, async_add_entities, "sensor", attr[1], is_sensor
         )
+
+    # Create sensor entities for any attributes that don't correspond to known
+    # sensor types
+    unknown_entities: List[HubitatEntity] = []
+    hub = get_hub(hass, entry.entry_id)
+
+    for id in hub.devices:
+        device = hub.devices[id]
+        device_entities = [e for e in hub.entities if e.device_id == id]
+        used_device_attrs: set[str] = set()
+        for entity in device_entities:
+            if entity.device_attrs is not None:
+                for attr in entity.device_attrs:
+                    used_device_attrs.add(attr)
+        for attr in device.attributes:
+            if attr not in used_device_attrs:
+                unknown_entities.append(
+                    HubitatSensor(
+                        hub=hub,
+                        device=device,
+                        attribute=attr,
+                        enabled_default=False,
+                        device_class="unknown",
+                    )
+                )
+                _LOGGER.debug(f"Adding unknown entity for {device.id}:{attr}")
+
+    if len(unknown_entities) > 0:
+        hub.add_entities(unknown_entities)
+        async_add_entities(unknown_entities)
 
 
 def add_hub_entities(

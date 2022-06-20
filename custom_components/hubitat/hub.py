@@ -5,7 +5,20 @@ import ssl
 from ssl import SSLContext
 from typing import Callable, Mapping, Optional, Sequence, Union, cast
 
-from custom_components.hubitat.const import (
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import (
+    ATTR_HIDDEN,
+    CONF_ACCESS_TOKEN,
+    CONF_HOST,
+    CONF_ID,
+    CONF_TEMPERATURE_UNIT,
+    DEVICE_CLASS_TEMPERATURE,
+)
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry
+from homeassistant.helpers.device_registry import DeviceEntry
+
+from .const import (
     ATTR_ATTRIBUTE,
     ATTR_HA_DEVICE_ID,
     ATTR_HUB,
@@ -20,21 +33,8 @@ from custom_components.hubitat.const import (
     TEMP_F,
     TRIGGER_CAPABILITIES,
 )
-from custom_components.hubitat.types import Removable, UpdateableEntity
-from custom_components.hubitat.util import get_hub_device_id, get_hub_short_id
-
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    ATTR_HIDDEN,
-    CONF_ACCESS_TOKEN,
-    CONF_HOST,
-    CONF_ID,
-    CONF_TEMPERATURE_UNIT,
-    DEVICE_CLASS_TEMPERATURE,
-)
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry
-from homeassistant.helpers.device_registry import DeviceEntry
+from .types import Removable, UpdateableEntity
+from .util import get_hub_device_id, get_hub_short_id
 
 _LOGGER = getLogger(__name__)
 

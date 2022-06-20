@@ -11,7 +11,7 @@ from hubitatmaker import (
     Device,
 )
 import re
-from typing import Dict, List, Optional, Tuple, Type
+from typing import Dict, List, Optional, Sequence, Tuple, Type
 
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_CONNECTIVITY,
@@ -47,6 +47,11 @@ class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):
     _active_state: str
     _attribute: str
     _device_class: str
+
+    @property
+    def device_attrs(self) -> Optional[Sequence[str]]:
+        """Return this entity's associated attributes"""
+        return (self._attribute,)
 
     @property
     def is_on(self) -> bool:
