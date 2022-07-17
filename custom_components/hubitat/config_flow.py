@@ -211,12 +211,6 @@ class HubitatOptionsFlow(OptionsFlow):
             form_errors = errors
             self.hub = None
 
-        default_server_url = entry.options.get(
-            CONF_SERVER_URL, entry.data.get(CONF_SERVER_URL)
-        )
-        if default_server_url == "":
-            default_server_url = None
-
         return self.async_show_form(
             step_id=STEP_USER,
             data_schema=vol.Schema(
@@ -227,7 +221,12 @@ class HubitatOptionsFlow(OptionsFlow):
                     ): str,
                     vol.Optional(
                         CONF_SERVER_URL,
-                        description={"suggested_value": default_server_url},
+                        description={
+                            "suggested_value": entry.options.get(
+                                CONF_SERVER_URL, entry.data.get(CONF_SERVER_URL)
+                            )
+                            or ""
+                        },
                     ): str,
                     vol.Optional(
                         CONF_SERVER_PORT,
@@ -235,6 +234,7 @@ class HubitatOptionsFlow(OptionsFlow):
                             "suggested_value": entry.options.get(
                                 CONF_SERVER_PORT, entry.data.get(CONF_SERVER_PORT)
                             )
+                            or ""
                         },
                     ): int,
                     vol.Optional(
@@ -244,14 +244,17 @@ class HubitatOptionsFlow(OptionsFlow):
                                 CONF_SERVER_SSL_CERT,
                                 entry.data.get(CONF_SERVER_SSL_CERT),
                             )
+                            or ""
                         },
                     ): str,
                     vol.Optional(
                         CONF_SERVER_SSL_KEY,
                         description={
                             "suggested_value": entry.options.get(
-                                CONF_SERVER_SSL_KEY, entry.data.get(CONF_SERVER_SSL_KEY)
+                                CONF_SERVER_SSL_KEY,
+                                entry.data.get(CONF_SERVER_SSL_KEY),
                             )
+                            or ""
                         },
                     ): str,
                     vol.Optional(
