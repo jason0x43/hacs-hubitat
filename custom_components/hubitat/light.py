@@ -240,7 +240,15 @@ class HubitatLight(HubitatEntity, LightEntity):
             await self.send_command(CMD_ON)
 
         if "hue" in props:
-            arg = json.dumps({"hue": props["hue"], "saturation": props["sat"]})
+            data = {
+                "hue": props["hue"],
+                "saturation": props["sat"],
+            }
+            level = self.get_int_attr(HE_ATTR_LEVEL)
+            if isinstance(level, int):
+                data["level"] = level
+
+            arg = json.dumps(data)
             await self.send_command(CMD_SET_COLOR, arg)
             del props["hue"]
             del props["sat"]

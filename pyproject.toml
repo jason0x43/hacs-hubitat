@@ -1,6 +1,6 @@
 [project]
 name = "hubitat"
-version = "0.8.1"
+version = "0.8.2b1"
 description = "A Hubitat integration for Home Assistant"
 authors = [
     {name = "Jason Cheatham", email = "jason@jasoncheatham.com"},
@@ -15,7 +15,8 @@ homepage = "https://github.com/jason0x43/hacs-hubitat"
 [project.optional-dependencies]
 [tool.pdm.scripts]
 init = {shell = "pdm install && pre-commit install"}
-test = {shell = "pyright custom_components/hubitat && pytest tests"}
+# test = {shell = "pyright custom_components/hubitat && pytest tests"}
+test = {shell = "pytest tests"}
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
