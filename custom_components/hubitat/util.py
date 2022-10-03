@@ -1,6 +1,6 @@
 from hashlib import sha256
 from hubitatmaker.types import Device
-from typing import Dict, Optional, Union
+from typing import Dict, Union
 
 from custom_components.hubitat.const import CONF_DEVICE_TYPE_OVERRIDES
 
@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.device_registry import DeviceEntry
 
 from .const import DOMAIN
+from .error import DeviceError
 from .types import HasToken
 
 _token_hashes = {}
@@ -35,10 +36,11 @@ def get_hub_device_id(hub: HasToken, device: Union[str, Device]) -> str:
     return f"{get_token_hash(hub.token)}::{device_id}"
 
 
-def get_hubitat_device_id(device: DeviceEntry) -> Optional[str]:
+def get_hubitat_device_id(device: DeviceEntry) -> str:
     for id_set in device.identifiers:
         if id_set[0] == DOMAIN:
             # The second identifier is hub_id:device_id
             if ":" in id_set[1]:
                 return id_set[1].split(":")[1]
             return id_set[1]
+    raise DeviceError(f"No Hubitat entry for device {device.id}")

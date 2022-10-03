@@ -27,8 +27,6 @@ from homeassistant.components.device_automation.exceptions import (
 )
 from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry
-from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
@@ -44,7 +42,13 @@ from .const import (
     DOMAIN,
     TRIGGER_CAPABILITIES,
 )
-from .hub import Hub, get_hub
+from .error import DeviceError
+from .helpers import (
+    are_config_entries_loaded,
+    get_device_entry_by_device_id,
+    get_hub_for_device,
+)
+from .hub import Hub
 
 try:
     from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
@@ -80,18 +84,10 @@ async def async_validate_trigger_config(
 ) -> Dict[str, Any]:
     """Validate a trigger config."""
     config = TRIGGER_SCHEMA(config)
+    device = get_device_entry_by_device_id(hass, config[CONF_DEVICE_ID])
 
-    device = get_device(hass, config[CONF_DEVICE_ID])
-    if not device:
-        _LOGGER.warning("Missing device")
-        raise InvalidDeviceAutomationConfig
-
-    if DOMAIN in hass.config.components:
+    if are_config_entries_loaded(hass, device.id):
         hubitat_device, _ = get_hubitat_device(hass, device.id)
-        if hubitat_device is None:
-            _LOGGER.warning("Invalid Hubitat device")
-            raise InvalidDeviceAutomationConfig
-
         types = get_trigger_types(hubitat_device)
         trigger_type = config[CONF_TYPE]
         if trigger_type not in types:
@@ -153,12 +149,12 @@ async def async_attach_trigger(
     automation_info: AutomationTriggerInfo,
 ) -> Callable[[], None]:
     """Attach a trigger."""
-    result = get_hubitat_device(hass, config[CONF_DEVICE_ID])
+    hubitat_device = None
+    hub = None
 
-    hubitat_device = result[0]
-    hub = result[1]
-
-    if hubitat_device is None or hub is None:
+    try:
+        hubitat_device, hub = get_hubitat_device(hass, config[CONF_DEVICE_ID])
+    except DeviceError:
         _LOGGER.warning(
             "Could not find Hubitat device for ID %s", config[CONF_DEVICE_ID]
         )
@@ -189,33 +185,18 @@ async def async_attach_trigger(
     )
 
 
-def get_device(hass: HomeAssistant, device_id: str) -> Optional[DeviceEntry]:
-    """Return a Home Assistant device for a given ID."""
-    dreg = device_registry.async_get(hass)
-    return dreg.async_get(device_id)
-
-
-def get_hubitat_device(
-    hass: HomeAssistant, device_id: str
-) -> Tuple[Optional[Device], Optional[Hub]]:
+def get_hubitat_device(hass: HomeAssistant, device_id: str) -> Tuple[Device, Hub]:
     """Return a Hubitat device for a given Home Assistant device ID."""
-    device = get_device(hass, device_id)
-    if device is None:
-        return None, None
-
+    device = get_device_entry_by_device_id(hass, device_id)
     hubitat_id = get_hubitat_device_id(device)
 
-    if hubitat_id is None:
-        _LOGGER.debug("Couldn't find Hubitat ID for device %s", device_id)
-        return None, None
+    hub = get_hub_for_device(hass, device)
+    if not hub:
+        raise DeviceError(f"No Hubitat hub is associated with {device_id}")
+    if hub.devices.get(hubitat_id) is None:
+        raise DeviceError(f"Invalid Hubitat ID for device {device_id}")
 
-    for entry_id in device.config_entries:
-        hub = get_hub(hass, entry_id)
-        if hubitat_id in hub.devices:
-            return hub.devices[hubitat_id], hub
-
-    _LOGGER.debug("Couldn't find Hubitat device for ID %s", hubitat_id)
-    return None, None
+    return hub.devices[hubitat_id], hub
 
 
 def get_trigger_types(device: Device) -> Sequence[str]:
