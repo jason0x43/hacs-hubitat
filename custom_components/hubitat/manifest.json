@@ -1,5 +1,5 @@
 {
-  "version": "0.8.2b1",
+  "version": "0.8.2",
   "domain": "hubitat",
   "name": "Hubitat",
   "config_flow": true,
