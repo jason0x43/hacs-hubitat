@@ -32,7 +32,7 @@ dev = [
     "pre-commit<3.0.0,>=2.4.0",
     "flake8-pyi>=20.5.0",
     "hubitatmaker==0.6.1",
-    "homeassistant==2022.9.5",
+    "homeassistant==2022.11.4",
     "pytest-asyncio>=0.16.0",
     "setuptools>=62.2.0",
 ]
