@@ -265,7 +265,7 @@ class HubitatLight(HubitatEntity, LightEntity):
         await self.send_command("off")
 
 
-LIGHT_CAPABILITIES = (CAP_COLOR_TEMP, CAP_COLOR_CONTROL, CAP_LIGHT)
+LIGHT_CAPABILITIES = (CAP_COLOR_TEMP, CAP_COLOR_CONTROL)
 
 # Ideally this would be multi-lingual
 MATCH_LIGHT = re.compile(
@@ -282,6 +282,8 @@ def is_light(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool
     if is_definitely_light(device):
         return True
     if CAP_SWITCH in device.capabilities and MATCH_LIGHT.search(device.name):
+        return True
+    if CAP_LIGHT in device.capabilities:
         return True
 
     # A Cover may also have a SwitchLevel capability that can be used to set
