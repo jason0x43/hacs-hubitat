@@ -17,7 +17,7 @@ from hubitatmaker.types import Device
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Type, Union
 
-from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ENERGY_KILO_WATT_HOUR,
@@ -51,6 +51,7 @@ class HubitatSensor(HubitatEntity):
     _attribute_name: Optional[str] = None
     _units: str
     _device_class: Optional[str] = None
+    _state_class: Optional[str] = None
     _enabled_default: Optional[bool] = None
 
     def __init__(
@@ -60,6 +61,7 @@ class HubitatSensor(HubitatEntity):
         attribute_name: Optional[str] = None,
         units: Optional[str] = None,
         device_class: Optional[str] = None,
+        state_class: Optional[str] = None,
         enabled_default: Optional[bool] = None,
         **kwargs: Any,
     ):
@@ -74,6 +76,8 @@ class HubitatSensor(HubitatEntity):
             self._units = units
         if device_class is not None:
             self._device_class = device_class
+        if state_class is not None:
+            self._state_class = state_class
         if enabled_default is not None:
             self._enabled_default = enabled_default
 
@@ -86,6 +90,11 @@ class HubitatSensor(HubitatEntity):
     def device_class(self) -> Optional[str]:
         """Return this sensor's device class."""
         return self._device_class
+
+    @property
+    def state_class(self) -> Optional[str]:
+        """Return this sensor's state class."""
+        return self._state_class
 
     @property
     def name(self) -> str:
@@ -149,6 +158,7 @@ class HubitatEnergySensor(HubitatSensor):
         self._attribute = ATTR_ENERGY
         self._units = ENERGY_KILO_WATT_HOUR
         self._device_class = SensorDeviceClass.ENERGY
+        self._state_class = SensorStateClass.TOTAL
 
 
 class HubitatEnergySourceSensor(HubitatSensor):
@@ -170,6 +180,7 @@ class HubitatHumiditySensor(HubitatSensor):
         self._attribute = ATTR_HUMIDITY
         self._units = "%"
         self._device_class = SensorDeviceClass.HUMIDITY
+        self._state_class = SensorStateClass.MEASUREMENT
 
 
 class HubitatIlluminanceSensor(HubitatSensor):
@@ -181,6 +192,7 @@ class HubitatIlluminanceSensor(HubitatSensor):
         self._attribute = ATTR_ILLUMINANCE
         self._units = "lx"
         self._device_class = SensorDeviceClass.ILLUMINANCE
+        self._state_class = SensorStateClass.MEASUREMENT
 
 
 class HubitatPowerSensor(HubitatSensor):
@@ -192,6 +204,7 @@ class HubitatPowerSensor(HubitatSensor):
         self._attribute = ATTR_POWER
         self._units = POWER_WATT
         self._device_class = SensorDeviceClass.POWER
+        self._state_class = SensorStateClass.MEASUREMENT
 
 
 class HubitatPowerSourceSensor(HubitatSensor):
@@ -212,6 +225,7 @@ class HubitatTemperatureSensor(HubitatSensor):
         super().__init__(*args, **kwargs)
         self._attribute = ATTR_TEMPERATURE
         self._device_class = SensorDeviceClass.TEMPERATURE
+        self._state_class = SensorStateClass.MEASUREMENT
 
     @property
     def unit_of_measurement(self) -> Optional[str]:
@@ -228,6 +242,7 @@ class HubitatVoltageSensor(HubitatSensor):
         self._attribute = ATTR_VOLTAGE
         self._units = "V"
         self._device_class = SensorDeviceClass.POWER
+        self._state_class = SensorStateClass.MEASUREMENT
 
 
 class HubitatPressureSensor(HubitatSensor):
@@ -244,6 +259,7 @@ class HubitatPressureSensor(HubitatSensor):
         self._units = PRESSURE_MBAR
 
         self._device_class = SensorDeviceClass.PRESSURE
+        self._state_class = SensorStateClass.MEASUREMENT
 
 
 class HubitatUpdateSensor(HubitatEntity):
