@@ -285,7 +285,16 @@ class HubitatOptionsFlow(OptionsFlow):
 
         devices = _get_devices(self.hass, self.config_entry)
         device_map = {d.id: d.name for d in devices}
+
         # Tag the names of devices that appear to have legacy device
+        # identifiers (domain + hub_id) so they can be manually removed.
+        for d in devices:
+            if d.name != "Hubitat Elevation":
+                for id in d.identifiers:
+                    if len(id) != 2 or ":" not in id[1]:
+                        device_map[d.id] = f"{d.name}*"
+                        break
+
         device_schema = vol.Schema(
             {
                 vol.Optional(
