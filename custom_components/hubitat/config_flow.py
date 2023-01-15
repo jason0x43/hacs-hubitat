@@ -9,7 +9,7 @@ from hubitatmaker import (
 )
 from hubitatmaker.types import Device
 import logging
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Union, cast
 import voluptuous as vol
 from voluptuous.schema_builder import Schema
 
@@ -58,7 +58,9 @@ CONFIG_SCHEMA = vol.Schema(
         vol.Optional(CONF_SERVER_PORT): int,
         vol.Optional(CONF_SERVER_SSL_CERT): str,
         vol.Optional(CONF_SERVER_SSL_KEY): str,
-        vol.Optional(CONF_TEMPERATURE_UNIT, default=TEMP_F): vol.In([TEMP_F, TEMP_C]),
+        vol.Optional(
+            CONF_TEMPERATURE_UNIT, default=cast(vol.Undefined, TEMP_F)
+        ): vol.In([TEMP_F, TEMP_C]),
     }
 )
 
@@ -259,8 +261,12 @@ class HubitatOptionsFlow(OptionsFlow):
                     ): str,
                     vol.Optional(
                         CONF_TEMPERATURE_UNIT,
-                        default=entry.options.get(
-                            CONF_TEMPERATURE_UNIT, entry.data.get(CONF_TEMPERATURE_UNIT)
+                        default=cast(
+                            vol.Undefined,
+                            entry.options.get(
+                                CONF_TEMPERATURE_UNIT,
+                                entry.data.get(CONF_TEMPERATURE_UNIT),
+                            ),
                         )
                         or TEMP_F,
                     ): vol.In([TEMP_F, TEMP_C]),
@@ -279,9 +285,12 @@ class HubitatOptionsFlow(OptionsFlow):
 
         devices = _get_devices(self.hass, self.config_entry)
         device_map = {d.id: d.name for d in devices}
+        # Tag the names of devices that appear to have legacy device
         device_schema = vol.Schema(
             {
-                vol.Optional(CONF_DEVICES, default=[]): cv.multi_select(device_map),
+                vol.Optional(
+                    CONF_DEVICES, default=cast(vol.Undefined, [])
+                ): cv.multi_select(device_map),
             }
         )
 
@@ -368,9 +377,9 @@ class HubitatOptionsFlow(OptionsFlow):
 
         device_schema = vol.Schema(
             {
-                vol.Optional(CONF_DEVICES, default=default_value): cv.multi_select(
-                    possible_overrides
-                )
+                vol.Optional(
+                    CONF_DEVICES, default=cast(vol.Undefined, default_value)
+                ): cv.multi_select(possible_overrides)
             }
         )
 
