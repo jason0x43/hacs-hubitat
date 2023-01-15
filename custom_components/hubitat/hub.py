@@ -3,8 +3,9 @@ from logging import getLogger
 import os
 import ssl
 from ssl import SSLContext
-from typing import Callable, Mapping, Optional, Sequence, Union, cast
+from typing import Any, Callable, Dict, Mapping, Optional, Sequence, Union, cast
 
+from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_HIDDEN,
@@ -12,7 +13,6 @@ from homeassistant.const import (
     CONF_HOST,
     CONF_ID,
     CONF_TEMPERATURE_UNIT,
-    DEVICE_CLASS_TEMPERATURE,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry
@@ -401,7 +401,7 @@ class Hub:
         if temp_unit != hub.temperature_unit:
             hub.set_temperature_unit(temp_unit)
             for entity in hub.entities:
-                if entity.device_class == DEVICE_CLASS_TEMPERATURE:
+                if entity.device_class == SensorDeviceClass.TEMPERATURE:
                     entity.update_state()
             _LOGGER.debug("Set temperature units to %s", temp_unit)
 
@@ -454,7 +454,7 @@ class Hub:
             for listener in self._device_listeners[event.device_id]:
                 listener(event)
         if event.attribute in _TRIGGER_ATTRS:
-            evt = dict(event)
+            evt: Dict[str, Any] = dict(event)
             evt[ATTR_ATTRIBUTE] = _TRIGGER_ATTR_MAP[event.attribute]
             evt[ATTR_HUB] = self.id
             evt[ATTR_HA_DEVICE_ID] = get_hub_device_id(self, event.device_id)

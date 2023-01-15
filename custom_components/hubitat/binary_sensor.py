@@ -14,16 +14,7 @@ import re
 from typing import Dict, List, Optional, Sequence, Tuple, Type
 
 from homeassistant.components.binary_sensor import (
-    DEVICE_CLASS_CONNECTIVITY,
-    DEVICE_CLASS_DOOR,
-    DEVICE_CLASS_GARAGE_DOOR,
-    DEVICE_CLASS_GAS,
-    DEVICE_CLASS_MOISTURE,
-    DEVICE_CLASS_MOTION,
-    DEVICE_CLASS_MOVING,
-    DEVICE_CLASS_PRESENCE,
-    DEVICE_CLASS_SMOKE,
-    DEVICE_CLASS_WINDOW,
+    BinarySensorDeviceClass,
     BinarySensorEntity,
 )
 from homeassistant.config_entries import ConfigEntry
@@ -34,11 +25,13 @@ from .entities import create_and_add_entities
 from .types import EntityAdder
 
 _CONTACT_MATCHERS = (
-    (re.compile("garage door", re.IGNORECASE), DEVICE_CLASS_GARAGE_DOOR),
-    (re.compile("window", re.IGNORECASE), DEVICE_CLASS_WINDOW),
+    (re.compile("garage door", re.IGNORECASE), BinarySensorDeviceClass.GARAGE_DOOR),
+    (re.compile("window", re.IGNORECASE), BinarySensorDeviceClass.WINDOW),
 )
 
-_PRESENCE_MATCHERS = ((re.compile("presence", re.IGNORECASE), DEVICE_CLASS_PRESENCE),)
+_PRESENCE_MATCHERS = (
+    (re.compile("presence", re.IGNORECASE), BinarySensorDeviceClass.PRESENCE),
+)
 
 
 class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):
@@ -90,7 +83,7 @@ class HubitatAccelerationSensor(HubitatBinarySensor):
 
     _active_state = "active"
     _attribute = ATTR_ACCELERATION
-    _device_class = DEVICE_CLASS_MOVING
+    _device_class = BinarySensorDeviceClass.MOVING
 
 
 class HubitatCoSensor(HubitatBinarySensor):
@@ -98,7 +91,7 @@ class HubitatCoSensor(HubitatBinarySensor):
 
     _active_state = "detected"
     _attribute = ATTR_CARBON_MONOXIDE
-    _device_class = DEVICE_CLASS_GAS
+    _device_class = BinarySensorDeviceClass.GAS
 
 
 class HubitatContactSensor(HubitatBinarySensor):
@@ -118,7 +111,7 @@ class HubitatMoistureSensor(HubitatBinarySensor):
 
     _active_state = "wet"
     _attribute = ATTR_WATER
-    _device_class = DEVICE_CLASS_MOISTURE
+    _device_class = BinarySensorDeviceClass.MOISTURE
 
 
 class HubitatMotionSensor(HubitatBinarySensor):
@@ -126,7 +119,7 @@ class HubitatMotionSensor(HubitatBinarySensor):
 
     _active_state = "active"
     _attribute = ATTR_MOTION
-    _device_class = DEVICE_CLASS_MOTION
+    _device_class = BinarySensorDeviceClass.MOTION
 
 
 class HubitatPresenceSensor(HubitatBinarySensor):
@@ -146,7 +139,7 @@ class HubitatSmokeSensor(HubitatBinarySensor):
 
     _active_state = "detected"
     _attribute = ATTR_SMOKE
-    _device_class = DEVICE_CLASS_SMOKE
+    _device_class = BinarySensorDeviceClass.SMOKE
 
 
 # Presence is handled specially in async_setup_entry()
@@ -188,7 +181,7 @@ def _get_contact_device_class(device: Device) -> str:
         if matcher[0].search(name):
             return matcher[1]
 
-    return DEVICE_CLASS_DOOR
+    return BinarySensorDeviceClass.DOOR
 
 
 def _get_presence_device_class(device: Device) -> str:
@@ -199,4 +192,4 @@ def _get_presence_device_class(device: Device) -> str:
         if matcher[0].search(name):
             return matcher[1]
 
-    return DEVICE_CLASS_CONNECTIVITY
+    return BinarySensorDeviceClass.CONNECTIVITY

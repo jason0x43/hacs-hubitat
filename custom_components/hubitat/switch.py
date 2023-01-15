@@ -18,11 +18,7 @@ import re
 from typing import Any, Dict, List, Optional, Sequence
 import voluptuous as vol
 
-from homeassistant.components.switch import (
-    DEVICE_CLASS_OUTLET,
-    DEVICE_CLASS_SWITCH,
-    SwitchEntity,
-)
+from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -61,8 +57,8 @@ class HubitatSwitch(HubitatEntity, SwitchEntity):
     def device_class(self) -> Optional[str]:
         """Return the class of this device, from component DEVICE_CLASSES."""
         if _NAME_TEST.search(self._device.name):
-            return DEVICE_CLASS_SWITCH
-        return DEVICE_CLASS_OUTLET
+            return SwitchDeviceClass.SWITCH
+        return SwitchDeviceClass.OUTLET
 
     @property
     def unique_id(self) -> str:

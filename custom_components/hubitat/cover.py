@@ -21,12 +21,10 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Type
 
 from homeassistant.components.cover import (
     ATTR_POSITION as HA_ATTR_POSITION,
-    DEVICE_CLASS_DOOR,
-    DEVICE_CLASS_GARAGE,
-    DEVICE_CLASS_SHADE,
     SUPPORT_CLOSE,
     SUPPORT_OPEN,
     SUPPORT_SET_POSITION,
+    CoverDeviceClass,
     CoverEntity,
 )
 from homeassistant.config_entries import ConfigEntry
@@ -133,7 +131,7 @@ class HubitatDoorControl(HubitatCover):
         """Initialize a door control."""
         super().__init__(*args, **kwargs)
         self._attribute = ATTR_DOOR
-        self._device_class = DEVICE_CLASS_DOOR
+        self._device_class = CoverDeviceClass.DOOR
         self._features = SUPPORT_OPEN | SUPPORT_CLOSE
 
 
@@ -144,7 +142,7 @@ class HubitatGarageDoorControl(HubitatCover):
         """Initialize a garage door control."""
         super().__init__(*args, **kwargs)
         self._attribute = ATTR_DOOR
-        self._device_class = DEVICE_CLASS_GARAGE
+        self._device_class = CoverDeviceClass.GARAGE
         self._features = SUPPORT_OPEN | SUPPORT_CLOSE
 
 
@@ -155,7 +153,7 @@ class HubitatWindowShade(HubitatCover):
         """Initialize a window shade."""
         super().__init__(*args, **kwargs)
         self._attribute = ATTR_WINDOW_SHADE
-        self._device_class = DEVICE_CLASS_SHADE
+        self._device_class = CoverDeviceClass.SHADE
         self._features = SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_SET_POSITION
 
 
