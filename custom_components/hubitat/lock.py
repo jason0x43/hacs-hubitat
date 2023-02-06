@@ -46,7 +46,7 @@ class HubitatLock(HubitatEntity, LockEntity):
         """Regex for code format or None if no code is required."""
         code_length = self.get_attr(HM_ATTR_CODE_LENGTH)
         if code_length is not None:
-            return f"^\\d{code_length}$"
+            return f"^\\d{{{code_length}}}$"
         return None
 
     @property
