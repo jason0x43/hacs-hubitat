@@ -1,4 +1,13 @@
-from hubitatmaker import (
+from typing import Any, Dict, List, Optional, Sequence, Union
+
+from homeassistant.components.lock import LockEntity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+
+from .const import ATTR_CODE_LENGTH, ATTR_CODES, ATTR_LAST_CODE_NAME, ATTR_MAX_CODES
+from .device import HubitatEntity
+from .entities import create_and_add_entities
+from .hubitatmaker import (
     ATTR_CODE_LENGTH as HM_ATTR_CODE_LENGTH,
     ATTR_LAST_CODE_NAME as HM_ATTR_LAST_CODE_NAME,
     ATTR_LOCK as HM_ATTR_LOCK,
@@ -13,15 +22,6 @@ from hubitatmaker import (
     STATE_LOCKED,
     Device,
 )
-from typing import Any, Dict, List, Optional, Sequence, Union
-
-from homeassistant.components.lock import LockEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-
-from .const import ATTR_CODE_LENGTH, ATTR_CODES, ATTR_LAST_CODE_NAME, ATTR_MAX_CODES
-from .device import HubitatEntity
-from .entities import create_and_add_entities
 from .types import EntityAdder
 
 _device_attrs = (

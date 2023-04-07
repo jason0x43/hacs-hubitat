@@ -1,20 +1,5 @@
 """Support for Hubitat thermostats."""
 
-from hubitatmaker import (
-    CAP_THERMOSTAT,
-    CMD_AUTO,
-    CMD_AWAY,
-    CMD_COOL,
-    CMD_ECO,
-    CMD_FAN_AUTO,
-    CMD_FAN_ON,
-    CMD_HEAT,
-    CMD_OFF,
-    CMD_PRESENT,
-    CMD_SET_COOLING_SETPOINT,
-    CMD_SET_HEATING_SETPOINT,
-    Device,
-)
 from typing import Any, Dict, List, Optional, Sequence
 
 from custom_components.hubitat.const import TEMP_C, TEMP_F
@@ -54,6 +39,21 @@ from homeassistant.core import HomeAssistant
 
 from .device import HubitatEntity
 from .entities import create_and_add_entities
+from .hubitatmaker import (
+    CAP_THERMOSTAT,
+    CMD_AUTO,
+    CMD_AWAY,
+    CMD_COOL,
+    CMD_ECO,
+    CMD_FAN_AUTO,
+    CMD_FAN_ON,
+    CMD_HEAT,
+    CMD_OFF,
+    CMD_PRESENT,
+    CMD_SET_COOLING_SETPOINT,
+    CMD_SET_HEATING_SETPOINT,
+    Device,
+)
 from .types import EntityAdder
 
 ATTR_COOLING_SETPOINT = "coolingSetpoint"

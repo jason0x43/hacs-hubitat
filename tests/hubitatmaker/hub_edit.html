@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <title>Settings</title>
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="apple-touch-icon" sizes="180x180" href="/ui2/images/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/ui2/images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/ui2/images/favicon-16x16.png">
+    <link rel="icon" sizes="192x192" href="/ui2/images/favicon.ico">
+    <link rel="manifest" href="/ui2/images/site.webmanifest">
+    <link rel="mask-icon" href="/ui2/images/safari-pinned-tab.svg" color="#5bbad5">
+    <link rel="shortcut icon" href="/ui2/images/favicon.ico">
+    <meta name="msapplication-TileColor" content="#da532c">
+    <meta name="msapplication-config" content="/ui2/images/browserconfig.xml">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="shortcut icon" href="/ui2/images/favicon.ico">
+    <style>
+        @font-face {
+            font-family: 'Material Icons';
+            font-style: normal;
+            font-weight: 400;
+            src: url(/ui2/css/fonts/MaterialIcons-Regular.eot);
+            /* For IE6-8 */
+            src: local('Material Icons'), local('MaterialIcons-Regular'), url(/ui2/css/fonts/MaterialIcons-Regular.woff2) format('woff2'), url(/ui2/css/fonts/MaterialIcons-Regular.woff) format('woff'), url(/ui2/css/fonts/MaterialIcons-Regular.ttf) format('truetype');
+            font-display:block;
+        }
+        @font-face {
+          font-family: 'hubitat';
+          src:  url('/ui2/css/fonts/hubitat.eot?roox2j');
+          src:  url('/ui2/css/fonts/hubitat.eot?roox2j#iefix') format('embedded-opentype'),
+            url('/ui2/css/fonts/hubitat.woff2?roox2j') format('woff2'),
+            url('/ui2/css/fonts/hubitat.ttf?roox2j') format('truetype'),
+            url('/ui2/css/fonts/hubitat.woff?roox2j') format('woff'),
+            url('/ui2/css/fonts/hubitat.svg?roox2j#hubitat') format('svg');
+          font-weight: normal;
+          font-style: normal;
+          font-display: block;
+        }
+        html {
+            -webkit-text-size-adjust: 100%; /* Prevent font scaling in landscape while allowing user zoom */
+        }
+    </style>
+    <link rel="stylesheet" href="/ui2/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="/ui2/css/material.min.css">
+    <link rel="stylesheet" href="/ui2/css/styles.min.css">
+    <script src="/ui2/js/jquery-3.4.0.min.js "></script>
+    <script type="text/javascript ">
+        window.jQuery || document.write("<script src='/ui2/js/jquery-3.4.0.min.js'> <\ / script > ");
+    </script>
+    <script src="/ui2/js/jquery.dataTables.min.js "></script>
+    <script src="/ui2/js/material.min.js "></script>
+    <script src="/ui2/js/hubitat.min.js"></script>
+    <script src="/ui2/js/success-compiled.js"></script>
+    <link rel="stylesheet" href="/ui2/css/sumoselect.min.css"/>
+    <script src="/ui2/js/jquery.sumoselect.min.js"></script>
+    <script src="/ui2/js/moment.min.js"></script>
+    <script src="/ui2/js/vue.min.js"></script>
+    <script src="/ui2/js/webcomponents-bundle.js"></script>
+    <script src="/ui2/js/vue-hub.min.js"></script>
+    <script>
+        var stripHtml = function(html) {
+            if(html) {
+                return html.replace(/<(?:.|\n)*?>/gm, '')
+            }
+        }
+        $(document).ready(function() {
+            console.log("Jquery Loaded");
+        });
+    </script>
+    <style>
+    .mdl-layout__content { opacity:0 }
+    .mdl-grid:focus { outline: none; }
+    </style>
+
+    <style>
+        .mdl-textfield.is-disabled .mdl-textfield__input { color: inherit;background-color: inherit;}
+        .topPadding {    padding-top: 16px; padding-left:16px; padding-right:16px;}
+        .mdl-card__title { padding: 4px; }
+        .menu-header {font-size:16px; font-weight:600;}
+        .menu-text {padding: 0 0 16px 8px;}
+        .hub-close {margin-top:16px;}
+        .shutdown:hover, .reboot:hover {background-color: white}
+    </style>
+</head>
+
+<body>
+<div class="mdl-layout mdl-js-layout mdl-layout--fixed-drawer mdl-layout--fixed-header">
+    <header class="mdl-layout__header">
+    <div class="mdl-layout__header-row">
+        <span class="mdl-layout-title"><h5>Settings</h5></span>
+        <div class="mdl-layout-spacer"></div>
+        <div class="mdl-spinner mdl-spinner--single-color mdl-js-spinner is-active" style="margin-right:50px;"></div>
+        <vue-hub-messages></vue-hub-messages>
+<!--        <div class="material-icons mdl-badge mdl-badge--overlap" id="messagesbtn" style="cursor:pointer;">-->
+<!--            <i class="material-icons">chat_bubble_outline</i>-->
+<!--        </div>-->
+<!--        <ul class="mdl-menu mdl-js-menu mdl-js-ripple-effect mdl-menu--bottom-right" for="messagesbtn">-->
+<!---->
+<!--            <li class="mdl-menu__item">No Messages</li>-->
+<!---->
+<!--        </ul>-->
+        <button class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon" id="hdrbtn">
+            <i class="material-icons">more_vert</i>
+        </button>
+        <ul class="mdl-menu mdl-js-menu mdl-js-ripple-effect mdl-menu--bottom-right" for="hdrbtn">
+            <a href="/hub/edit"><li class="mdl-menu__item"><i class="menu-icon he-settings1"></i>Settings</li></a>
+            <a href="/hub/zigbeeInfo"><li class=" mdl-menu__item "><span class="menu-icon he-zigbee"><span class="path1"></span><span class="path2"></span></span>Zigbee Details</li></a>
+            <a href="/hub/zwaveInfo"><li class="mdl-menu__item "><i class="menu-icon he-zwave"></i>Z-Wave Details</li></a>
+            <a href="/hub/scanDevice"><li class="mdl-menu__item "><i class="menu-icon he-discovery_1"></i>Discover Devices</li></a>
+            <a href="https://docs.hubitat.com/index.php?title=Settings" target="_blank"><li class="mdl-menu__item"><i class="menu-icon material-icons" style="font-size:18px;vertical-align: text-top;">help_outline</i>Help</li></a>
+        </ul>
+    </div>
+</header>
+
+    <div class="mdl-layout__drawer mdl-shadow--4dp">
+    <span class="logo mdl-shadow--2dp">
+        <a  href="/" >
+            <img src="/ui2/images/hub-logo.svg">
+        </a>
+    </span>
+    <nav class="hub-navigation mdl-navigation">
+        <a class="mdl-navigation__link" href="/device/list"><i class="material-icons he-bulb_1"></i>Devices</a>
+        <a class="mdl-navigation__link" href="/installedapp/list"><i class="material-icons he-apps_21"></i>Apps</a>
+        <a class="mdl-navigation__link is-active" href="/hub/edit"><i class="material-icons he-settings1"></i>Settings</a>
+        <div class="mdl-layout__title menu-separator" style="margin-left:16px;">Advanced</div>
+        <a class="mdl-navigation__link" href="/app/list"><i class="material-icons">code</i>Apps Code</a>
+        <a class="mdl-navigation__link" href="/driver/list"><i class="material-icons ">code</i>Drivers Code</a>
+        <a class="mdl-navigation__link" href="/events"><i class="material-icons he-calendar1"></i>System Events</a>
+        <a class="mdl-navigation__link" href="/logs"><i class="material-icons he-file1"></i>Logs</a>
+
+    </nav>
+</div>
+
+
+    <main class="mdl-layout__content">
+        <div class="mdl-grid">
+            <div id="flash-message-container"></div>
+            <div class="mdl-card mdl-shadow--2dp mdl-cell mdl-cell--12-col">
+                <div class="mdl-card__title">
+                    <div class="mdl-grid">
+                        <input type="hidden" name="name" class="form-control" required="" value="Home" id="name"/>
+                        <div id="hubInfo" class="mainmenu-card mdl-card mdl-shadow--6dp mdl-cell mdl-cell--4-col mdl-cell--4-col-tablet mdl-cell--12-col-phone">
+                            <div class="mdl-card__title mdl-card--expand">
+                                <div class="mdl-card__title-text topPadding">
+                                    <p>View Hub details like Platform Version, Hardware version, IP Address and more.</p>
+                                </div>
+                            </div>
+                            <div class="mdl-card__actions mdl-card--border">
+                                <a href="#" id="hubBtn" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect">Hub Details</a>
+                                <div class="mdl-layout-spacer"></div>
+                                <i class="material-icons he-info1"></i>
+                            </div>
+                        </div>
+                        <div class="mainmenu-card mdl-card mdl-shadow--6dp mdl-cell mdl-cell--4-col mdl-cell--4-col-tablet mdl-cell--12-col-phone">
+                            <div class="mdl-card__title mdl-card--expand">
+                                <div class="mdl-card__title-text topPadding">
+                                    <p>Setup and Configure Local Hub Login Security</p>
+                                </div>
+                            </div>
+                            <div class="mdl-card__actions mdl-card--border">
+                                <a href="/hub/userAdmin" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect">Hub Login Security</a>
+                                <div class="mdl-layout-spacer"></div>
+                                <i class="material-icons">lock</i>
+                            </div>
+                        </div>
+                        <div class="mainmenu-card mdl-card mdl-shadow--6dp mdl-cell mdl-cell--4-col mdl-cell--4-col-tablet mdl-cell--12-col-phone">
+                            <div class="mdl-card__title mdl-card--expand">
+                                <div class="mdl-card__title-text topPadding">
+                                    <p>View and change your location information and modes.</p>
+                                </div>
+                            </div>
+                            <div class="mdl-card__actions mdl-card--border">
+                                <a href="/location/edit" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect">Location and Modes</a>
+                                <div class="mdl-layout-spacer"></div>
+                                <i class="material-icons he-location"></i>
+                            </div>
+                        </div>
+                        <div class="mainmenu-card mdl-card mdl-shadow--6dp mdl-cell mdl-cell--4-col mdl-cell--4-col-tablet mdl-cell--12-col-phone">
+                            <div class="mdl-card__title mdl-card--expand">
+                                <div class="mdl-card__title-text topPadding">
+                                    <p>View your Z-Wave devices and control the radio.</p>
+                                </div>
+                            </div>
+                            <div class="mdl-card__actions mdl-card--border">
+                                <a href="/hub/zwaveInfo" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect">Z-Wave Details</a>
+                                <div class="mdl-layout-spacer"></div>
+                                <i class="material-icons he-zwave"></i>
+                            </div>
+                        </div>
+                        <div class="mainmenu-card mdl-card mdl-shadow--6dp mdl-cell mdl-cell--4-col mdl-cell--4-col-tablet mdl-cell--12-col-phone">
+                            <div class="mdl-card__title mdl-card--expand">
+                                <div class="mdl-card__title-text topPadding">
+                                    <p>View your Zigbee devices and control the radio.</p>
+                                </div>
+                            </div>
+                            <div class="mdl-card__actions mdl-card--border">
+                                <a href="/hub/zigbeeInfo" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect">Zigbee Details</a>
+                                <div class="mdl-layout-spacer"></div>
+                                <span class="he-zigbee"><span class="path1"></span><span class="path2"></span></span>
+                            </div>
+                        </div>
+                        <div class="mainmenu-card mdl-card mdl-shadow--6dp mdl-cell mdl-cell--4-col mdl-cell--4-col-tablet mdl-cell--12-col-phone">
+                            <div class="mdl-card__title mdl-card--expand">
+                                <div class="mdl-card__title-text topPadding">
+                                    <p>Check for updates and install the latest software.</p>
+                                </div>
+                            </div>
+                            <div class="mdl-card__actions mdl-card--border">
+                                <a href="/hub/platformUpdate" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect">Check for Updates</a>
+                                <div class="mdl-layout-spacer"></div>
+                                <i class="material-icons he-download3"></i>
+                            </div>
+                        </div>
+                        <div id="reboot" class="mainmenu-card reboot mdl-card mdl-shadow--6dp mdl-cell mdl-cell--4-col mdl-cell--4-col-tablet mdl-cell--12-col-phone">
+                            <div class="mdl-card__title mdl-card--expand">
+                                <div class="mdl-card__title-text topPadding">
+                                    <p>Restart your hub safely.</p>
+                                </div>
+                            </div>
+                            <div class="mdl-card__actions mdl-card--border">
+                                <a  id="reboot-button" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect">Reboot Hub</a>
+                                <div class="mdl-layout-spacer"></div>
+                                <i class="material-icons he-loop2"></i>
+                            </div>
+                        </div>
+                        <div id="shutdown" class="mainmenu-card shutdown mdl-card mdl-shadow--6dp mdl-cell mdl-cell--4-col mdl-cell--4-col-tablet mdl-cell--12-col-phone">
+                            <div class="mdl-card__title mdl-card--expand">
+                                <div class="mdl-card__title-text topPadding">
+                                    <p>Shutdown your hub safely.</p>
+                                </div>
+                            </div>
+                            <div class="mdl-card__actions mdl-card--border">
+                                <a  id="shutdown-button" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect">Shutdown Hub</a>
+                                <div class="mdl-layout-spacer"></div>
+                                <i class="material-icons he-stop3" style="font-weight: 1000;"></i>
+                            </div>
+                        </div>
+                        <div class="mainmenu-card mdl-card mdl-shadow--6dp mdl-cell mdl-cell--4-col mdl-cell--4-col-tablet mdl-cell--12-col-phone">
+                            <div class="mdl-card__title mdl-card--expand">
+                                <div class="mdl-card__title-text topPadding">
+                                    <p>Download backups of your hub's database and restore as needed.</p>
+                                </div>
+                            </div>
+                            <div class="mdl-card__actions mdl-card--border">
+                                <a  id="backup-button" href="/hub/backup" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect">Backup and Restore</a>
+                                <div class="mdl-layout-spacer"></div>
+                                <i class="material-icons he-floppy-disk"></i>
+                            </div>
+                        </div>
+                        <div class="mainmenu-card mdl-card mdl-shadow--6dp mdl-cell mdl-cell--4-col mdl-cell--4-col-tablet mdl-cell--12-col-phone">
+                            <div class="mdl-card__title mdl-card--expand">
+                                <div class="mdl-card__title-text topPadding">
+                                    <p>View Hub Registration Information</p>
+                                </div>
+                            </div>
+                            <div class="mdl-card__actions mdl-card--border">
+                                <a href="/hub/register"
+                                   class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect">Hub Registration</a>
+                                <div class="mdl-layout-spacer"></div>
+                                <i class="material-icons he-address-book1"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <footer class="mdl-mini-footer ">
+    
+    <div class="mdl-mini-footer__left-section mdl-cell--hide-phone" >
+        <ul class="mdl-mini-footer__link-list ">
+        <li>Location: <a href="/location/edit">Home</a></li>
+        </ul>
+    </div>
+    
+    <div class="mdl-mini-footer__right-section ">
+        <ul class="mdl-mini-footer__link-list ">
+            <li><a href="/tos" target="_blank">Terms of Service</a></li>
+            <li><a href="https://docs.hubitat.com/index.php?title=Settings" target="_blank">Documentation</a></li>
+            <li><a href="https://community.hubitat.com" target="_blank">Community</a></li>
+            <li><a href="mailto:support@hubitat.com">Support</a></li>
+            <li><a href="https://hubitat.com" target="_blank">Copyright 2019 Hubitat, Inc.</a></li>
+        </ul>
+    </div>
+</footer>
+<script>
+    window.onload = function(){
+        $('.mdl-layout__content').css('opacity', 1)
+        $(".mdl-layout__header-row .mdl-spinner").hide()
+        document.title = stripHtml(document.title)
+        var grid = document.getElementsByClassName('mdl-grid')[0]
+        if (grid) {
+            grid.setAttribute('tabindex', "-1")
+            grid.style.outline = "0px solid tranparent";
+            grid.focus()
+        }
+    };
+</script>
+
+</div>
+<div id="hubPopup" style="display: none;position: absolute;top: 20px;left: 5%;right: 5%;max-width:400px;padding: 16px;background-color: white;z-index: 1002;overflow: auto;padding-top:4px" class="mdl-shadow--16dp">
+    <div style="clear:both">
+        <button class="mdl-button mdl-js-button mdl-button--raised pull-right hub-close">Close</button>
+    </div>
+    <h2>Hub Details</h2>
+        <div>
+            <div class="menu-header">Hubitat Elevation<sup>&reg;</sup> Platform Version</div>
+            <div class="menu-text">
+                2.1.8.117
+            </div>
+        </div>
+        <div>
+            <div class="menu-header">Hardware Version</div>
+            <div class="menu-text">
+                Rev C-3
+            </div>
+        </div>
+        <div>
+            <div class="menu-header">Hub UID</div>
+            <div class="menu-text">
+                1234abcd-1234-abcd-1234-abcd1234abcd
+            </div>
+        </div>
+        <div>
+            <div class="menu-header">IP Address</div>
+            <div class="menu-text">
+                10.0.1.99
+            </div>
+        </div>
+        <div>
+            <div class="menu-header">MAC Address</div>
+            <div class="menu-text">
+                12:34:56:78:9A:BC
+            </div>
+        </div>
+        <div>
+            <div class="menu-header">Default Text To Speech (TTS) Voice</div>
+            <div class="menu-text">
+                <select id="ttsVoice" class="mdl-textfield__input"  name="ttsVoice">
+                        <option class="" value="Nicole" >Nicole, Female, Australian English</option>
+                        <option class="" value="Russell" >Russell, Male, Australian English</option>
+                        <option class="" value="Vitoria" >Vitoria, Female, Brazilian Portuguese</option>
+                        <option class="" value="Ricardo" >Ricardo, Male, Brazilian Portuguese</option>
+                        <option class="" value="Emma" >Emma, Female, British English</option>
+                        <option class="" value="Amy" >Amy, Female, British English</option>
+                        <option class="" value="Brian" >Brian, Male, British English</option>
+                        <option class="" value="Chantal" >Chantal, Female, Canadian French</option>
+                        <option class="" value="Conchita" >Conchita, Female, Castilian Spanish</option>
+                        <option class="" value="Enrique" >Enrique, Male, Castilian Spanish</option>
+                        <option class="" value="Naja" >Naja, Female, Danish</option>
+                        <option class="" value="Mads" >Mads, Male, Danish</option>
+                        <option class="" value="Lotte" >Lotte, Female, Dutch</option>
+                        <option class="" value="Ruben" >Ruben, Male, Dutch</option>
+                        <option class="" value="Lea" >Lea, Female, French</option>
+                        <option class="" value="Celine" >Celine, Female, French</option>
+                        <option class="" value="Mathieu" >Mathieu, Male, French</option>
+                        <option class="" value="Vicki" >Vicki, Female, German</option>
+                        <option class="" value="Marlene" >Marlene, Female, German</option>
+                        <option class="" value="Hans" >Hans, Male, German</option>
+                        <option class="" value="Dora" >Dora, Female, Icelandic</option>
+                        <option class="" value="Karl" >Karl, Male, Icelandic</option>
+                        <option class="" value="Raveena" >Raveena, Female, Indian English</option>
+                        <option class="" value="Aditi" >Aditi, Female, Indian English</option>
+                        <option class="" value="Carla" >Carla, Female, Italian</option>
+                        <option class="" value="Giorgio" >Giorgio, Male, Italian</option>
+                        <option class="" value="Mizuki" >Mizuki, Female, Japanese</option>
+                        <option class="" value="Takumi" >Takumi, Male, Japanese</option>
+                        <option class="" value="Seoyeon" >Seoyeon, Female, Korean</option>
+                        <option class="" value="Liv" >Liv, Female, Norwegian</option>
+                        <option class="" value="Maja" >Maja, Female, Polish</option>
+                        <option class="" value="Ewa" >Ewa, Female, Polish</option>
+                        <option class="" value="Jan" >Jan, Male, Polish</option>
+                        <option class="" value="Jacek" >Jacek, Male, Polish</option>
+                        <option class="" value="Ines" >Ines, Female, Portuguese</option>
+                        <option class="" value="Cristiano" >Cristiano, Male, Portuguese</option>
+                        <option class="" value="Carmen" >Carmen, Female, Romanian</option>
+                        <option class="" value="Tatyana" >Tatyana, Female, Russian</option>
+                        <option class="" value="Maxim" >Maxim, Male, Russian</option>
+                        <option class="" value="Astrid" >Astrid, Female, Swedish</option>
+                        <option class="" value="Filiz" >Filiz, Female, Turkish</option>
+                        <option class="" value="Salli" >Salli, Female, US English</option>
+                        <option class="" value="Kimberly" >Kimberly, Female, US English</option>
+                        <option class="" value="Kendra" >Kendra, Female, US English</option>
+                        <option class="" value="Joanna" >Joanna, Female, US English</option>
+                        <option class="" value="Ivy" >Ivy, Female, US English</option>
+                        <option class="" value="Matthew" selected>Matthew, Male, US English</option>
+                        <option class="" value="Justin" >Justin, Male, US English</option>
+                        <option class="" value="Joey" >Joey, Male, US English</option>
+                        <option class="" value="Penelope" >Penelope, Female, US Spanish</option>
+                        <option class="" value="Miguel" >Miguel, Male, US Spanish</option>
+                        <option class="" value="Gwyneth" >Gwyneth, Female, Welsh</option>
+                        <option class="" value="Geraint" >Geraint, Male, Welsh English</option>
+                </select>
+            </div>
+        </div>
+        <div>
+            <div class="menu-header">Current Hub Time (as of last page load)</div>
+            <div class="menu-text">
+                2020-01-23 22:44:35 EST
+                <button type="button" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" id="updateTime">Update Time from Browser Time</button>
+            </div>
+        </div>
+</div>
+<script>
+    $('#ttsVoice').change(function (e) {
+        var url = '/hub/tts/updateDefaultVoice'
+        var value = { "name" : $('#ttsVoice').val() }
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: JSON.stringify(value),
+            dataType: "json",
+            contentType: "application/json; charset=utf-8",
+            success: function (data) {
+              console.log("sent action, set to " + data.current);
+            }
+        });
+    });
+
+    $(document).on('change', '.mdl-switch', function (e) {
+        if(e.target.name == "devMode") {
+            var url = '/hub/devMode'
+            var devMode =  $(this).is('.is-checked')
+            var value = { "devMode" : devMode }
+            $.ajax({
+                type: "POST",
+                url: url,
+                data: JSON.stringify(value),
+                dataType: "json",
+                contentType: "application/json; charset=utf-8",
+                success: function (data) {
+                  console.log("sent action, set to " + data.devMode);
+            }
+          });
+        }
+    });
+</script>
+
+<script>
+$(document).on('click', '#updateTime', function() {
+    console.log(new Date())
+    //date -s "19 APR 2012 11:14:00"
+    var currentDate = new Date()
+    var systemDate = currentDate.getDate() + " "
+        + 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[currentDate.getMonth()] + " "
+        + currentDate.getFullYear() + " "
+        + currentDate.getHours() + ":"
+        + currentDate.getMinutes() + ":"
+        + currentDate.getSeconds();
+    $.ajax({
+        url: "/location/updateTime",
+        type: "POST",
+        data: systemDate.toString(),
+        success: function (data) {
+            window.location.reload()
+        },
+        error: function (data) {
+            window.location.reload()
+        }
+    });
+});
+
+$('#hubBtn').click(function(e) {
+    e.preventDefault()
+    $('#hubPopup').show()
+})
+
+$('.hub-close').click(function(e) {
+    $('#hubPopup').hide()
+})
+</script>
+
+<script>
+    $('.mainmenu-card').click(function(e) {
+        console.log(this)
+        if(this.id == "hubInfo") {
+            $('#hubPopup').show()
+        } else if (this.id == "reboot") {
+            // $('#reboot-button').click()
+        } else if (this.id == "shutdown") {
+            // $('#shutdown-button').click()
+        } else {
+        var url = $(this).find('a').prop('href')
+        window.location = url
+        }
+    })
+</script>
+</body>
+</html>

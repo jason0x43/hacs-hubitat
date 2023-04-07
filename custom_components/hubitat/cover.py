@@ -1,4 +1,20 @@
-from hubitatmaker import (
+from logging import getLogger
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Type
+
+from homeassistant.components.cover import (
+    ATTR_POSITION as HA_ATTR_POSITION,
+    SUPPORT_CLOSE,
+    SUPPORT_OPEN,
+    SUPPORT_SET_POSITION,
+    CoverDeviceClass,
+    CoverEntity,
+)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+
+from .device import HubitatEntity
+from .entities import create_and_add_entities
+from .hubitatmaker import (
     ATTR_DOOR,
     ATTR_LEVEL,
     ATTR_POSITION,
@@ -16,22 +32,6 @@ from hubitatmaker import (
     STATE_PARTIALLY_OPEN,
     Device,
 )
-from logging import getLogger
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Type
-
-from homeassistant.components.cover import (
-    ATTR_POSITION as HA_ATTR_POSITION,
-    SUPPORT_CLOSE,
-    SUPPORT_OPEN,
-    SUPPORT_SET_POSITION,
-    CoverDeviceClass,
-    CoverEntity,
-)
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-
-from .device import HubitatEntity
-from .entities import create_and_add_entities
 from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)

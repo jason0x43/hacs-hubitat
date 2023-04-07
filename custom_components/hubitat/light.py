@@ -1,27 +1,5 @@
 """Support for Hubitat lights."""
 
-from hubitatmaker import (
-    ATTR_COLOR_MODE as HE_ATTR_COLOR_MODE,
-    ATTR_COLOR_NAME as HE_ATTR_COLOR_NAME,
-    ATTR_COLOR_TEMP as HE_ATTR_COLOR_TEMP,
-    ATTR_HUE as HE_ATTR_HUE,
-    ATTR_LEVEL as HE_ATTR_LEVEL,
-    ATTR_SATURATION as HE_ATTR_SATURATION,
-    ATTR_SWITCH as HE_ATTR_SWITCH,
-    CAP_COLOR_CONTROL,
-    CAP_COLOR_TEMP,
-    CAP_LIGHT,
-    CAP_SWITCH,
-    CAP_SWITCH_LEVEL,
-    CMD_FLASH,
-    CMD_ON,
-    CMD_SET_COLOR,
-    CMD_SET_COLOR_TEMP,
-    CMD_SET_LEVEL,
-    COLOR_MODE_CT as HE_COLOR_MODE_CT,
-    COLOR_MODE_RGB as HE_COLOR_MODE_RGB,
-    Device,
-)
 import json
 from logging import getLogger
 import re
@@ -46,6 +24,28 @@ from homeassistant.util import color as color_util
 from .cover import is_cover
 from .device import HubitatEntity
 from .entities import create_and_add_entities
+from .hubitatmaker import (
+    ATTR_COLOR_MODE as HE_ATTR_COLOR_MODE,
+    ATTR_COLOR_NAME as HE_ATTR_COLOR_NAME,
+    ATTR_COLOR_TEMP as HE_ATTR_COLOR_TEMP,
+    ATTR_HUE as HE_ATTR_HUE,
+    ATTR_LEVEL as HE_ATTR_LEVEL,
+    ATTR_SATURATION as HE_ATTR_SATURATION,
+    ATTR_SWITCH as HE_ATTR_SWITCH,
+    CAP_COLOR_CONTROL,
+    CAP_COLOR_TEMP,
+    CAP_LIGHT,
+    CAP_SWITCH,
+    CAP_SWITCH_LEVEL,
+    CMD_FLASH,
+    CMD_ON,
+    CMD_SET_COLOR,
+    CMD_SET_COLOR_TEMP,
+    CMD_SET_LEVEL,
+    COLOR_MODE_CT as HE_COLOR_MODE_CT,
+    COLOR_MODE_RGB as HE_COLOR_MODE_RGB,
+    Device,
+)
 from .types import EntityAdder
 
 try:

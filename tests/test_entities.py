@@ -1,9 +1,9 @@
-from hubitatmaker import Device
-import pytest
 from typing import Dict, Optional
 from unittest.mock import Mock, NonCallableMock, patch
 
 from custom_components.hubitat.device import Hub
+from custom_components.hubitat.hubitatmaker import Device
+import pytest
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant

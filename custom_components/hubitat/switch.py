@@ -1,21 +1,9 @@
 """Support for Hubitat switches."""
 
-from hubitatmaker import (
-    CAP_ALARM,
-    CAP_DOUBLE_TAPABLE_BUTTON,
-    CAP_HOLDABLE_BUTTON,
-    CAP_POWER_METER,
-    CAP_PUSHABLE_BUTTON,
-    CAP_SWITCH,
-    CMD_BOTH,
-    CMD_ON,
-    CMD_SIREN,
-    CMD_STROBE,
-    Device,
-)
 from logging import getLogger
 import re
 from typing import Any, Dict, List, Optional, Sequence
+
 import voluptuous as vol
 
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
@@ -28,6 +16,19 @@ from .const import DOMAIN, ICON_ALARM, SERVICE_ALARM_SIREN_ON, SERVICE_ALARM_STR
 from .device import HubitatEntity
 from .entities import create_and_add_entities, create_and_add_event_emitters
 from .fan import is_fan
+from .hubitatmaker import (
+    CAP_ALARM,
+    CAP_DOUBLE_TAPABLE_BUTTON,
+    CAP_HOLDABLE_BUTTON,
+    CAP_POWER_METER,
+    CAP_PUSHABLE_BUTTON,
+    CAP_SWITCH,
+    CMD_BOTH,
+    CMD_ON,
+    CMD_SIREN,
+    CMD_STROBE,
+    Device,
+)
 from .light import is_light
 from .types import EntityAdder
 

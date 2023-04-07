@@ -1,0 +1,27 @@
+[
+    {
+        "active": true,
+        "id": 1,
+        "name": "Day"
+    },
+    {
+        "active": false,
+        "id": 2,
+        "name": "Evening"
+    },
+    {
+        "active": false,
+        "id": 3,
+        "name": "Night"
+    },
+    {
+        "active": false,
+        "id": 4,
+        "name": "Away"
+    },
+    {
+        "active": false,
+        "id": 5,
+        "name": "Morning"
+    }
+]

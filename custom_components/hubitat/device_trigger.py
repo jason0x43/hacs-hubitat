@@ -1,22 +1,11 @@
 """Provide automation triggers for certain types of Hubitat device."""
-from hubitatmaker import (
-    ATTR_DEVICE_ID,
-    ATTR_LOCK_CODES,
-    ATTR_NUM_BUTTONS,
-    ATTR_VALUE,
-    CAP_DOUBLE_TAPABLE_BUTTON,
-    CAP_HOLDABLE_BUTTON,
-    CAP_LOCK,
-    CAP_PUSHABLE_BUTTON,
-    Device,
-)
 from itertools import chain
 from json import loads
 import logging
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, cast
-import voluptuous as vol
 
 from custom_components.hubitat.util import get_hubitat_device_id
+import voluptuous as vol
 
 from homeassistant.components.automation import (
     AutomationActionType,
@@ -49,6 +38,17 @@ from .helpers import (
     get_hub_for_device,
 )
 from .hub import Hub
+from .hubitatmaker import (
+    ATTR_DEVICE_ID,
+    ATTR_LOCK_CODES,
+    ATTR_NUM_BUTTONS,
+    ATTR_VALUE,
+    CAP_DOUBLE_TAPABLE_BUTTON,
+    CAP_HOLDABLE_BUTTON,
+    CAP_LOCK,
+    CAP_PUSHABLE_BUTTON,
+    Device,
+)
 
 try:
     from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA

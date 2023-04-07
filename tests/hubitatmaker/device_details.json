@@ -1,0 +1,173 @@
+{
+  "6": {
+    "label": "Office Door",
+    "commands": ["configure"],
+    "name": "Generic Z-Wave Contact Sensor",
+    "attributes": [
+      {
+        "currentValue": 100,
+        "name": "battery",
+        "dataType": "NUMBER"
+      },
+      {
+        "dataType": "ENUM",
+        "name": "contact",
+        "currentValue": "open",
+        "values": ["closed", "open"]
+      },
+      {
+        "dataType": "ENUM",
+        "name": "tamper",
+        "values": ["clear", "detected"],
+        "currentValue": "clear"
+      }
+    ],
+    "id": "6",
+    "capabilities": [
+      "Battery",
+      {
+        "attributes": [
+          {
+            "dataType": null,
+            "name": "battery"
+          }
+        ]
+      },
+      "ContactSensor",
+      {
+        "attributes": [
+          {
+            "name": "contact",
+            "dataType": null
+          }
+        ]
+      },
+      "Configuration",
+      "Sensor",
+      "TamperAlert",
+      {
+        "attributes": [
+          {
+            "name": "tamper",
+            "dataType": null
+          }
+        ]
+      }
+    ]
+  },
+
+  "32": {
+    "commands": ["configure", "refresh"],
+    "label": "Basement Leak Detector",
+    "id": "32",
+    "attributes": [
+      {
+        "dataType": "NUMBER",
+        "name": "battery",
+        "currentValue": 66
+      },
+      {
+        "dataType": "NUMBER",
+        "name": "temperature",
+        "currentValue": 63.99
+      },
+      {
+        "name": "water",
+        "currentValue": "dry",
+        "values": ["wet", "dry"],
+        "dataType": "ENUM"
+      }
+    ],
+    "name": "Generic Zigbee Moisture Sensor",
+    "capabilities": [
+      "TemperatureMeasurement",
+      {
+        "attributes": [
+          {
+            "dataType": null,
+            "name": "temperature"
+          }
+        ]
+      },
+      "Battery",
+      {
+        "attributes": [
+          {
+            "dataType": null,
+            "name": "battery"
+          }
+        ]
+      },
+      "WaterSensor",
+      {
+        "attributes": [
+          {
+            "name": "water",
+            "dataType": null
+          }
+        ]
+      },
+      "Configuration",
+      "Refresh",
+      "Sensor"
+    ]
+  },
+
+  "176": {
+    "capabilities": [
+      "Switch",
+      {
+        "attributes": [
+          {
+            "dataType": null,
+            "name": "switch"
+          }
+        ]
+      },
+      "Configuration",
+      "PowerMeter",
+      {
+        "attributes": [
+          {
+            "name": "power",
+            "dataType": null
+          }
+        ]
+      },
+      "Sensor",
+      "Actuator",
+      "Outlet",
+      {
+        "attributes": [
+          {
+            "name": "switch",
+            "dataType": null
+          }
+        ]
+      }
+    ],
+    "name": "Generic Zigbee Outlet",
+    "commands": ["configure", "off", "off", "on", "on", "refresh"],
+    "label": "Loft Fan",
+    "attributes": [
+      {
+        "currentValue": 0,
+        "name": "power",
+        "dataType": "NUMBER"
+      },
+      {
+        "values": ["on", "off"],
+        "currentValue": "off",
+        "dataType": "ENUM",
+        "name": "switch"
+      },
+      {
+        "currentValue": "off",
+        "values": ["on", "off"],
+        "name": "switch",
+        "dataType": "ENUM"
+      }
+    ],
+    "id": "176"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "device": {
+    "content": {
+      "name": "switch",
+      "value": "on",
+      "displayName": "Loft Fan",
+      "descriptionText": "Loft Fan is on",
+      "deviceId": "176",
+      "unit": null,
+      "data": null
+    }
+  },
+  "other": {
+    "content": {
+      "name": "ssdpTerm",
+      "value": "urn:schemas-upnp-org:device:basic:1",
+      "displayName": null,
+      "deviceId": null,
+      "descriptionText": null,
+      "unit": null,
+      "type": null,
+      "data": null
+    }
+  },
+  "mode": {
+    "content": {
+      "name": "mode",
+      "value": "Evening",
+      "displayName": "Home",
+      "deviceId": null,
+      "descriptionText": "Home is now in Evening mode",
+      "unit": null,
+      "type": "LOCATION_MODE_CHANGE",
+      "data": null
+    }
+  },
+  "hsmArmedAway": {
+    "content": {
+      "name": "hsmStatus",
+      "value": "armedAway",
+      "displayName": "Home",
+      "deviceId": null,
+      "descriptionText": "hsmEvent",
+      "unit": null,
+      "type": null,
+      "data": null
+    }
+  },
+  "hsmAllDisarmed": {
+    "content": {
+      "name": "hsmStatus",
+      "value": "allDisarmed",
+      "displayName": "Home",
+      "deviceId": null,
+      "descriptionText": "hsmEvent",
+      "unit": null,
+      "type": null,
+      "data": null
+    }
+  }
+}

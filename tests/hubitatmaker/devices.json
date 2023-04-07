@@ -1,0 +1,47 @@
+[
+   {
+      "label" : "Office Door",
+      "id" : "6",
+      "name" : "Generic Z-Wave Contact Sensor"
+   },
+   {
+      "label" : "Basement Leak Detector",
+      "id" : "32",
+      "name" : "Generic Zigbee Moisture Sensor"
+   },
+   {
+      "name" : "Generic Zigbee Outlet",
+      "id" : "176",
+      "label" : "Loft Fan"
+   },
+   {
+      "name" : "Aeotec Nano Dimmer",
+      "id" : "514",
+      "label" : "Hall Light"
+   },
+   {
+      "id" : "710",
+      "name" : "Generic Zigbee Motion Sensor",
+      "label" : "Office Sensor"
+   },
+   {
+      "label" : "Stove Light",
+      "name" : "Aeon Nano Dimmer",
+      "id" : "834"
+   },
+   {
+      "name" : "Aeotec Nano Switch",
+      "id" : "835",
+      "label" : "Back Yard Light"
+   },
+   {
+      "name" : "Aeotec Nano Switch",
+      "id" : "836",
+      "label" : "Front Lights"
+   },
+   {
+      "label" : "Hall Closet Door",
+      "id" : "1192",
+      "name" : "Generic Z-Wave Contact Sensor"
+   }
+]

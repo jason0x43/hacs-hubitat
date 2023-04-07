@@ -1,6 +1,5 @@
 """Classes for managing Hubitat devices."""
 
-from hubitatmaker import Device, Event
 from json import loads
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Union, cast
@@ -11,6 +10,7 @@ from homeassistant.helpers.entity import DeviceInfo
 
 from .const import DOMAIN
 from .hub import Hub
+from .hubitatmaker import Device, Event
 from .types import Removable, UpdateableEntity
 from .util import get_hub_device_id
 
@@ -27,7 +27,6 @@ class HubitatBase(Removable):
         self._id = get_hub_device_id(hub, device)
         self._old_ids = [
             f"{self._hub.host}::{self._hub.app_id}::{self._device.id}",
-            f"{self._hub.mac}::{self._hub.app_id}::{self._device.id}",
         ]
         self._temp = temp
 

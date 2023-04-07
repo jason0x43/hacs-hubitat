@@ -1,4 +1,3 @@
-from hubitatmaker import Device
 from logging import getLogger
 from typing import Callable, Dict, List, Optional, Type, TypeVar
 
@@ -11,6 +10,7 @@ from homeassistant.helpers import entity_registry
 from .const import DOMAIN
 from .device import HubitatEntity, HubitatEventEmitter
 from .hub import get_hub
+from .hubitatmaker import Device
 from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)

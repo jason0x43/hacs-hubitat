@@ -1,19 +1,6 @@
 """Hubitat sensor entities."""
 
 from datetime import datetime
-from hubitatmaker import (
-    ATTR_BATTERY,
-    ATTR_ENERGY,
-    ATTR_ENERGY_SOURCE,
-    ATTR_HUMIDITY,
-    ATTR_ILLUMINANCE,
-    ATTR_POWER,
-    ATTR_POWER_SOURCE,
-    ATTR_PRESSURE,
-    ATTR_TEMPERATURE,
-    ATTR_VOLTAGE,
-)
-from hubitatmaker.types import Device
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Type, Union
 
@@ -39,6 +26,19 @@ from .const import (
 from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .hub import get_hub
+from .hubitatmaker import (
+    ATTR_BATTERY,
+    ATTR_ENERGY,
+    ATTR_ENERGY_SOURCE,
+    ATTR_HUMIDITY,
+    ATTR_ILLUMINANCE,
+    ATTR_POWER,
+    ATTR_POWER_SOURCE,
+    ATTR_PRESSURE,
+    ATTR_TEMPERATURE,
+    ATTR_VOLTAGE,
+)
+from .hubitatmaker.types import Device
 from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)

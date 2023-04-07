@@ -1,15 +1,5 @@
 """Hubitat binary sensor entities."""
 
-from hubitatmaker import (
-    ATTR_ACCELERATION,
-    ATTR_CARBON_MONOXIDE,
-    ATTR_CONTACT,
-    ATTR_MOTION,
-    ATTR_PRESENCE,
-    ATTR_SMOKE,
-    ATTR_WATER,
-    Device,
-)
 import re
 from typing import Dict, List, Optional, Sequence, Tuple, Type
 
@@ -22,6 +12,16 @@ from homeassistant.core import HomeAssistant
 
 from .device import Hub, HubitatEntity
 from .entities import create_and_add_entities
+from .hubitatmaker import (
+    ATTR_ACCELERATION,
+    ATTR_CARBON_MONOXIDE,
+    ATTR_CONTACT,
+    ATTR_MOTION,
+    ATTR_PRESENCE,
+    ATTR_SMOKE,
+    ATTR_WATER,
+    Device,
+)
 from .types import EntityAdder
 
 _CONTACT_MATCHERS = (

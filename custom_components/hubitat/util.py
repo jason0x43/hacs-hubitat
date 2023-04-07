@@ -1,14 +1,12 @@
 from hashlib import sha256
-from hubitatmaker.types import Device
 from typing import Dict, Union
-
-from custom_components.hubitat.const import CONF_DEVICE_TYPE_OVERRIDES
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.device_registry import DeviceEntry
 
-from .const import DOMAIN
+from .const import CONF_DEVICE_TYPE_OVERRIDES, DOMAIN
 from .error import DeviceError
+from .hubitatmaker.types import Device
 from .types import HasToken
 
 _token_hashes = {}

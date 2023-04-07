@@ -1,6 +1,7 @@
-from hubitatmaker.const import ATTR_LOCK_CODES
-from hubitatmaker.types import Attribute
 from unittest.mock import Mock
+
+from custom_components.hubitat.hubitatmaker.const import ATTR_LOCK_CODES
+from custom_components.hubitat.hubitatmaker.types import Attribute
 
 
 def test_normal_lock_codes() -> None:

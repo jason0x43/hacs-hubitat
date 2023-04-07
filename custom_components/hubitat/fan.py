@@ -1,6 +1,16 @@
 """Support for Hubitat fans."""
 
-from hubitatmaker import (
+from logging import getLogger
+from math import modf
+from typing import Any, Dict, List, Optional, Sequence
+
+from homeassistant.components.fan import FanEntity, FanEntityFeature
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+
+from .device import HubitatEntity
+from .entities import create_and_add_entities
+from .hubitatmaker import (
     ATTR_SPEED,
     ATTR_SWITCH,
     CAP_FAN_CONTROL,
@@ -13,16 +23,6 @@ from hubitatmaker import (
     STATE_ON,
     Device,
 )
-from logging import getLogger
-from math import modf
-from typing import Any, Dict, List, Optional, Sequence
-
-from homeassistant.components.fan import FanEntity, FanEntityFeature
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-
-from .device import HubitatEntity
-from .entities import create_and_add_entities
 from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)

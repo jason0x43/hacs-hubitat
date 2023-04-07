@@ -1,4 +1,3 @@
-from hubitatmaker import Device, Event, Hub as HubitatHub
 from logging import getLogger
 import os
 import ssl
@@ -33,6 +32,7 @@ from .const import (
     TEMP_F,
     TRIGGER_CAPABILITIES,
 )
+from .hubitatmaker import Device, Event, Hub as HubitatHub
 from .types import Removable, UpdateableEntity
 from .util import get_hub_device_id, get_hub_short_id
 
@@ -112,11 +112,6 @@ class Hub:
     def id(self) -> str:
         """A unique ID for this hub instance."""
         return get_hub_short_id(self._hub)
-
-    @property
-    def mac(self) -> Optional[str]:
-        """The MAC address of the  associated Hubitat hub."""
-        return self._hub.mac
 
     @property
     def port(self) -> Optional[int]:

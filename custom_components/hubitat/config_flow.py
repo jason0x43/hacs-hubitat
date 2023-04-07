@@ -1,15 +1,8 @@
 """Config flow for Hubitat integration."""
 from copy import deepcopy
-from hubitatmaker import (
-    ConnectionError,
-    Hub as HubitatHub,
-    InvalidConfig,
-    InvalidToken,
-    RequestError,
-)
-from hubitatmaker.types import Device
 import logging
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Union, cast
+
 import voluptuous as vol
 from voluptuous.schema_builder import Schema
 
@@ -43,6 +36,14 @@ from .const import (
     TEMP_C,
     TEMP_F,
 )
+from .hubitatmaker import (
+    ConnectionError,
+    Hub as HubitatHub,
+    InvalidConfig,
+    InvalidToken,
+    RequestError,
+)
+from .hubitatmaker.types import Device
 from .light import is_definitely_light, is_light
 from .switch import is_switch
 from .util import get_hub_short_id
