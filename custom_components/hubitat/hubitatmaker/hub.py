@@ -9,6 +9,10 @@ from typing import Any, Callable, Dict, Iterator, List, Mapping, Optional, Union
 from urllib.parse import ParseResult, quote, urlparse
 
 import aiohttp
+from aiohttp.client_exceptions import (
+    ClientConnectionError,
+    ContentTypeError,
+)
 
 from . import server
 from .const import ID_HSM_STATUS, ID_MODE
@@ -422,11 +426,20 @@ class Hub:
                             raise InvalidToken()
                         else:
                             raise RequestError(resp)
-                    json = await resp.json()
-                    if "error" in json and json["error"]:
-                        raise RequestError(resp)
-                    return json
-            except (aiohttp.ClientConnectionError, asyncio.TimeoutError) as e:
+                    try:
+                        json = await resp.json()
+                        if "error" in json and json["error"]:
+                            raise RequestError(resp)
+                        return json
+                    except ContentTypeError as e:
+                        text = await resp.text()
+                        _LOGGER.warn("Unable to parse as JSON: %s", text)
+                        raise e
+            except (
+                ClientConnectionError,
+                asyncio.TimeoutError,
+                ContentTypeError,
+            ) as e:
                 # catch connection exceptions to retry w/ increasing delay
                 if attempt < MAX_REQUEST_ATTEMPT_COUNT:
                     _LOGGER.debug(
