@@ -143,7 +143,11 @@ class Event:
             yield key, getattr(self, key)
 
     def __str__(self) -> str:
-        return f'<Event device_id="{self.device_id}" device_name="{self.device_name}" attribute="{self.attribute}" value="{self.value}" description="{self.description}" type="{self.type}">'
+        return (
+            f'<Event device_id="{self.device_id}" device_name="{self.device_name}"'
+            f' attribute="{self.attribute}" value="{self.value}"'
+            f' description="{self.description}" type="{self.type}">'
+        )
 
 
 class Mode:

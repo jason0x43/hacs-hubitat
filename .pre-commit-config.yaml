@@ -13,22 +13,13 @@ repos:
     files: ^(custom_components|tests|stubs)/.+\.pyi?$
 - repo: local
   hooks:
-  - id: flake8
-    name: flake8
-    entry: pdm run flake8
+  - id: ruff
+    name: ruff
+    entry: pdm run ruff --fix
     language: system
     types: [python]
     require_serial: true
     files: ^(custom_components|tests)/.+\.py$
-- repo: local
-  hooks:
-  - id: isort
-    name: isort
-    entry: pdm run isort
-    language: system
-    types: [python]
-    require_serial: true
-    files: ^(custom_components|tests|stubs)/.+\.pyi?$
 - repo: local
   hooks:
   - id: pyright

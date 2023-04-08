@@ -1,7 +1,7 @@
 """Support for Hubitat switches."""
 
-from logging import getLogger
 import re
+from logging import getLogger
 from typing import Any, Dict, List, Optional, Sequence
 
 import voluptuous as vol

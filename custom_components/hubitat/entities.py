@@ -2,7 +2,6 @@ from logging import getLogger
 from typing import Callable, Dict, List, Optional, Type, TypeVar
 
 from custom_components.hubitat.util import get_device_overrides
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry

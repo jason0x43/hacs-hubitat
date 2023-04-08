@@ -1,8 +1,8 @@
 import asyncio
+import threading
 from asyncio.base_events import Server as AsyncioServer
 from socket import socket as Socket
 from ssl import SSLContext
-import threading
 from typing import Any, Callable, Dict, List, Optional, cast
 
 from aiohttp import web

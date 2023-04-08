@@ -1,15 +1,15 @@
 """The Hubitat integration."""
+import re
 from asyncio import gather
 from logging import getLogger
-import re
 from typing import Any, Dict
+
 import voluptuous as vol
 
 from custom_components.hubitat.services import (
     async_register_services,
     async_remove_services,
 )
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant

@@ -1,8 +1,8 @@
 """Support for Hubitat lights."""
 
 import json
-from logging import getLogger
 import re
+from logging import getLogger
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from homeassistant.components.light import (

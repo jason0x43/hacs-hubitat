@@ -1,11 +1,12 @@
 """Config flow for Hubitat integration."""
-from copy import deepcopy
 import logging
+from copy import deepcopy
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Union, cast
 
 import voluptuous as vol
 from voluptuous.schema_builder import Schema
 
+import homeassistant.helpers.config_validation as cv
 from homeassistant.config_entries import (
     CONN_CLASS_LOCAL_PUSH,
     ConfigEntry,
@@ -16,7 +17,6 @@ from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_TEMPERATURE_U
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import device_registry
-import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.device_registry import DeviceEntry
 
 from .const import (

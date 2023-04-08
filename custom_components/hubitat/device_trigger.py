@@ -1,12 +1,12 @@
 """Provide automation triggers for certain types of Hubitat device."""
+import logging
 from itertools import chain
 from json import loads
-import logging
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, cast
 
-from custom_components.hubitat.util import get_hubitat_device_id
 import voluptuous as vol
 
+from custom_components.hubitat.util import get_hubitat_device_id
 from homeassistant.components.automation import (
     AutomationActionType,
     AutomationTriggerInfo,
@@ -53,7 +53,9 @@ from .hubitatmaker import (
 try:
     from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
 except Exception:
-    from homeassistant.components.device_automation import TRIGGER_BASE_SCHEMA  # type: ignore
+    from homeassistant.components.device_automation import (
+        TRIGGER_BASE_SCHEMA,  # type: ignore
+    )
 
     DEVICE_TRIGGER_BASE_SCHEMA = TRIGGER_BASE_SCHEMA
 

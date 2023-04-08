@@ -3,7 +3,6 @@
 from typing import Any, Dict, List, Optional, Sequence
 
 from custom_components.hubitat.const import TEMP_C, TEMP_F
-
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
     ATTR_TARGET_TEMP_HIGH,

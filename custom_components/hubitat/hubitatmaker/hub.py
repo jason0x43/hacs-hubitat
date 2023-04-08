@@ -1,8 +1,8 @@
 """Hubitat API."""
 import asyncio
+import socket
 from contextlib import contextmanager
 from logging import getLogger
-import socket
 from ssl import SSLContext
 from types import MappingProxyType
 from typing import Any, Callable, Dict, Iterator, List, Mapping, Optional, Union
@@ -61,10 +61,11 @@ class Hub:
         port:
           The port to listen on for events (optional). Defaults to a random open port.
         event_url:
-          The URL that Hubitat should send events to (optional). Defaults the server's actual address and port.
+          The URL that Hubitat should send events to (optional). Defaults the server's
+          actual address and port.
         ssl_context:
-          The SSLContext the event listener server will use. Passing in a SSLContext object
-          will make the event listener server HTTPS only.
+          The SSLContext the event listener server will use. Passing in a SSLContext
+          object will make the event listener server HTTPS only.
         """
         if not host or not app_id or not access_token:
             raise InvalidConfig()
@@ -276,9 +277,9 @@ class Hub:
         await self._start_server()
 
     async def set_ssl_context(self, ssl_context: Optional[SSLContext]) -> None:
-        """Set the SSLContext that the event listener server will use. Passing in a SSLContext object
-        will make the event listener server HTTPS only. Passing in None will revert the server back
-        to HTTP.
+        """Set the SSLContext that the event listener server will use. Passing in a
+        SSLContext object will make the event listener server HTTPS only. Passing in
+        None will revert the server back to HTTP.
 
         Setting this will stop and restart the event listener server.
         """
@@ -405,7 +406,8 @@ class Hub:
                         if resp.status >= 500 or resp.status == 408:
                             if attempt < MAX_REQUEST_ATTEMPT_COUNT:
                                 _LOGGER.debug(
-                                    "%s request to %s failed with code %d: %s. Retrying...",
+                                    "%s request to %s failed with code %d: %s."
+                                    " Retrying...",
                                     method,
                                     path,
                                     resp.status,

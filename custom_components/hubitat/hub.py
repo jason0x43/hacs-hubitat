@@ -1,6 +1,6 @@
-from logging import getLogger
 import os
 import ssl
+from logging import getLogger
 from ssl import SSLContext
 from typing import Any, Callable, Dict, Mapping, Optional, Sequence, Union, cast
 
@@ -32,7 +32,11 @@ from .const import (
     TEMP_F,
     TRIGGER_CAPABILITIES,
 )
-from .hubitatmaker import Device, Event, Hub as HubitatHub
+from .hubitatmaker import (
+    Device,
+    Event,
+    Hub as HubitatHub,
+)
 from .types import Removable, UpdateableEntity
 from .util import get_hub_device_id, get_hub_short_id
 
@@ -553,7 +557,8 @@ def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:
             # device; remove the old device
             dreg.async_remove_device(dev.id)
             _LOGGER.info(
-                f"Removed device {dev.identifiers} in favor of {new_devs[id].identifiers}"
+                f"Removed device {dev.identifiers} in favor of "
+                f"{new_devs[id].identifiers}"
             )
         else:
             # No new device exists with the same Hubitat device ID as this old
