@@ -12,23 +12,11 @@ from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 
-from .const import DOMAIN, ICON_ALARM, SERVICE_ALARM_SIREN_ON, SERVICE_ALARM_STROBE_ON
+from .const import DOMAIN, ICON_ALARM, ServiceName
 from .device import HubitatEntity
 from .entities import create_and_add_entities, create_and_add_event_emitters
 from .fan import is_fan
-from .hubitatmaker import (
-    CAP_ALARM,
-    CAP_DOUBLE_TAPABLE_BUTTON,
-    CAP_HOLDABLE_BUTTON,
-    CAP_POWER_METER,
-    CAP_PUSHABLE_BUTTON,
-    CAP_SWITCH,
-    CMD_BOTH,
-    CMD_ON,
-    CMD_SIREN,
-    CMD_STROBE,
-    Device,
-)
+from .hubitatmaker import Device, DeviceCapability, DeviceCommand
 from .light import is_light
 from .types import EntityAdder
 
@@ -80,7 +68,7 @@ class HubitatSwitch(HubitatEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""
         _LOGGER.debug(f"Turning on {self.name} with {kwargs}")
-        await self.send_command(CMD_ON)
+        await self.send_command(DeviceCommand.ON)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the switch."""
@@ -113,17 +101,17 @@ class HubitatAlarm(HubitatSwitch):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the alarm."""
         _LOGGER.debug("Activating alarm %s", self.name)
-        await self.send_command(CMD_BOTH)
+        await self.send_command(DeviceCommand.BOTH)
 
     async def siren_on(self) -> None:
         """Turn on the siren."""
         _LOGGER.debug("Turning on siren for %s", self.name)
-        await self.send_command(CMD_SIREN)
+        await self.send_command(DeviceCommand.SIREN)
 
     async def strobe_on(self) -> None:
         """Turn on the strobe."""
         _LOGGER.debug("Turning on strobe for %s", self.name)
-        await self.send_command(CMD_STROBE)
+        await self.send_command(DeviceCommand.STROBE)
 
 
 def is_switch(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
@@ -132,7 +120,7 @@ def is_switch(device: Device, overrides: Optional[Dict[str, str]] = None) -> boo
         return overrides[device.id] == "switch"
 
     return (
-        CAP_SWITCH in device.capabilities
+        DeviceCapability.SWITCH in device.capabilities
         and not is_light(device, overrides)
         and not is_fan(device, overrides)
     )
@@ -140,20 +128,20 @@ def is_switch(device: Device, overrides: Optional[Dict[str, str]] = None) -> boo
 
 def is_energy_meter(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
     """Return True if device can measure power."""
-    return CAP_POWER_METER in device.capabilities
+    return DeviceCapability.POWER_METER in device.capabilities
 
 
 def is_alarm(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
     """Return True if the device is an alarm."""
-    return CAP_ALARM in device.capabilities
+    return DeviceCapability.ALARM in device.capabilities
 
 
 def is_button_controller(device: Device) -> bool:
     """Return true if the device is a stateless button controller."""
     return (
-        CAP_PUSHABLE_BUTTON in device.capabilities
-        or CAP_HOLDABLE_BUTTON in device.capabilities
-        or CAP_DOUBLE_TAPABLE_BUTTON in device.capabilities
+        DeviceCapability.PUSHABLE_BUTTON in device.capabilities
+        or DeviceCapability.HOLDABLE_BUTTON in device.capabilities
+        or DeviceCapability.DOUBLE_TAPABLE_BUTTON in device.capabilities
     )
 
 
@@ -219,8 +207,8 @@ async def async_setup_entry(
                 await alarm.strobe_on()
 
         hass.services.async_register(
-            DOMAIN, SERVICE_ALARM_SIREN_ON, siren_on, schema=ENTITY_SCHEMA
+            DOMAIN, ServiceName.ALARM_SIREN_ON, siren_on, schema=ENTITY_SCHEMA
         )
         hass.services.async_register(
-            DOMAIN, SERVICE_ALARM_STROBE_ON, strobe_on, schema=ENTITY_SCHEMA
+            DOMAIN, ServiceName.ALARM_STROBE_ON, strobe_on, schema=ENTITY_SCHEMA
         )

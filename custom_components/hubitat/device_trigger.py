@@ -20,15 +20,17 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import (
     ATTR_ATTRIBUTE,
+    ATTR_DEVICE_ID,
     ATTR_HUB,
-    CONF_BUTTONS,
-    CONF_DOUBLE_TAPPED,
-    CONF_HELD,
-    CONF_HUBITAT_EVENT,
-    CONF_PUSHED,
-    CONF_SUBTYPE,
-    CONF_UNLOCKED_WITH_CODE,
+    ATTR_VALUE,
     DOMAIN,
+    H_CONF_DOUBLE_TAPPED,
+    H_CONF_HELD,
+    H_CONF_HUBITAT_EVENT,
+    H_CONF_PUSHED,
+    H_CONF_SUBTYPE,
+    H_CONF_UNLOCKED_WITH_CODE,
+    TRIGGER_BUTTONS,
     TRIGGER_CAPABILITIES,
 )
 from .error import DeviceError
@@ -38,17 +40,7 @@ from .helpers import (
     get_hub_for_device,
 )
 from .hub import Hub
-from .hubitatmaker import (
-    ATTR_DEVICE_ID,
-    ATTR_LOCK_CODES,
-    ATTR_NUM_BUTTONS,
-    ATTR_VALUE,
-    CAP_DOUBLE_TAPABLE_BUTTON,
-    CAP_HOLDABLE_BUTTON,
-    CAP_LOCK,
-    CAP_PUSHABLE_BUTTON,
-    Device,
-)
+from .hubitatmaker import Device, DeviceAttribute, DeviceCapability
 
 try:
     from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
@@ -75,7 +67,10 @@ TRIGGER_SUBTYPES = set(
 )
 
 TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
-    {vol.Required(CONF_TYPE): vol.In(TRIGGER_TYPES), vol.Required(CONF_SUBTYPE): str}
+    {
+        vol.Required(CONF_TYPE): vol.In(TRIGGER_TYPES),
+        vol.Required(H_CONF_SUBTYPE): str,
+    }
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -96,7 +91,7 @@ async def async_validate_trigger_config(
             _LOGGER.warning("Device doesn't support '%s'", trigger_type)
             raise InvalidDeviceAutomationConfig
 
-        trigger_subtype = config.get(CONF_SUBTYPE)
+        trigger_subtype = config.get(H_CONF_SUBTYPE)
         if trigger_subtype:
             subtypes = get_trigger_subtypes(hubitat_device, trigger_type)
             if not subtypes or trigger_subtype not in subtypes:
@@ -127,7 +122,7 @@ async def async_get_triggers(
                         CONF_DOMAIN: DOMAIN,
                         CONF_PLATFORM: "device",
                         CONF_TYPE: trigger_type,
-                        CONF_SUBTYPE: trigger_subtype,
+                        H_CONF_SUBTYPE: trigger_subtype,
                     }
                 )
         else:
@@ -169,13 +164,13 @@ async def async_attach_trigger(
         ATTR_HUB: hub.id,
         ATTR_ATTRIBUTE: config[CONF_TYPE],
     }
-    if CONF_SUBTYPE in config:
-        event_data[ATTR_VALUE] = config[CONF_SUBTYPE]
+    if H_CONF_SUBTYPE in config:
+        event_data[ATTR_VALUE] = config[H_CONF_SUBTYPE]
 
     trigger = event.TRIGGER_SCHEMA(
         {
             event.CONF_PLATFORM: "event",
-            event.CONF_EVENT_TYPE: CONF_HUBITAT_EVENT,
+            event.CONF_EVENT_TYPE: H_CONF_HUBITAT_EVENT,
             event.CONF_EVENT_DATA: event_data,
         }
     )
@@ -205,17 +200,17 @@ def get_trigger_types(device: Device) -> Sequence[str]:
     """Return the list of trigger types for a device."""
     types = []
 
-    if CAP_DOUBLE_TAPABLE_BUTTON in device.capabilities:
-        types.append(CONF_DOUBLE_TAPPED)
+    if DeviceCapability.DOUBLE_TAPABLE_BUTTON in device.capabilities:
+        types.append(H_CONF_DOUBLE_TAPPED)
 
-    if CAP_HOLDABLE_BUTTON in device.capabilities:
-        types.append(CONF_HELD)
+    if DeviceCapability.HOLDABLE_BUTTON in device.capabilities:
+        types.append(H_CONF_HELD)
 
-    if CAP_PUSHABLE_BUTTON in device.capabilities:
-        types.append(CONF_PUSHED)
+    if DeviceCapability.PUSHABLE_BUTTON in device.capabilities:
+        types.append(H_CONF_PUSHED)
 
-    if CAP_LOCK in device.capabilities:
-        types.append(CONF_UNLOCKED_WITH_CODE)
+    if DeviceCapability.LOCK in device.capabilities:
+        types.append(H_CONF_UNLOCKED_WITH_CODE)
 
     return types
 
@@ -224,12 +219,16 @@ def get_trigger_subtypes(device: Device, trigger_type: str) -> Sequence[str]:
     """Return the list of trigger subtypes for a device and a trigger type."""
     subtypes: List[str] = []
 
-    if trigger_type in (CONF_DOUBLE_TAPPED, CONF_HELD, CONF_PUSHED):
+    if trigger_type in (
+        H_CONF_DOUBLE_TAPPED,
+        H_CONF_HELD,
+        H_CONF_PUSHED,
+    ):
         num_buttons = 1
-        if ATTR_NUM_BUTTONS in device.attributes:
-            num_buttons = int(device.attributes[ATTR_NUM_BUTTONS].value)
-        subtypes.extend(CONF_BUTTONS[0:num_buttons])
-    elif trigger_type == CONF_UNLOCKED_WITH_CODE:
+        if DeviceAttribute.NUM_BUTTONS in device.attributes:
+            num_buttons = int(device.attributes[DeviceAttribute.NUM_BUTTONS].value)
+        subtypes.extend(TRIGGER_BUTTONS[0:num_buttons])
+    elif trigger_type == H_CONF_UNLOCKED_WITH_CODE:
         subtypes.extend(get_lock_codes(device))
 
     return subtypes
@@ -246,7 +245,7 @@ def get_valid_subtypes(trigger_type: str) -> Optional[Sequence[str]]:
 def get_lock_codes(device: Device) -> Sequence[str]:
     """Return the lock codes for a lock."""
     try:
-        codes_str = cast(str, device.attributes[ATTR_LOCK_CODES].value)
+        codes_str = cast(str, device.attributes[DeviceAttribute.LOCK_CODES].value)
         codes = loads(codes_str)
         return [codes[id]["name"] for id in codes]
     except Exception as e:

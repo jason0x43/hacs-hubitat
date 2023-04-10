@@ -1,10 +1,10 @@
 from typing import Dict, Optional
 from unittest.mock import Mock, NonCallableMock, patch
 
-from custom_components.hubitat.device import Hub
-from custom_components.hubitat.hubitatmaker import Device
 import pytest
 
+from custom_components.hubitat.device import Hub
+from custom_components.hubitat.hubitatmaker import Device
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_registry import EntityRegistry
@@ -34,8 +34,8 @@ async def test_entity_migration(get_hub: Mock) -> None:
 
     get_hub.return_value = mock_hub
 
-    from custom_components.hubitat.switch import HubitatSwitch
     from custom_components.hubitat.entities import create_and_add_entities
+    from custom_components.hubitat.switch import HubitatSwitch
 
     mock_hass = Mock(spec=["async_create_task"])
     MockConfigEntry = Mock(spec=ConfigEntry)

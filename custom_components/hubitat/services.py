@@ -19,14 +19,7 @@ from .const import (
     ATTR_NAME,
     ATTR_POSITION,
     DOMAIN,
-    SERVICE_CLEAR_CODE,
-    SERVICE_SEND_COMMAND,
-    SERVICE_SET_CODE,
-    SERVICE_SET_CODE_LENGTH,
-    SERVICE_SET_ENTRY_DELAY,
-    SERVICE_SET_EXIT_DELAY,
-    SERVICE_SET_HSM,
-    SERVICE_SET_HUB_MODE,
+    ServiceName,
 )
 from .device import HubitatEntity
 from .hub import get_hub
@@ -150,40 +143,40 @@ def async_register_services(
         await target_hub.set_mode(mode)
 
     hass.services.async_register(
-        DOMAIN, SERVICE_CLEAR_CODE, clear_code, schema=CLEAR_CODE_SCHEMA
+        DOMAIN, ServiceName.CLEAR_CODE, clear_code, schema=CLEAR_CODE_SCHEMA
     )
     hass.services.async_register(
-        DOMAIN, SERVICE_SEND_COMMAND, send_command, schema=SEND_COMMAND_SCHEMA
+        DOMAIN, ServiceName.SEND_COMMAND, send_command, schema=SEND_COMMAND_SCHEMA
     )
     hass.services.async_register(
-        DOMAIN, SERVICE_SET_CODE, set_code, schema=SET_CODE_SCHEMA
+        DOMAIN, ServiceName.SET_CODE, set_code, schema=SET_CODE_SCHEMA
     )
     hass.services.async_register(
         DOMAIN,
-        SERVICE_SET_CODE_LENGTH,
+        ServiceName.SET_CODE_LENGTH,
         set_code_length,
         schema=SET_CODE_LENGTH_SCHEMA,
     )
     hass.services.async_register(
-        DOMAIN, SERVICE_SET_ENTRY_DELAY, set_entry_delay, schema=SET_DELAY_SCHEMA
+        DOMAIN, ServiceName.SET_ENTRY_DELAY, set_entry_delay, schema=SET_DELAY_SCHEMA
     )
     hass.services.async_register(
-        DOMAIN, SERVICE_SET_EXIT_DELAY, set_exit_delay, schema=SET_DELAY_SCHEMA
+        DOMAIN, ServiceName.SET_EXIT_DELAY, set_exit_delay, schema=SET_DELAY_SCHEMA
     )
     hass.services.async_register(
-        DOMAIN, SERVICE_SET_HSM, set_hsm, schema=SET_HSM_SCHEMA
+        DOMAIN, ServiceName.SET_HSM, set_hsm, schema=SET_HSM_SCHEMA
     )
     hass.services.async_register(
-        DOMAIN, SERVICE_SET_HUB_MODE, set_hub_mode, schema=SET_HUB_MODE_SCHEMA
+        DOMAIN, ServiceName.SET_HUB_MODE, set_hub_mode, schema=SET_HUB_MODE_SCHEMA
     )
 
 
 def async_remove_services(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
-    hass.services.async_remove(DOMAIN, SERVICE_CLEAR_CODE)
-    hass.services.async_remove(DOMAIN, SERVICE_SET_CODE)
-    hass.services.async_remove(DOMAIN, SERVICE_SET_CODE_LENGTH)
-    hass.services.async_remove(DOMAIN, SERVICE_SET_ENTRY_DELAY)
-    hass.services.async_remove(DOMAIN, SERVICE_SET_EXIT_DELAY)
-    hass.services.async_remove(DOMAIN, SERVICE_SEND_COMMAND)
-    hass.services.async_remove(DOMAIN, SERVICE_SET_HSM)
-    hass.services.async_remove(DOMAIN, SERVICE_SET_HUB_MODE)
+    hass.services.async_remove(DOMAIN, ServiceName.CLEAR_CODE)
+    hass.services.async_remove(DOMAIN, ServiceName.SET_CODE)
+    hass.services.async_remove(DOMAIN, ServiceName.SET_CODE_LENGTH)
+    hass.services.async_remove(DOMAIN, ServiceName.SET_ENTRY_DELAY)
+    hass.services.async_remove(DOMAIN, ServiceName.SET_EXIT_DELAY)
+    hass.services.async_remove(DOMAIN, ServiceName.SEND_COMMAND)
+    hass.services.async_remove(DOMAIN, ServiceName.SET_HSM)
+    hass.services.async_remove(DOMAIN, ServiceName.SET_HUB_MODE)

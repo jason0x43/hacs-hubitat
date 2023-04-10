@@ -19,25 +19,13 @@ from homeassistant.util import dt as dt_util
 from .const import (
     ATTR_HSM_STATUS,
     ATTR_MODE,
-    DEVICE_TYPE_HUB_HSM_STATUS,
-    DEVICE_TYPE_HUB_MODE,
     TEMP_F,
+    DeviceType,
 )
 from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .hub import get_hub
-from .hubitatmaker import (
-    ATTR_BATTERY,
-    ATTR_ENERGY,
-    ATTR_ENERGY_SOURCE,
-    ATTR_HUMIDITY,
-    ATTR_ILLUMINANCE,
-    ATTR_POWER,
-    ATTR_POWER_SOURCE,
-    ATTR_PRESSURE,
-    ATTR_TEMPERATURE,
-    ATTR_VOLTAGE,
-)
+from .hubitatmaker import DeviceAttribute
 from .hubitatmaker.types import Device
 from .types import EntityAdder
 
@@ -135,7 +123,7 @@ class HubitatBatterySensor(HubitatSensor):
     def __init__(self, *args: Any, **kwargs: Any):
         """Initialize a battery sensor."""
         super().__init__(*args, **kwargs)
-        self._attribute = ATTR_BATTERY
+        self._attribute = DeviceAttribute.BATTERY
         self._units = "%"
         self._device_class = SensorDeviceClass.BATTERY
 
@@ -146,7 +134,7 @@ class HubitatEnergySensor(HubitatSensor):
     def __init__(self, *args: Any, **kwargs: Any):
         """Initialize a energy sensor."""
         super().__init__(*args, **kwargs)
-        self._attribute = ATTR_ENERGY
+        self._attribute = DeviceAttribute.ENERGY
         self._units = ENERGY_KILO_WATT_HOUR
         self._device_class = SensorDeviceClass.ENERGY
 
@@ -157,7 +145,7 @@ class HubitatEnergySourceSensor(HubitatSensor):
     def __init__(self, *args: Any, **kwargs: Any):
         """Initialize a energy source sensor."""
         super().__init__(*args, **kwargs)
-        self._attribute = ATTR_ENERGY_SOURCE
+        self._attribute = DeviceAttribute.ENERGY_SOURCE
         self._device_class = SensorDeviceClass.ENERGY
 
 
@@ -167,7 +155,7 @@ class HubitatHumiditySensor(HubitatSensor):
     def __init__(self, *args: Any, **kwargs: Any):
         """Initialize a humidity sensor."""
         super().__init__(*args, **kwargs)
-        self._attribute = ATTR_HUMIDITY
+        self._attribute = DeviceAttribute.HUMIDITY
         self._units = "%"
         self._device_class = SensorDeviceClass.HUMIDITY
 
@@ -178,7 +166,7 @@ class HubitatIlluminanceSensor(HubitatSensor):
     def __init__(self, *args: Any, **kwargs: Any):
         """Initialize an illuminance sensor."""
         super().__init__(*args, **kwargs)
-        self._attribute = ATTR_ILLUMINANCE
+        self._attribute = DeviceAttribute.ILLUMINANCE
         self._units = "lx"
         self._device_class = SensorDeviceClass.ILLUMINANCE
 
@@ -189,7 +177,7 @@ class HubitatPowerSensor(HubitatSensor):
     def __init__(self, *args: Any, **kwargs: Any):
         """Initialize a power sensor."""
         super().__init__(*args, **kwargs)
-        self._attribute = ATTR_POWER
+        self._attribute = DeviceAttribute.POWER
         self._units = POWER_WATT
         self._device_class = SensorDeviceClass.POWER
 
@@ -200,7 +188,7 @@ class HubitatPowerSourceSensor(HubitatSensor):
     def __init__(self, *args: Any, **kwargs: Any):
         """Initialize a power source sensor."""
         super().__init__(*args, **kwargs)
-        self._attribute = ATTR_POWER_SOURCE
+        self._attribute = DeviceAttribute.POWER_SOURCE
         self._device_class = SensorDeviceClass.POWER
 
 
@@ -210,7 +198,7 @@ class HubitatTemperatureSensor(HubitatSensor):
     def __init__(self, *args: Any, **kwargs: Any):
         """Initialize a temperature sensor."""
         super().__init__(*args, **kwargs)
-        self._attribute = ATTR_TEMPERATURE
+        self._attribute = DeviceAttribute.TEMPERATURE
         self._device_class = SensorDeviceClass.TEMPERATURE
 
     @property
@@ -225,7 +213,7 @@ class HubitatVoltageSensor(HubitatSensor):
     def __init__(self, *args: Any, **kwargs: Any):
         """Initialize a voltage sensor."""
         super().__init__(*args, **kwargs)
-        self._attribute = ATTR_VOLTAGE
+        self._attribute = DeviceAttribute.VOLTAGE
         self._units = "V"
         self._device_class = SensorDeviceClass.POWER
 
@@ -236,7 +224,7 @@ class HubitatPressureSensor(HubitatSensor):
     def __init__(self, *args: Any, **kwargs: Any):
         """Initialize a pressure sensor."""
         super().__init__(*args, **kwargs)
-        self._attribute = ATTR_PRESSURE
+        self._attribute = DeviceAttribute.PRESSURE
 
         # Maker API does not expose pressure unit
         # Override if necessary through customization.py
@@ -299,7 +287,7 @@ class HubitatHsmSensor(HubitatSensor):
         """Initialize an hsm status sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = ATTR_HSM_STATUS
-        self._device_class = DEVICE_TYPE_HUB_HSM_STATUS
+        self._device_class = DeviceType.HUB_HSM_STATUS
         self._attribute_name = "HSM status"
 
 
@@ -312,20 +300,20 @@ class HubitatHubModeSensor(HubitatSensor):
         """Initialize an hsm status sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = ATTR_MODE
-        self._device_class = DEVICE_TYPE_HUB_MODE
+        self._device_class = DeviceType.HUB_MODE
 
 
 _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatSensor]], ...] = (
-    (ATTR_BATTERY, HubitatBatterySensor),
-    (ATTR_ENERGY, HubitatEnergySensor),
-    (ATTR_ENERGY_SOURCE, HubitatEnergySourceSensor),
-    (ATTR_HUMIDITY, HubitatHumiditySensor),
-    (ATTR_ILLUMINANCE, HubitatIlluminanceSensor),
-    (ATTR_POWER, HubitatPowerSensor),
-    (ATTR_POWER_SOURCE, HubitatPowerSourceSensor),
-    (ATTR_PRESSURE, HubitatPressureSensor),
-    (ATTR_TEMPERATURE, HubitatTemperatureSensor),
-    (ATTR_VOLTAGE, HubitatVoltageSensor),
+    (DeviceAttribute.BATTERY, HubitatBatterySensor),
+    (DeviceAttribute.ENERGY, HubitatEnergySensor),
+    (DeviceAttribute.ENERGY_SOURCE, HubitatEnergySourceSensor),
+    (DeviceAttribute.HUMIDITY, HubitatHumiditySensor),
+    (DeviceAttribute.ILLUMINANCE, HubitatIlluminanceSensor),
+    (DeviceAttribute.POWER, HubitatPowerSensor),
+    (DeviceAttribute.POWER_SOURCE, HubitatPowerSourceSensor),
+    (DeviceAttribute.PRESSURE, HubitatPressureSensor),
+    (DeviceAttribute.TEMPERATURE, HubitatTemperatureSensor),
+    (DeviceAttribute.VOLTAGE, HubitatVoltageSensor),
 )
 
 

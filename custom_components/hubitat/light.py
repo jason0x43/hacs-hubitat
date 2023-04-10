@@ -25,26 +25,11 @@ from .cover import is_cover
 from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .hubitatmaker import (
-    ATTR_COLOR_MODE as HE_ATTR_COLOR_MODE,
-    ATTR_COLOR_NAME as HE_ATTR_COLOR_NAME,
-    ATTR_COLOR_TEMP as HE_ATTR_COLOR_TEMP,
-    ATTR_HUE as HE_ATTR_HUE,
-    ATTR_LEVEL as HE_ATTR_LEVEL,
-    ATTR_SATURATION as HE_ATTR_SATURATION,
-    ATTR_SWITCH as HE_ATTR_SWITCH,
-    CAP_COLOR_CONTROL,
-    CAP_COLOR_TEMP,
-    CAP_LIGHT,
-    CAP_SWITCH,
-    CAP_SWITCH_LEVEL,
-    CMD_FLASH,
-    CMD_ON,
-    CMD_SET_COLOR,
-    CMD_SET_COLOR_TEMP,
-    CMD_SET_LEVEL,
-    COLOR_MODE_CT as HE_COLOR_MODE_CT,
-    COLOR_MODE_RGB as HE_COLOR_MODE_RGB,
+    ColorMode,
     Device,
+    DeviceAttribute,
+    DeviceCapability,
+    DeviceCommand,
 )
 from .types import EntityAdder
 
@@ -65,13 +50,13 @@ except ImportError:
 _LOGGER = getLogger(__name__)
 
 _device_attrs = (
-    HE_ATTR_COLOR_MODE,
-    HE_ATTR_COLOR_NAME,
-    HE_ATTR_COLOR_TEMP,
-    HE_ATTR_HUE,
-    HE_ATTR_LEVEL,
-    HE_ATTR_SATURATION,
-    HE_ATTR_SWITCH,
+    DeviceAttribute.COLOR_MODE,
+    DeviceAttribute.COLOR_NAME,
+    DeviceAttribute.COLOR_TEMP,
+    DeviceAttribute.HUE,
+    DeviceAttribute.LEVEL,
+    DeviceAttribute.SATURATION,
+    DeviceAttribute.SWITCH,
 )
 
 
@@ -86,22 +71,22 @@ class HubitatLight(HubitatEntity, LightEntity):
     @property
     def color_mode(self) -> Optional[str]:
         """Return this light's color mode."""
-        he_color_mode = self.get_str_attr(HE_ATTR_COLOR_MODE)
-        if he_color_mode == HE_COLOR_MODE_CT:
+        he_color_mode = self.get_str_attr(DeviceAttribute.COLOR_MODE)
+        if he_color_mode == ColorMode.CT:
             return COLOR_MODE_COLOR_TEMP
-        if he_color_mode == HE_COLOR_MODE_RGB:
+        if he_color_mode == ColorMode.RGB:
             return COLOR_MODE_HS
         return None
 
     @property
     def color_name(self) -> Optional[str]:
         """Return the name of this light's current color."""
-        return self.get_str_attr(HE_ATTR_COLOR_NAME)
+        return self.get_str_attr(DeviceAttribute.COLOR_NAME)
 
     @property
     def brightness(self) -> Optional[int]:
         """Return the level of this light."""
-        level = self.get_int_attr(HE_ATTR_LEVEL)
+        level = self.get_int_attr(DeviceAttribute.LEVEL)
         if level is None:
             return None
         return int(255 * level / 100)
@@ -113,7 +98,7 @@ class HubitatLight(HubitatEntity, LightEntity):
         if mode and mode != COLOR_MODE_COLOR_TEMP:
             return None
 
-        temp = self.get_int_attr(HE_ATTR_COLOR_TEMP)
+        temp = self.get_int_attr(DeviceAttribute.COLOR_TEMP)
         if temp is None:
             return None
 
@@ -126,8 +111,8 @@ class HubitatLight(HubitatEntity, LightEntity):
         if mode and mode != COLOR_MODE_HS:
             return None
 
-        hue = self.get_float_attr(HE_ATTR_HUE)
-        sat = self.get_float_attr(HE_ATTR_SATURATION)
+        hue = self.get_float_attr(DeviceAttribute.HUE)
+        sat = self.get_float_attr(DeviceAttribute.SATURATION)
         if hue is None or sat is None:
             return None
 
@@ -137,19 +122,19 @@ class HubitatLight(HubitatEntity, LightEntity):
     @property
     def is_on(self) -> bool:
         """Return True if the light is on."""
-        return self.get_str_attr(HE_ATTR_SWITCH) == "on"
+        return self.get_str_attr(DeviceAttribute.SWITCH) == "on"
 
     @property
     def supported_color_modes(self) -> set:
         caps = self._device.capabilities
         supported_modes = set()
 
-        if CAP_COLOR_CONTROL in caps:
+        if DeviceCapability.COLOR_CONTROL in caps:
             supported_modes.add(COLOR_MODE_HS)
-        if CAP_COLOR_TEMP in caps:
+        if DeviceCapability.COLOR_TEMP in caps:
             supported_modes.add(COLOR_MODE_COLOR_TEMP)
 
-        if CAP_SWITCH_LEVEL in caps and not supported_modes:
+        if DeviceCapability.SWITCH_LEVEL in caps and not supported_modes:
             supported_modes.add(COLOR_MODE_BRIGHTNESS)
 
         if not supported_modes:
@@ -165,16 +150,16 @@ class HubitatLight(HubitatEntity, LightEntity):
         cmds = self._device.commands
 
         # deprecated, replaced by color modes
-        if CAP_COLOR_CONTROL in caps:
+        if DeviceCapability.COLOR_CONTROL in caps:
             features |= SUPPORT_COLOR
         # deprecated, replaced by color modes
-        if CAP_COLOR_TEMP in caps:
+        if DeviceCapability.COLOR_TEMP in caps:
             features |= SUPPORT_COLOR_TEMP
         # deprecated, replaced by color modes
-        if CAP_SWITCH_LEVEL in caps:
+        if DeviceCapability.SWITCH_LEVEL in caps:
             features |= SUPPORT_BRIGHTNESS
 
-        if CMD_FLASH in cmds:
+        if DeviceCommand.FLASH in cmds:
             features |= SUPPORT_FLASH
 
         return features
@@ -219,7 +204,9 @@ class HubitatLight(HubitatEntity, LightEntity):
 
         if "level" in props:
             if "time" in props:
-                await self.send_command(CMD_SET_LEVEL, props["level"], props["time"])
+                await self.send_command(
+                    DeviceCommand.SET_LEVEL, props["level"], props["time"]
+                )
                 del props["time"]
             elif "hue" in props:
                 arg = json.dumps(
@@ -229,35 +216,35 @@ class HubitatLight(HubitatEntity, LightEntity):
                         "level": props["level"],
                     }
                 )
-                await self.send_command(CMD_SET_COLOR, arg)
+                await self.send_command(DeviceCommand.SET_COLOR, arg)
                 del props["hue"]
                 del props["sat"]
             else:
-                await self.send_command(CMD_SET_LEVEL, props["level"])
+                await self.send_command(DeviceCommand.SET_LEVEL, props["level"])
 
             del props["level"]
         else:
-            await self.send_command(CMD_ON)
+            await self.send_command(DeviceCommand.ON)
 
         if "hue" in props:
             data = {
                 "hue": props["hue"],
                 "saturation": props["sat"],
             }
-            level = self.get_int_attr(HE_ATTR_LEVEL)
+            level = self.get_int_attr(DeviceAttribute.LEVEL)
             if isinstance(level, int):
                 data["level"] = level
 
             arg = json.dumps(data)
-            await self.send_command(CMD_SET_COLOR, arg)
+            await self.send_command(DeviceCommand.SET_COLOR, arg)
             del props["hue"]
             del props["sat"]
 
         if "temp" in props:
-            await self.send_command(CMD_SET_COLOR_TEMP, props["temp"])
+            await self.send_command(DeviceCommand.SET_COLOR_TEMP, props["temp"])
 
         if ATTR_FLASH in kwargs and self.supports_feature(SUPPORT_FLASH):
-            await self.send_command(CMD_FLASH)
+            await self.send_command(DeviceCommand.FLASH)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the light."""
@@ -265,7 +252,7 @@ class HubitatLight(HubitatEntity, LightEntity):
         await self.send_command("off")
 
 
-LIGHT_CAPABILITIES = (CAP_COLOR_TEMP, CAP_COLOR_CONTROL)
+LIGHT_CAPABILITIES = (DeviceCapability.COLOR_TEMP, DeviceCapability.COLOR_CONTROL)
 
 # Ideally this would be multi-lingual
 MATCH_LIGHT = re.compile(
@@ -281,15 +268,17 @@ def is_light(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool
 
     if is_definitely_light(device):
         return True
-    if CAP_SWITCH in device.capabilities and MATCH_LIGHT.search(device.name):
+    if DeviceCapability.SWITCH in device.capabilities and MATCH_LIGHT.search(
+        device.name
+    ):
         return True
-    if CAP_LIGHT in device.capabilities:
+    if DeviceCapability.LIGHT in device.capabilities:
         return True
 
     # A Cover may also have a SwitchLevel capability that can be used to set
     # the height of the cover. Fans may have SwitchLevel, but it seems to only
     # apply to light switches in that case.
-    if CAP_SWITCH_LEVEL in device.capabilities and not is_cover(device):
+    if DeviceCapability.SWITCH_LEVEL in device.capabilities and not is_cover(device):
         return True
 
     return False

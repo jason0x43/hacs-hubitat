@@ -4,7 +4,7 @@ from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import ATTR_MODE, DEVICE_TYPE_HUB_MODE
+from .const import ATTR_MODE, DeviceType
 from .device import HubitatEntity
 from .hub import get_hub
 from .types import EntityAdder
@@ -50,7 +50,7 @@ class HubitatModeSelect(HubitatSelect):
         super().__init__(*args, **kwargs)
         # TODO use constant
         self._attribute = ATTR_MODE
-        self._device_class = DEVICE_TYPE_HUB_MODE
+        self._device_class = DeviceType.HUB_MODE
 
     @property
     def options(self) -> List[str]:

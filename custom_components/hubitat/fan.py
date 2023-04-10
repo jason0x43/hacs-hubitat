@@ -11,25 +11,20 @@ from homeassistant.core import HomeAssistant
 from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .hubitatmaker import (
-    ATTR_SPEED,
-    ATTR_SWITCH,
-    CAP_FAN_CONTROL,
-    CAP_SWITCH,
-    CMD_OFF,
-    CMD_ON,
-    CMD_SET_SPEED,
     DEFAULT_FAN_SPEEDS,
-    STATE_OFF,
-    STATE_ON,
     Device,
+    DeviceAttribute,
+    DeviceCapability,
+    DeviceCommand,
+    DeviceState,
 )
 from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
 _device_attrs = (
-    ATTR_SWITCH,
-    ATTR_SPEED,
+    DeviceAttribute.SWITCH,
+    DeviceAttribute.SPEED,
 )
 
 _speeds = {}
@@ -46,14 +41,14 @@ class HubitatFan(HubitatEntity, FanEntity):
     @property
     def is_on(self) -> bool:
         """Return true if the entity is on."""
-        if CAP_SWITCH in self._device.capabilities:
-            return self.get_str_attr(ATTR_SWITCH) == STATE_ON
-        return self.get_str_attr(ATTR_SPEED) != STATE_OFF
+        if DeviceCapability.SWITCH in self._device.capabilities:
+            return self.get_str_attr(DeviceAttribute.SWITCH) == DeviceState.ON
+        return self.get_str_attr(DeviceAttribute.SPEED) != DeviceState.OFF
 
     @property
     def percentage(self) -> Optional[int]:
         """Return the current speed as a percentage."""
-        speed = self.get_str_attr(ATTR_SPEED)
+        speed = self.get_str_attr(DeviceAttribute.SPEED)
         _LOGGER.debug("hubitat speed: %s", speed)
         if speed is None or speed == "off":
             _LOGGER.debug("  returning None")
@@ -73,7 +68,7 @@ class HubitatFan(HubitatEntity, FanEntity):
     @property
     def preset_mode(self) -> Optional[str]:
         """Return the current preset mode"""
-        if self.get_str_attr(ATTR_SPEED) == "auto":
+        if self.get_str_attr(DeviceAttribute.SPEED) == "auto":
             return "auto"
         return None
 
@@ -98,7 +93,9 @@ class HubitatFan(HubitatEntity, FanEntity):
     @property
     def speeds_and_modes(self) -> List[str]:
         """Return the list of speeds and modes for this fan."""
-        return self._device.attributes[ATTR_SPEED].values or DEFAULT_FAN_SPEEDS
+        return (
+            self._device.attributes[DeviceAttribute.SPEED].values or DEFAULT_FAN_SPEEDS
+        )
 
     @property
     def unique_id(self) -> str:
@@ -132,27 +129,27 @@ class HubitatFan(HubitatEntity, FanEntity):
             preset_mode,
         )
         if preset_mode in self.speeds_and_modes:
-            await self.send_command(CMD_SET_SPEED, preset_mode)
+            await self.send_command(DeviceCommand.SET_SPEED, preset_mode)
         elif percentage is not None:
             await self.async_set_percentage(percentage)
-        elif CAP_SWITCH in self._device.capabilities:
-            await self.send_command(CMD_ON)
+        elif DeviceCapability.SWITCH in self._device.capabilities:
+            await self.send_command(DeviceCommand.ON)
         else:
-            await self.send_command(CMD_SET_SPEED, STATE_ON)
+            await self.send_command(DeviceCommand.SET_SPEED, DeviceState.ON)
 
     async def async_turn_off(self) -> None:
         """Turn off the switch."""
         _LOGGER.debug("Turning off %s", self.name)
-        if CAP_SWITCH in self._device.capabilities:
-            await self.send_command(CMD_OFF)
+        if DeviceCapability.SWITCH in self._device.capabilities:
+            await self.send_command(DeviceCommand.OFF)
         else:
-            await self.send_command(CMD_SET_SPEED, STATE_OFF)
+            await self.send_command(DeviceCommand.SET_SPEED, DeviceState.OFF)
 
     async def async_set_percentage(self, percentage: int) -> None:
         """Set the speed of the fan."""
         _LOGGER.debug("setting percentage to %d", percentage)
         if percentage == 0:
-            await self.send_command(CMD_SET_SPEED, STATE_OFF)
+            await self.send_command(DeviceCommand.SET_SPEED, DeviceState.OFF)
         else:
             step = self.percentage_step
             [stepFrac, stepInt] = modf(percentage / step)
@@ -160,16 +157,16 @@ class HubitatFan(HubitatEntity, FanEntity):
             if stepFrac >= 0.5:
                 idx += 1
             if idx == 0:
-                await self.send_command(CMD_SET_SPEED, STATE_OFF)
+                await self.send_command(DeviceCommand.SET_SPEED, DeviceState.OFF)
             else:
-                await self.send_command(CMD_SET_SPEED, self.speeds[idx - 1])
+                await self.send_command(DeviceCommand.SET_SPEED, self.speeds[idx - 1])
 
 
 def is_fan(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
     """Return True if device looks like a fan."""
     if overrides and device.id in overrides and overrides[device.id] != "fan":
         return False
-    return CAP_FAN_CONTROL in device.capabilities
+    return DeviceCapability.FAN_CONTROL in device.capabilities
 
 
 async def async_setup_entry(

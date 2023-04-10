@@ -4,7 +4,7 @@ from typing import Dict, Union
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.device_registry import DeviceEntry
 
-from .const import CONF_DEVICE_TYPE_OVERRIDES, DOMAIN
+from .const import DOMAIN, H_CONF_DEVICE_TYPE_OVERRIDES
 from .error import DeviceError
 from .hubitatmaker.types import Device
 from .types import HasToken
@@ -25,7 +25,7 @@ def get_hub_short_id(hub: HasToken) -> str:
 
 
 def get_device_overrides(config_entry: ConfigEntry) -> Dict[str, str]:
-    return config_entry.options.get(CONF_DEVICE_TYPE_OVERRIDES, {})
+    return config_entry.options.get(H_CONF_DEVICE_TYPE_OVERRIDES, {})
 
 
 def get_hub_device_id(hub: HasToken, device: Union[str, Device]) -> str:

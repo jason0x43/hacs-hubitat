@@ -1,13 +1,14 @@
 import json
-from os.path import dirname, join
 import re
+from os.path import dirname, join
 from typing import Any, Dict, List, Union
 from unittest.mock import MagicMock, patch
 from urllib.parse import unquote
 
-from custom_components.hubitat.hubitatmaker.const import HSM_DISARM
-from custom_components.hubitat.hubitatmaker.hub import Hub, InvalidConfig
 import pytest
+
+from custom_components.hubitat.hubitatmaker.const import HsmCommand
+from custom_components.hubitat.hubitatmaker.hub import Hub, InvalidConfig
 
 hub_edit_page: str = ""
 devices: Dict[str, Any] = {}
@@ -91,9 +92,9 @@ def create_fake_request(responses: Dict = {}):
                                 mode["active"] = False
                     self.response = FakeResponse(data=modes, url=url)
                 elif hsm_match:
-                    hsm_mode = hsm_match.group(1)
+                    hsm_cmd = hsm_match.group(1)
                     new_mode = "disarmed"
-                    if hsm_mode == HSM_DISARM:
+                    if hsm_cmd == HsmCommand.DISARM:
                         new_mode = "disarmed"
                     self.response = FakeResponse(data={"hsm": new_mode}, url=url)
                 elif dev_match:
@@ -394,8 +395,8 @@ async def test_process_set_hsm() -> None:
     hub = Hub("1.2.3.4", "1234", "token")
     await hub.start()
     assert hub.hsm_status == "armedAway"
-    await hub.set_hsm(HSM_DISARM)
-    assert re.search(f"hsm/{HSM_DISARM}$", requests[-1]["url"]) is not None
+    await hub.set_hsm(HsmCommand.DISARM)
+    assert re.search(f"hsm/{HsmCommand.DISARM}$", requests[-1]["url"]) is not None
 
     hub._process_event(events["hsmAllDisarmed"])
     assert hub.hsm_status == "allDisarmed"

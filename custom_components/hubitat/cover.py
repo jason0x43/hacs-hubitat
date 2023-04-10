@@ -15,22 +15,11 @@ from homeassistant.core import HomeAssistant
 from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .hubitatmaker import (
-    ATTR_DOOR,
-    ATTR_LEVEL,
-    ATTR_POSITION,
-    ATTR_WINDOW_SHADE,
-    CAP_DOOR_CONTROL,
-    CAP_GARAGE_DOOR_CONTROL,
-    CAP_WINDOW_SHADE,
-    CMD_CLOSE,
-    CMD_OPEN,
-    CMD_SET_POSITION,
-    STATE_CLOSED,
-    STATE_CLOSING,
-    STATE_OPEN,
-    STATE_OPENING,
-    STATE_PARTIALLY_OPEN,
     Device,
+    DeviceAttribute,
+    DeviceCapability,
+    DeviceCommand,
+    DeviceState,
 )
 from .types import EntityAdder
 
@@ -49,8 +38,8 @@ class HubitatCover(HubitatEntity, CoverEntity):
         """Return this entity's associated attributes"""
         return (
             self._attribute,
-            ATTR_LEVEL,
-            ATTR_POSITION,
+            DeviceAttribute.LEVEL,
+            DeviceAttribute.POSITION,
         )
 
     @property
@@ -61,33 +50,33 @@ class HubitatCover(HubitatEntity, CoverEntity):
     @property
     def current_cover_position(self) -> Optional[int]:
         """Return current position of cover."""
-        pos = self.get_int_attr(ATTR_POSITION)
+        pos = self.get_int_attr(DeviceAttribute.POSITION)
         if pos is not None:
             return pos
         # At least the Qubino Roller Shutter driver reports the shade position
         # using the 'level' parameter
-        return self.get_int_attr(ATTR_LEVEL)
+        return self.get_int_attr(DeviceAttribute.LEVEL)
 
     @property
     def is_closed(self) -> bool:
         """Return True if the cover is closed."""
-        return self.get_attr(self._attribute) == STATE_CLOSED
+        return self.get_attr(self._attribute) == DeviceState.CLOSED
 
     @property
     def is_closing(self) -> bool:
         """Return True if the cover is opening."""
-        return self.get_attr(self._attribute) == STATE_CLOSING
+        return self.get_attr(self._attribute) == DeviceState.CLOSING
 
     @property
     def is_open(self) -> bool:
         """Return True if the cover is open."""
         state = self.get_attr(self._attribute)
-        return state == STATE_OPEN or state == STATE_PARTIALLY_OPEN
+        return state == DeviceState.OPEN or state == DeviceState.PARTIALLY_OPEN
 
     @property
     def is_opening(self) -> bool:
         """Return True if the cover is opening."""
-        return self.get_attr(self._attribute) == STATE_OPENING
+        return self.get_attr(self._attribute) == DeviceState.OPENING
 
     @property
     def supported_features(self) -> int:
@@ -110,18 +99,18 @@ class HubitatCover(HubitatEntity, CoverEntity):
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close the cover."""
         _LOGGER.debug("Closing %s", self.name)
-        await self.send_command(CMD_CLOSE)
+        await self.send_command(DeviceCommand.CLOSE)
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""
         _LOGGER.debug("Opening %s", self.name)
-        await self.send_command(CMD_OPEN)
+        await self.send_command(DeviceCommand.OPEN)
 
     async def async_set_cover_position(self, **kwargs: Any) -> None:
         """Move the cover to a specific position."""
         pos = kwargs[HA_ATTR_POSITION]
         _LOGGER.debug("Setting cover position to %s", pos)
-        await self.send_command(CMD_SET_POSITION, pos)
+        await self.send_command(DeviceCommand.SET_POSITION, pos)
 
 
 class HubitatDoorControl(HubitatCover):
@@ -130,7 +119,7 @@ class HubitatDoorControl(HubitatCover):
     def __init__(self, *args: Any, **kwargs: Any):
         """Initialize a door control."""
         super().__init__(*args, **kwargs)
-        self._attribute = ATTR_DOOR
+        self._attribute = DeviceAttribute.DOOR
         self._device_class = CoverDeviceClass.DOOR
         self._features = SUPPORT_OPEN | SUPPORT_CLOSE
 
@@ -141,7 +130,7 @@ class HubitatGarageDoorControl(HubitatCover):
     def __init__(self, *args: Any, **kwargs: Any):
         """Initialize a garage door control."""
         super().__init__(*args, **kwargs)
-        self._attribute = ATTR_DOOR
+        self._attribute = DeviceAttribute.DOOR
         self._device_class = CoverDeviceClass.GARAGE
         self._features = SUPPORT_OPEN | SUPPORT_CLOSE
 
@@ -152,15 +141,15 @@ class HubitatWindowShade(HubitatCover):
     def __init__(self, *args: Any, **kwargs: Any):
         """Initialize a window shade."""
         super().__init__(*args, **kwargs)
-        self._attribute = ATTR_WINDOW_SHADE
+        self._attribute = DeviceAttribute.WINDOW_SHADE
         self._device_class = CoverDeviceClass.SHADE
         self._features = SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_SET_POSITION
 
 
 _COVER_CAPS: Tuple[Tuple[str, Type[HubitatCover]], ...] = (
-    (CAP_WINDOW_SHADE, HubitatWindowShade),
-    (CAP_GARAGE_DOOR_CONTROL, HubitatGarageDoorControl),
-    (CAP_DOOR_CONTROL, HubitatGarageDoorControl),
+    (DeviceCapability.WINDOW_SHADE, HubitatWindowShade),
+    (DeviceCapability.GARAGE_DOOR_CONTROL, HubitatGarageDoorControl),
+    (DeviceCapability.DOOR_CONTROL, HubitatGarageDoorControl),
 )
 
 
@@ -184,21 +173,21 @@ async def async_setup_entry(
 
 def is_cover(dev: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
     return (
-        CAP_WINDOW_SHADE in dev.capabilities
-        or CAP_GARAGE_DOOR_CONTROL in dev.capabilities
-        or CAP_DOOR_CONTROL in dev.capabilities
+        DeviceCapability.WINDOW_SHADE in dev.capabilities
+        or DeviceCapability.GARAGE_DOOR_CONTROL in dev.capabilities
+        or DeviceCapability.DOOR_CONTROL in dev.capabilities
     )
 
 
 def _is_cover_type(dev: Device, cap: str) -> bool:
     cover_type = None
 
-    if CAP_WINDOW_SHADE in dev.capabilities:
-        cover_type = CAP_WINDOW_SHADE
-    elif CAP_GARAGE_DOOR_CONTROL in dev.capabilities:
-        cover_type = CAP_GARAGE_DOOR_CONTROL
-    elif CAP_DOOR_CONTROL in dev.capabilities:
-        cover_type = CAP_DOOR_CONTROL
+    if DeviceCapability.WINDOW_SHADE in dev.capabilities:
+        cover_type = DeviceCapability.WINDOW_SHADE
+    elif DeviceCapability.GARAGE_DOOR_CONTROL in dev.capabilities:
+        cover_type = DeviceCapability.GARAGE_DOOR_CONTROL
+    elif DeviceCapability.DOOR_CONTROL in dev.capabilities:
+        cover_type = DeviceCapability.DOOR_CONTROL
 
     if cover_type is None:
         return False

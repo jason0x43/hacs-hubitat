@@ -21,13 +21,13 @@ from .const import (
     ATTR_ATTRIBUTE,
     ATTR_HA_DEVICE_ID,
     ATTR_HUB,
-    CONF_APP_ID,
-    CONF_HUBITAT_EVENT,
-    CONF_SERVER_PORT,
-    CONF_SERVER_SSL_CERT,
-    CONF_SERVER_SSL_KEY,
-    CONF_SERVER_URL,
     DOMAIN,
+    H_CONF_APP_ID,
+    H_CONF_HUBITAT_EVENT,
+    H_CONF_SERVER_PORT,
+    H_CONF_SERVER_SSL_CERT,
+    H_CONF_SERVER_SSL_KEY,
+    H_CONF_SERVER_URL,
     PLATFORMS,
     TEMP_F,
     TRIGGER_CAPABILITIES,
@@ -62,7 +62,7 @@ class Hub:
         """Initialize a Hubitat manager."""
         if CONF_HOST not in entry.data:
             raise ValueError("Missing host in config entry")
-        if CONF_APP_ID not in entry.data:
+        if H_CONF_APP_ID not in entry.data:
             raise ValueError("Missing app ID in config entry")
         if CONF_ACCESS_TOKEN not in entry.data:
             raise ValueError("Missing access token in config entry")
@@ -90,7 +90,7 @@ class Hub:
     @property
     def app_id(self) -> str:
         """The Maker API app ID for this hub."""
-        return cast(str, self.config_entry.data.get(CONF_APP_ID))
+        return cast(str, self.config_entry.data.get(H_CONF_APP_ID))
 
     @property
     def devices(self) -> Mapping[str, Device]:
@@ -214,8 +214,8 @@ class Hub:
     async def async_setup(self) -> bool:
         """Initialize this hub instance."""
         entry = self.config_entry
-        url = entry.options.get(CONF_SERVER_URL, entry.data.get(CONF_SERVER_URL))
-        port = entry.options.get(CONF_SERVER_PORT, entry.data.get(CONF_SERVER_PORT))
+        url = entry.options.get(H_CONF_SERVER_URL, entry.data.get(H_CONF_SERVER_URL))
+        port = entry.options.get(H_CONF_SERVER_PORT, entry.data.get(H_CONF_SERVER_PORT))
 
         # Previous versions of the integration may have saved a value of "" for
         # server_url with the assumption that a use_server_url flag would control
@@ -225,10 +225,11 @@ class Hub:
             url = None
 
         ssl_cert = entry.options.get(
-            CONF_SERVER_SSL_CERT, entry.data.get(CONF_SERVER_SSL_CERT)
+            H_CONF_SERVER_SSL_CERT,
+            entry.data.get(H_CONF_SERVER_SSL_CERT),
         )
         ssl_key = entry.options.get(
-            CONF_SERVER_SSL_KEY, entry.data.get(CONF_SERVER_SSL_KEY)
+            H_CONF_SERVER_SSL_KEY, entry.data.get(H_CONF_SERVER_SSL_KEY)
         )
         ssl_context = _create_ssl_context(ssl_cert, ssl_key)
 
@@ -362,7 +363,8 @@ class Hub:
 
         port = (
             config_entry.options.get(
-                CONF_SERVER_PORT, config_entry.data.get(CONF_SERVER_PORT)
+                H_CONF_SERVER_PORT,
+                config_entry.data.get(H_CONF_SERVER_PORT),
             )
             or 0
         )
@@ -371,7 +373,7 @@ class Hub:
             _LOGGER.debug("Set event server port to %s", port)
 
         url = config_entry.options.get(
-            CONF_SERVER_URL, config_entry.data.get(CONF_SERVER_URL)
+            H_CONF_SERVER_URL, config_entry.data.get(H_CONF_SERVER_URL)
         )
         if url == "":
             url = None
@@ -380,10 +382,12 @@ class Hub:
             _LOGGER.debug("Set event server URL to %s", url)
 
         ssl_cert = config_entry.options.get(
-            CONF_SERVER_SSL_CERT, config_entry.data.get(CONF_SERVER_SSL_CERT)
+            H_CONF_SERVER_SSL_CERT,
+            config_entry.data.get(H_CONF_SERVER_SSL_CERT),
         )
         ssl_key = config_entry.options.get(
-            CONF_SERVER_SSL_KEY, config_entry.data.get(CONF_SERVER_SSL_KEY)
+            H_CONF_SERVER_SSL_KEY,
+            config_entry.data.get(H_CONF_SERVER_SSL_KEY),
         )
         ssl_context = _create_ssl_context(ssl_cert, ssl_key)
         await hub.set_ssl_context(ssl_context)
@@ -457,7 +461,7 @@ class Hub:
             evt[ATTR_ATTRIBUTE] = _TRIGGER_ATTR_MAP[event.attribute]
             evt[ATTR_HUB] = self.id
             evt[ATTR_HA_DEVICE_ID] = get_hub_device_id(self, event.device_id)
-            self.hass.bus.async_fire(CONF_HUBITAT_EVENT, evt)
+            self.hass.bus.async_fire(H_CONF_HUBITAT_EVENT, evt)
             _LOGGER.debug("Emitted event %s", evt)
 
 

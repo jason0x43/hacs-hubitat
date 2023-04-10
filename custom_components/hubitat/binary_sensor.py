@@ -12,16 +12,7 @@ from homeassistant.core import HomeAssistant
 
 from .device import Hub, HubitatEntity
 from .entities import create_and_add_entities
-from .hubitatmaker import (
-    ATTR_ACCELERATION,
-    ATTR_CARBON_MONOXIDE,
-    ATTR_CONTACT,
-    ATTR_MOTION,
-    ATTR_PRESENCE,
-    ATTR_SMOKE,
-    ATTR_WATER,
-    Device,
-)
+from .hubitatmaker import Device, DeviceAttribute
 from .types import EntityAdder
 
 _CONTACT_MATCHERS = (
@@ -82,7 +73,7 @@ class HubitatAccelerationSensor(HubitatBinarySensor):
     """An acceleration sensor."""
 
     _active_state = "active"
-    _attribute = ATTR_ACCELERATION
+    _attribute = DeviceAttribute.ACCELERATION
     _device_class = BinarySensorDeviceClass.MOVING
 
 
@@ -90,7 +81,7 @@ class HubitatCoSensor(HubitatBinarySensor):
     """A carbon monoxide sensor."""
 
     _active_state = "detected"
-    _attribute = ATTR_CARBON_MONOXIDE
+    _attribute = DeviceAttribute.CARBON_MONOXIDE
     _device_class = BinarySensorDeviceClass.GAS
 
 
@@ -98,7 +89,7 @@ class HubitatContactSensor(HubitatBinarySensor):
     """A generic contact sensor."""
 
     _active_state = "open"
-    _attribute = ATTR_CONTACT
+    _attribute = DeviceAttribute.CONTACT
 
     def __init__(self, hub: Hub, device: Device):
         """Initialize a contact sensor."""
@@ -110,7 +101,7 @@ class HubitatMoistureSensor(HubitatBinarySensor):
     """A moisture sensor."""
 
     _active_state = "wet"
-    _attribute = ATTR_WATER
+    _attribute = DeviceAttribute.WATER
     _device_class = BinarySensorDeviceClass.MOISTURE
 
 
@@ -118,7 +109,7 @@ class HubitatMotionSensor(HubitatBinarySensor):
     """A motion sensor."""
 
     _active_state = "active"
-    _attribute = ATTR_MOTION
+    _attribute = DeviceAttribute.MOTION
     _device_class = BinarySensorDeviceClass.MOTION
 
 
@@ -126,7 +117,7 @@ class HubitatPresenceSensor(HubitatBinarySensor):
     """A presence sensor."""
 
     _active_state = "present"
-    _attribute = ATTR_PRESENCE
+    _attribute = DeviceAttribute.PRESENCE
 
     def __init__(self, hub: Hub, device: Device):
         """Initialize a presence sensor."""
@@ -138,19 +129,19 @@ class HubitatSmokeSensor(HubitatBinarySensor):
     """A smoke sensor."""
 
     _active_state = "detected"
-    _attribute = ATTR_SMOKE
+    _attribute = DeviceAttribute.SMOKE
     _device_class = BinarySensorDeviceClass.SMOKE
 
 
 # Presence is handled specially in async_setup_entry()
 _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatBinarySensor]], ...] = (
-    (ATTR_ACCELERATION, HubitatAccelerationSensor),
-    (ATTR_CARBON_MONOXIDE, HubitatCoSensor),
-    (ATTR_CONTACT, HubitatContactSensor),
-    (ATTR_MOTION, HubitatMotionSensor),
-    (ATTR_PRESENCE, HubitatPresenceSensor),
-    (ATTR_SMOKE, HubitatSmokeSensor),
-    (ATTR_WATER, HubitatMoistureSensor),
+    (DeviceAttribute.ACCELERATION, HubitatAccelerationSensor),
+    (DeviceAttribute.CARBON_MONOXIDE, HubitatCoSensor),
+    (DeviceAttribute.CONTACT, HubitatContactSensor),
+    (DeviceAttribute.MOTION, HubitatMotionSensor),
+    (DeviceAttribute.PRESENCE, HubitatPresenceSensor),
+    (DeviceAttribute.SMOKE, HubitatSmokeSensor),
+    (DeviceAttribute.WATER, HubitatMoistureSensor),
 )
 
 

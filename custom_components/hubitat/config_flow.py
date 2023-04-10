@@ -20,21 +20,18 @@ from homeassistant.helpers import device_registry
 from homeassistant.helpers.device_registry import DeviceEntry
 
 from .const import (
-    CONF_APP_ID,
-    CONF_DEVICE_LIST,
-    CONF_DEVICE_TYPE_OVERRIDES,
-    CONF_DEVICES,
-    CONF_SERVER_PORT,
-    CONF_SERVER_SSL_CERT,
-    CONF_SERVER_SSL_KEY,
-    CONF_SERVER_URL,
     DOMAIN,
-    STEP_OVERRIDE_LIGHTS,
-    STEP_OVERRIDE_SWITCHES,
-    STEP_REMOVE_DEVICES,
-    STEP_USER,
+    H_CONF_APP_ID,
+    H_CONF_DEVICE_LIST,
+    H_CONF_DEVICE_TYPE_OVERRIDES,
+    H_CONF_DEVICES,
+    H_CONF_SERVER_PORT,
+    H_CONF_SERVER_SSL_CERT,
+    H_CONF_SERVER_SSL_KEY,
+    H_CONF_SERVER_URL,
     TEMP_C,
     TEMP_F,
+    ConfigStep,
 )
 from .hubitatmaker import (
     ConnectionError,
@@ -53,12 +50,12 @@ _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): str,
-        vol.Required(CONF_APP_ID): str,
+        vol.Required(H_CONF_APP_ID): str,
         vol.Required(CONF_ACCESS_TOKEN): str,
-        vol.Optional(CONF_SERVER_URL): str,
-        vol.Optional(CONF_SERVER_PORT): int,
-        vol.Optional(CONF_SERVER_SSL_CERT): str,
-        vol.Optional(CONF_SERVER_SSL_KEY): str,
+        vol.Optional(H_CONF_SERVER_URL): str,
+        vol.Optional(H_CONF_SERVER_PORT): int,
+        vol.Optional(H_CONF_SERVER_SSL_CERT): str,
+        vol.Optional(H_CONF_SERVER_SSL_KEY): str,
         vol.Optional(
             CONF_TEMPERATURE_UNIT, default=cast(vol.Undefined, TEMP_F)
         ): vol.In([TEMP_F, TEMP_C]),
@@ -129,7 +126,7 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
             self.hub = None
 
         return self.async_show_form(
-            step_id=STEP_USER,
+            step_id=ConfigStep.USER,
             data_schema=CONFIG_SCHEMA,
             errors=form_errors,
         )
@@ -167,24 +164,26 @@ class HubitatOptionsFlow(OptionsFlow):
             try:
                 check_input: Dict[str, Union[str, None]] = {
                     CONF_HOST: user_input[CONF_HOST],
-                    CONF_APP_ID: entry.data.get(CONF_APP_ID),
+                    H_CONF_APP_ID: entry.data.get(H_CONF_APP_ID),
                     CONF_ACCESS_TOKEN: entry.data.get(CONF_ACCESS_TOKEN),
-                    CONF_SERVER_PORT: user_input.get(CONF_SERVER_PORT),
-                    CONF_SERVER_URL: user_input.get(CONF_SERVER_URL),
-                    CONF_SERVER_SSL_CERT: user_input.get(CONF_SERVER_SSL_CERT),
-                    CONF_SERVER_SSL_KEY: user_input.get(CONF_SERVER_SSL_KEY),
+                    H_CONF_SERVER_PORT: user_input.get(H_CONF_SERVER_PORT),
+                    H_CONF_SERVER_URL: user_input.get(H_CONF_SERVER_URL),
+                    H_CONF_SERVER_SSL_CERT: user_input.get(H_CONF_SERVER_SSL_CERT),
+                    H_CONF_SERVER_SSL_KEY: user_input.get(H_CONF_SERVER_SSL_KEY),
                 }
 
                 info = await _validate_input(check_input)
                 self.hub = info["hub"]
 
                 self.options[CONF_HOST] = user_input[CONF_HOST]
-                self.options[CONF_SERVER_PORT] = user_input.get(CONF_SERVER_PORT)
-                self.options[CONF_SERVER_URL] = user_input.get(CONF_SERVER_URL)
-                self.options[CONF_SERVER_SSL_CERT] = user_input.get(
-                    CONF_SERVER_SSL_CERT
+                self.options[H_CONF_SERVER_PORT] = user_input.get(H_CONF_SERVER_PORT)
+                self.options[H_CONF_SERVER_URL] = user_input.get(H_CONF_SERVER_URL)
+                self.options[H_CONF_SERVER_SSL_CERT] = user_input.get(
+                    H_CONF_SERVER_SSL_CERT
                 )
-                self.options[CONF_SERVER_SSL_KEY] = user_input.get(CONF_SERVER_SSL_KEY)
+                self.options[H_CONF_SERVER_SSL_KEY] = user_input.get(
+                    H_CONF_SERVER_SSL_KEY
+                )
                 self.options[CONF_TEMPERATURE_UNIT] = user_input[CONF_TEMPERATURE_UNIT]
 
                 _LOGGER.debug("Moving to device removal step")
@@ -215,7 +214,7 @@ class HubitatOptionsFlow(OptionsFlow):
             self.hub = None
 
         return self.async_show_form(
-            step_id=STEP_USER,
+            step_id=ConfigStep.USER,
             data_schema=vol.Schema(
                 {
                     vol.Optional(
@@ -223,39 +222,41 @@ class HubitatOptionsFlow(OptionsFlow):
                         default=entry.options.get(CONF_HOST, entry.data.get(CONF_HOST)),
                     ): str,
                     vol.Optional(
-                        CONF_SERVER_URL,
+                        H_CONF_SERVER_URL,
                         description={
                             "suggested_value": entry.options.get(
-                                CONF_SERVER_URL, entry.data.get(CONF_SERVER_URL)
+                                H_CONF_SERVER_URL,
+                                entry.data.get(H_CONF_SERVER_URL),
                             )
                             or ""
                         },
                     ): str,
                     vol.Optional(
-                        CONF_SERVER_PORT,
+                        H_CONF_SERVER_PORT,
                         description={
                             "suggested_value": entry.options.get(
-                                CONF_SERVER_PORT, entry.data.get(CONF_SERVER_PORT)
+                                H_CONF_SERVER_PORT,
+                                entry.data.get(H_CONF_SERVER_PORT),
                             )
                             or ""
                         },
                     ): int,
                     vol.Optional(
-                        CONF_SERVER_SSL_CERT,
+                        H_CONF_SERVER_SSL_CERT,
                         description={
                             "suggested_value": entry.options.get(
-                                CONF_SERVER_SSL_CERT,
-                                entry.data.get(CONF_SERVER_SSL_CERT),
+                                H_CONF_SERVER_SSL_CERT,
+                                entry.data.get(H_CONF_SERVER_SSL_CERT),
                             )
                             or ""
                         },
                     ): str,
                     vol.Optional(
-                        CONF_SERVER_SSL_KEY,
+                        H_CONF_SERVER_SSL_KEY,
                         description={
                             "suggested_value": entry.options.get(
-                                CONF_SERVER_SSL_KEY,
-                                entry.data.get(CONF_SERVER_SSL_KEY),
+                                H_CONF_SERVER_SSL_KEY,
+                                entry.data.get(H_CONF_SERVER_SSL_KEY),
                             )
                             or ""
                         },
@@ -299,13 +300,13 @@ class HubitatOptionsFlow(OptionsFlow):
         device_schema = vol.Schema(
             {
                 vol.Optional(
-                    CONF_DEVICES, default=cast(vol.Undefined, [])
+                    H_CONF_DEVICES, default=cast(vol.Undefined, [])
                 ): cv.multi_select(device_map),
             }
         )
 
         if user_input is not None:
-            ids = [id for id in user_input[CONF_DEVICES]]
+            ids = [id for id in user_input[H_CONF_DEVICES]]
             _remove_devices(self.hass, ids)
             return await self.async_step_override_lights()
 
@@ -315,7 +316,7 @@ class HubitatOptionsFlow(OptionsFlow):
             form_errors = errors
 
         return self.async_show_form(
-            step_id=STEP_REMOVE_DEVICES,
+            step_id=ConfigStep.REMOVE_DEVICES,
             data_schema=device_schema,
             errors=form_errors,
         )
@@ -329,7 +330,7 @@ class HubitatOptionsFlow(OptionsFlow):
             return await self.async_step_override_switches()
 
         return await self._async_step_override_type(
-            user_input, "light", STEP_OVERRIDE_LIGHTS, next_step, is_switch
+            user_input, "light", ConfigStep.OVERRIDE_LIGHTS, next_step, is_switch
         )
 
     async def async_step_override_switches(
@@ -340,7 +341,7 @@ class HubitatOptionsFlow(OptionsFlow):
         async def next_step() -> FlowResult:
             # Copy self.options to ensure config entry is recreated
             self.options = {key: self.options[key] for key in self.options}
-            self.options[CONF_DEVICE_TYPE_OVERRIDES] = self.overrides
+            self.options[H_CONF_DEVICE_TYPE_OVERRIDES] = self.overrides
             _LOGGER.debug(f"Set device type overrides to {self.overrides}")
             _LOGGER.debug("Creating entry")
             return self.async_create_entry(title="", data=self.options)
@@ -349,7 +350,11 @@ class HubitatOptionsFlow(OptionsFlow):
             return is_light(device, None) and not is_definitely_light(device)
 
         return await self._async_step_override_type(
-            user_input, "switch", STEP_OVERRIDE_SWITCHES, next_step, is_possible_light
+            user_input,
+            "switch",
+            ConfigStep.OVERRIDE_SWITCHES,
+            next_step,
+            is_possible_light,
         )
 
     async def _async_step_override_type(
@@ -369,9 +374,9 @@ class HubitatOptionsFlow(OptionsFlow):
 
         # Store the list of devices in the config flow so that a config entry
         # update will be triggered if devices are added or removed
-        self.options[CONF_DEVICE_LIST] = sorted([id for id in devices])
+        self.options[H_CONF_DEVICE_LIST] = sorted([id for id in devices])
 
-        existing_overrides = self.options.get(CONF_DEVICE_TYPE_OVERRIDES)
+        existing_overrides = self.options.get(H_CONF_DEVICE_TYPE_OVERRIDES)
         default_value = []
 
         possible_overrides = {
@@ -388,14 +393,14 @@ class HubitatOptionsFlow(OptionsFlow):
         device_schema = vol.Schema(
             {
                 vol.Optional(
-                    CONF_DEVICES, default=cast(vol.Undefined, default_value)
+                    H_CONF_DEVICES, default=cast(vol.Undefined, default_value)
                 ): cv.multi_select(possible_overrides)
             }
         )
 
         if user_input is not None:
             for id in possible_overrides:
-                if id in user_input[CONF_DEVICES]:
+                if id in user_input[H_CONF_DEVICES]:
                     self.overrides[id] = platform
                     _LOGGER.debug(f"Overrode device {id} to {platform}")
                 elif id in self.overrides:
@@ -445,10 +450,10 @@ async def _validate_input(user_input: Dict[str, Any]) -> Dict[str, Any]:
 
     # data has the keys from CONFIG_SCHEMA with values provided by the user.
     host: str = user_input[CONF_HOST]
-    app_id: str = user_input[CONF_APP_ID]
+    app_id: str = user_input[H_CONF_APP_ID]
     token: str = user_input[CONF_ACCESS_TOKEN]
-    port: Optional[int] = user_input.get(CONF_SERVER_PORT)
-    event_url: Optional[str] = user_input.get(CONF_SERVER_URL)
+    port: Optional[int] = user_input.get(H_CONF_SERVER_PORT)
+    event_url: Optional[str] = user_input.get(H_CONF_SERVER_URL)
 
     if event_url:
         event_url = cv.url(event_url)
