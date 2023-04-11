@@ -8,22 +8,22 @@ from homeassistant.components.number import NumberDeviceClass
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
-    DEGREE,
-    PERCENTAGE,
+    CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+    CONCENTRATION_PARTS_PER_BILLION,
+    CONCENTRATION_PARTS_PER_MILLION,
     CURRENCY_EURO,
+    DEGREE,
+    LIGHT_LUX,
+    PERCENTAGE,
+    UnitOfElectricCurrent,
+    UnitOfElectricPotential,
     UnitOfEnergy,
     UnitOfPower,
-    UnitOfElectricPotential,
-    UnitOfElectricCurrent,
     UnitOfPressure,
-    UnitOfTemperature,
-    LIGHT_LUX,
     UnitOfSpeed,
+    UnitOfTemperature,
     UnitOfVolume,
     UnitOfVolumetricFlux,
-    CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
-    CONCENTRATION_PARTS_PER_MILLION,
-    CONCENTRATION_PARTS_PER_BILLION,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
@@ -49,7 +49,7 @@ class HubitatSensor(HubitatEntity):
 
     _attribute: str
     _attribute_name: Optional[str] = None
-    _units: str
+    _units: str | None
     _device_class: Optional[str] = None
     _state_class: Optional[str] = None
     _enabled_default: Optional[bool] = None

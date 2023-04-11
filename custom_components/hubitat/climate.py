@@ -253,7 +253,11 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
             return UnitOfTemperature.FAHRENHEIT
         if unit == TEMP_C:
             return UnitOfTemperature.CELSIUS
-        return UnitOfTemperature.FAHRENHEIT if self._hub.temperature_unit == TEMP_F else UnitOfTemperature.CELSIUS
+        return (
+            UnitOfTemperature.FAHRENHEIT
+            if self._hub.temperature_unit == TEMP_F
+            else UnitOfTemperature.CELSIUS
+        )
 
     @property
     def precision(self) -> Optional[float]:

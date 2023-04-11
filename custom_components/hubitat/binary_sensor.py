@@ -92,6 +92,7 @@ class HubitatCoSensor(HubitatBinarySensor):
     _attribute = DeviceAttribute.CARBON_MONOXIDE
     _device_class = BinarySensorDeviceClass.GAS
 
+
 class HubitatNaturalGasSensor(HubitatBinarySensor):
     """A natural gas sensor."""
 
@@ -147,6 +148,7 @@ class HubitatSmokeSensor(HubitatBinarySensor):
     _attribute = DeviceAttribute.SMOKE
     _device_class = BinarySensorDeviceClass.SMOKE
 
+
 class HubitatSoundSensor(HubitatBinarySensor):
     """A sound sensor."""
 
@@ -161,6 +163,7 @@ class HubitatTamperSensor(HubitatBinarySensor):
     _active_state = "detected"
     _attribute = DeviceAttribute.TAMPER
     _device_class = BinarySensorDeviceClass.TAMPER
+
 
 class HubitatShockSensor(HubitatBinarySensor):
     """A shock sensor."""
@@ -192,7 +195,7 @@ _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatBinarySensor]], ...] = (
     (DeviceAttribute.SHOCK, HubitatShockSensor),
     (DeviceAttribute.TAMPER, HubitatTamperSensor),
     (DeviceAttribute.WATER, HubitatMoistureSensor),
-    (DeviceAttribute.HEAT_ALARM, HubitatHeatSensor)
+    (DeviceAttribute.HEAT_ALARM, HubitatHeatSensor),
 )
 
 
