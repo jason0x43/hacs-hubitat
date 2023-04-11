@@ -146,8 +146,32 @@ class HubitatWindowShade(HubitatCover):
         self._features = SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_SET_POSITION
 
 
+class HubitatWindowBlind(HubitatCover):
+    """Representation of a Hubitat window blind."""
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        """Initialize a window blind."""
+        super().__init__(*args, **kwargs)
+        self._attribute = DeviceAttribute.WINDOW_BLIND
+        self._device_class = CoverDeviceClass.BLIND
+        self._features = SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_SET_POSITION
+
+
+class HubitatWindowControl(HubitatCover):
+    """Representation of a Hubitat window control."""
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        """Initialize a window control."""
+        super().__init__(*args, **kwargs)
+        self._attribute = DeviceAttribute.WINDOW_SHADE
+        self._device_class = CoverDeviceClass.WINDOW
+        self._features = SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_SET_POSITION
+
+
 _COVER_CAPS: Tuple[Tuple[str, Type[HubitatCover]], ...] = (
     (DeviceCapability.WINDOW_SHADE, HubitatWindowShade),
+    (DeviceCapability.WINDOW_BLIND, HubitatWindowBlind),
+    (DeviceCapability.WINDOW_SHADE, HubitatWindowControl),  # TODO
     (DeviceCapability.GARAGE_DOOR_CONTROL, HubitatGarageDoorControl),
     (DeviceCapability.DOOR_CONTROL, HubitatGarageDoorControl),
 )
@@ -174,6 +198,7 @@ async def async_setup_entry(
 def is_cover(dev: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
     return (
         DeviceCapability.WINDOW_SHADE in dev.capabilities
+        or DeviceCapability.WINDOW_BLIND in dev.capabilities
         or DeviceCapability.GARAGE_DOOR_CONTROL in dev.capabilities
         or DeviceCapability.DOOR_CONTROL in dev.capabilities
     )
@@ -184,6 +209,8 @@ def _is_cover_type(dev: Device, cap: str) -> bool:
 
     if DeviceCapability.WINDOW_SHADE in dev.capabilities:
         cover_type = DeviceCapability.WINDOW_SHADE
+    elif DeviceCapability.WINDOW_BLIND in dev.capabilities:
+        cover_type = DeviceCapability.WINDOW_BLIND
     elif DeviceCapability.GARAGE_DOOR_CONTROL in dev.capabilities:
         cover_type = DeviceCapability.GARAGE_DOOR_CONTROL
     elif DeviceCapability.DOOR_CONTROL in dev.capabilities:

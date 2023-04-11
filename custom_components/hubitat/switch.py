@@ -128,7 +128,10 @@ def is_switch(device: Device, overrides: Optional[Dict[str, str]] = None) -> boo
 
 def is_energy_meter(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
     """Return True if device can measure power."""
-    return DeviceCapability.POWER_METER in device.capabilities
+    return (
+        DeviceCapability.POWER_METER in device.capabilities
+        or DeviceCapability.ENERGY_METER in device.capabilities
+    )
 
 
 def is_alarm(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
@@ -142,6 +145,7 @@ def is_button_controller(device: Device) -> bool:
         DeviceCapability.PUSHABLE_BUTTON in device.capabilities
         or DeviceCapability.HOLDABLE_BUTTON in device.capabilities
         or DeviceCapability.DOUBLE_TAPABLE_BUTTON in device.capabilities
+        or DeviceCapability.RELEASABLE_BUTTON in device.capabilities
     )
 
 
