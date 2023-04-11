@@ -261,8 +261,10 @@ class Hub:
         self.device = Device(
             {
                 "id": self.id,
-                "label": HUB_DEVICE_NAME,
                 "name": HUB_DEVICE_NAME,
+                "label": HUB_DEVICE_NAME,
+                "model": "Cx",
+                "manufacturer": HUB_NAME,
                 "attributes": [
                     {
                         "name": "mode",
@@ -314,24 +316,24 @@ class Hub:
         if self.mode_supported:
 
             def handle_mode_event(event: Event):
-                self.device.update_attr("mode", cast(str, event.value))
+                self.device.update_attr("mode", cast(str, event.value), None)
                 for listener in self._hub_device_listeners:
                     listener(event)
 
             self._hub.add_mode_listener(handle_mode_event)
             if self.mode:
-                self.device.update_attr("mode", self.mode)
+                self.device.update_attr("mode", self.mode, None)
 
         if self.hsm_supported:
 
             def handle_hsm_status_event(event: Event):
-                self.device.update_attr("hsm_status", cast(str, event.value))
+                self.device.update_attr("hsm_status", cast(str, event.value), None)
                 for listener in self._hub_device_listeners:
                     listener(event)
 
             self._hub.add_hsm_listener(handle_hsm_status_event)
             if self.hsm_status:
-                self.device.update_attr("hsm_status", self.hsm_status)
+                self.device.update_attr("hsm_status", self.hsm_status, None)
 
         return True
 

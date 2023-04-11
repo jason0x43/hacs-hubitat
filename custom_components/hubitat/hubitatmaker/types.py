@@ -28,12 +28,16 @@ class Attribute:
     def update_value(self, value: Union[str, float]) -> None:
         self._properties["currentValue"] = value
 
+    @property
+    def unit(self) -> str:
+        return self._properties["unit"]
+
     def __iter__(self):
-        for key in "name", "type", "value":
+        for key in "name", "type", "value", "unit":
             yield key, getattr(self, key)
 
     def __str__(self):
-        return f"<Attribute name={self.name} type={self.type} value={self.value}>"
+        return f"<Attribute name={self.name} type={self.type} value={self.value} unit={self.unit}>"
 
 
 class Device:
@@ -46,11 +50,23 @@ class Device:
 
     @property
     def name(self) -> str:
-        return self._properties["label"]
+        return self._properties["name"]
 
     @property
     def type(self) -> str:
-        return self._properties["name"]
+        return self._properties["type"]
+
+    @property
+    def model(self) -> str:
+        return self._properties["model"]
+
+    @property
+    def manufacturer(self) -> str:
+        return self._properties["manufacturer"]
+
+    @property
+    def room(self) -> str:
+        return self._properties["room"]
 
     @property
     def attributes(self) -> Mapping[str, Attribute]:
@@ -71,7 +87,7 @@ class Device:
         """
         return self._last_update
 
-    def update_attr(self, attr_name: str, value: Union[str, int]) -> None:
+    def update_attr(self, attr_name: str, value: Union[str, int], value_unit: str) -> None:
         attr = self.attributes[attr_name]
         attr.update_value(value)
         self._last_update = time()
@@ -96,11 +112,11 @@ class Device:
         self._commands: Tuple[str, ...] = tuple(commands)
 
     def __iter__(self):
-        for key in "id", "name", "type", "attributes", "capabilities":
+        for key in "id", "name", "label", "type", "model", "manufacturer", "room", "attributes", "capabilities":
             yield key, getattr(self, key)
 
     def __str__(self):
-        return f'<Device id="{self.id}" name="{self.name}" type="{self.type}">'
+        return f'<Device id="{self.id}" name="{self.name}" label="{self.label}" type="{self.type}" model="{self.model}" manufacturer="{self.manufacturer}" room="{self.room}">'
 
 
 class Event:
@@ -137,6 +153,7 @@ class Event:
             "device_name",
             "attribute",
             "value",
+            "unit",
             "description",
             "type",
         ):
@@ -145,7 +162,7 @@ class Event:
     def __str__(self) -> str:
         return (
             f'<Event device_id="{self.device_id}" device_name="{self.device_name}"'
-            f' attribute="{self.attribute}" value="{self.value}"'
+            f' attribute="{self.attribute}" value="{self.value}" unit="{self.unit}"'
             f' description="{self.description}" type="{self.type}">'
         )
 
