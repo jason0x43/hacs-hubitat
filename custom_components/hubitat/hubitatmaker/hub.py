@@ -466,7 +466,7 @@ class Hub:
         # machine and the Hubitat hub are on the same network.
         with _open_socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
             s.connect((self.host, 80))
-            address = "0.0.0.0"
+            address = s.getsockname()[0]
 
         self._server = server.create_server(
             self._process_event, address, self.port or 0, self.ssl_context

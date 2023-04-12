@@ -158,7 +158,7 @@ class HubitatSoundSensor(HubitatBinarySensor):
 
 
 class HubitatTamperSensor(HubitatBinarySensor):
-    """A smoke sensor."""
+    """A tamper sensor."""
 
     _active_state = "detected"
     _attribute = DeviceAttribute.TAMPER

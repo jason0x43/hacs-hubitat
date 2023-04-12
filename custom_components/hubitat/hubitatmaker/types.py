@@ -137,7 +137,7 @@ class Device:
     def __str__(self):
         return (
             f'<Device id="{self.id}" name="{self.name}" label="{self.label}"'
-            f' ype="{self.type}" model="{self.model}"'
+            f' type="{self.type}" model="{self.model}"'
             f' manufacturer="{self.manufacturer}" room="{self.room}">'
         )
 
