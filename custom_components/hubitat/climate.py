@@ -32,8 +32,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_TEMPERATURE,
     PRECISION_TENTHS,
-    TEMP_CELSIUS,
-    TEMP_FAHRENHEIT,
+    UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant
 
@@ -251,10 +250,14 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         """Return the unit of measurement used by the platform."""
         unit = self.get_str_attr(ClimateAttr.TEMP_UNIT)
         if unit == TEMP_F:
-            return TEMP_FAHRENHEIT
+            return UnitOfTemperature.FAHRENHEIT
         if unit == TEMP_C:
-            return TEMP_CELSIUS
-        return TEMP_FAHRENHEIT if self._hub.temperature_unit == TEMP_F else TEMP_CELSIUS
+            return UnitOfTemperature.CELSIUS
+        return (
+            UnitOfTemperature.FAHRENHEIT
+            if self._hub.temperature_unit == TEMP_F
+            else UnitOfTemperature.CELSIUS
+        )
 
     @property
     def precision(self) -> Optional[float]:

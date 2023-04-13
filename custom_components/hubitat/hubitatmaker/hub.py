@@ -316,7 +316,9 @@ class Hub:
 
         if content["deviceId"] is not None:
             device_id = content["deviceId"]
-            self._update_device_attr(device_id, content["name"], content["value"])
+            self._update_device_attr(
+                device_id, content["name"], content["value"], content["unit"]
+            )
 
             evt = Event(content)
 
@@ -351,10 +353,12 @@ class Hub:
                 listener(evt)
 
     def _update_device_attr(
-        self, device_id: str, attr_name: str, value: Union[int, str]
+        self, device_id: str, attr_name: str, value: Union[int, str], value_unit: str
     ) -> None:
         """Update a device attribute value."""
-        _LOGGER.debug("Updating %s of %s to %s", attr_name, device_id, value)
+        _LOGGER.debug(
+            "Updating %s of %s to %s (%s)", attr_name, device_id, value, value_unit
+        )
         try:
             dev = self._devices[device_id]
         except KeyError:
@@ -362,7 +366,7 @@ class Hub:
             return
 
         try:
-            dev.update_attr(attr_name, value)
+            dev.update_attr(attr_name, value, value_unit)
         except KeyError:
             _LOGGER.warning("Tried to update unknown attribute %s", attr_name)
 

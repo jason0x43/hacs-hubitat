@@ -28,12 +28,19 @@ class Attribute:
     def update_value(self, value: Union[str, float]) -> None:
         self._properties["currentValue"] = value
 
+    @property
+    def unit(self) -> str:
+        return self._properties["unit"]
+
     def __iter__(self):
-        for key in "name", "type", "value":
+        for key in "name", "type", "value", "unit":
             yield key, getattr(self, key)
 
     def __str__(self):
-        return f"<Attribute name={self.name} type={self.type} value={self.value}>"
+        return (
+            f'<Attribute name="{self.name}" type="{self.type}" value="{self.value}"'
+            f' unit="{self.unit}">'
+        )
 
 
 class Device:
@@ -46,11 +53,27 @@ class Device:
 
     @property
     def name(self) -> str:
+        return self._properties["name"]
+
+    @property
+    def label(self) -> str:
         return self._properties["label"]
 
     @property
     def type(self) -> str:
-        return self._properties["name"]
+        return self._properties["type"]
+
+    @property
+    def model(self) -> str:
+        return self._properties["model"]
+
+    @property
+    def manufacturer(self) -> str:
+        return self._properties["manufacturer"]
+
+    @property
+    def room(self) -> str:
+        return self._properties["room"]
 
     @property
     def attributes(self) -> Mapping[str, Attribute]:
@@ -71,7 +94,9 @@ class Device:
         """
         return self._last_update
 
-    def update_attr(self, attr_name: str, value: Union[str, int]) -> None:
+    def update_attr(
+        self, attr_name: str, value: Union[str, int], value_unit: str | None
+    ) -> None:
         attr = self.attributes[attr_name]
         attr.update_value(value)
         self._last_update = time()
@@ -96,11 +121,25 @@ class Device:
         self._commands: Tuple[str, ...] = tuple(commands)
 
     def __iter__(self):
-        for key in "id", "name", "type", "attributes", "capabilities":
+        for key in (
+            "id",
+            "name",
+            "label",
+            "type",
+            "model",
+            "manufacturer",
+            "room",
+            "attributes",
+            "capabilities",
+        ):
             yield key, getattr(self, key)
 
     def __str__(self):
-        return f'<Device id="{self.id}" name="{self.name}" type="{self.type}">'
+        return (
+            f'<Device id="{self.id}" name="{self.name}" label="{self.label}"'
+            f' type="{self.type}" model="{self.model}"'
+            f' manufacturer="{self.manufacturer}" room="{self.room}">'
+        )
 
 
 class Event:
@@ -131,12 +170,17 @@ class Event:
     def value(self) -> Union[str, float]:
         return self._properties["value"]
 
+    @property
+    def unit(self) -> Optional[str]:
+        return self._properties.get("unit")
+
     def __iter__(self):
         for key in (
             "device_id",
             "device_name",
             "attribute",
             "value",
+            "unit",
             "description",
             "type",
         ):
@@ -145,7 +189,7 @@ class Event:
     def __str__(self) -> str:
         return (
             f'<Event device_id="{self.device_id}" device_name="{self.device_name}"'
-            f' attribute="{self.attribute}" value="{self.value}"'
+            f' attribute="{self.attribute}" value="{self.value}" unit="{self.unit}"'
             f' description="{self.description}" type="{self.type}">'
         )
 
@@ -179,4 +223,4 @@ class Mode:
             yield key, getattr(self, key)
 
     def __str__(self) -> str:
-        return f'<Mode id="{self.id}" name="{self.name}" active="{self.active}"'
+        return f'<Mode id="{self.id}" name="{self.name}" active="{self.active}">'

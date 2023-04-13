@@ -77,11 +77,27 @@ class HubitatAccelerationSensor(HubitatBinarySensor):
     _device_class = BinarySensorDeviceClass.MOVING
 
 
+class HubitatCo2Sensor(HubitatBinarySensor):
+    """A carbon dioxide sensor."""
+
+    _active_state = "detected"
+    _attribute = DeviceAttribute.CARBON_DIOXIDE
+    _device_class = BinarySensorDeviceClass.GAS
+
+
 class HubitatCoSensor(HubitatBinarySensor):
     """A carbon monoxide sensor."""
 
     _active_state = "detected"
     _attribute = DeviceAttribute.CARBON_MONOXIDE
+    _device_class = BinarySensorDeviceClass.GAS
+
+
+class HubitatNaturalGasSensor(HubitatBinarySensor):
+    """A natural gas sensor."""
+
+    _active_state = "detected"
+    _attribute = DeviceAttribute.NATURAL_GAS
     _device_class = BinarySensorDeviceClass.GAS
 
 
@@ -133,15 +149,53 @@ class HubitatSmokeSensor(HubitatBinarySensor):
     _device_class = BinarySensorDeviceClass.SMOKE
 
 
+class HubitatSoundSensor(HubitatBinarySensor):
+    """A sound sensor."""
+
+    _active_state = "detected"
+    _attribute = DeviceAttribute.SOUND
+    _device_class = BinarySensorDeviceClass.SOUND
+
+
+class HubitatTamperSensor(HubitatBinarySensor):
+    """A tamper sensor."""
+
+    _active_state = "detected"
+    _attribute = DeviceAttribute.TAMPER
+    _device_class = BinarySensorDeviceClass.TAMPER
+
+
+class HubitatShockSensor(HubitatBinarySensor):
+    """A shock sensor."""
+
+    _active_state = "detected"
+    _attribute = DeviceAttribute.SHOCK
+    _device_class = BinarySensorDeviceClass.VIBRATION
+
+
+class HubitatHeatSensor(HubitatBinarySensor):
+    """A heatAlarm sensor."""
+
+    _active_state = "overheat"
+    _attribute = DeviceAttribute.HEAT_ALARM
+    _device_class = BinarySensorDeviceClass.HEAT
+
+
 # Presence is handled specially in async_setup_entry()
 _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatBinarySensor]], ...] = (
     (DeviceAttribute.ACCELERATION, HubitatAccelerationSensor),
+    (DeviceAttribute.CARBON_DIOXIDE, HubitatCo2Sensor),
     (DeviceAttribute.CARBON_MONOXIDE, HubitatCoSensor),
+    (DeviceAttribute.NATURAL_GAS, HubitatNaturalGasSensor),
     (DeviceAttribute.CONTACT, HubitatContactSensor),
     (DeviceAttribute.MOTION, HubitatMotionSensor),
     (DeviceAttribute.PRESENCE, HubitatPresenceSensor),
     (DeviceAttribute.SMOKE, HubitatSmokeSensor),
+    (DeviceAttribute.SOUND, HubitatSoundSensor),
+    (DeviceAttribute.SHOCK, HubitatShockSensor),
+    (DeviceAttribute.TAMPER, HubitatTamperSensor),
     (DeviceAttribute.WATER, HubitatMoistureSensor),
+    (DeviceAttribute.HEAT_ALARM, HubitatHeatSensor),
 )
 
 

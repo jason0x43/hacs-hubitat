@@ -142,6 +142,7 @@ def is_button_controller(device: Device) -> bool:
         DeviceCapability.PUSHABLE_BUTTON in device.capabilities
         or DeviceCapability.HOLDABLE_BUTTON in device.capabilities
         or DeviceCapability.DOUBLE_TAPABLE_BUTTON in device.capabilities
+        or DeviceCapability.RELEASABLE_BUTTON in device.capabilities
     )
 
 
