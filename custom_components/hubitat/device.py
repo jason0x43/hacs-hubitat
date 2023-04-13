@@ -69,7 +69,7 @@ class HubitatBase(Removable):
     @property
     def name(self) -> str:
         """Return the display name of this device."""
-        return self._device.label or self._device.name
+        return self._device.label
 
     @property
     def type(self) -> str:
