@@ -64,16 +64,16 @@ class Device:
         return self._properties["type"]
 
     @property
-    def model(self) -> str:
-        return self._properties["model"]
+    def model(self) -> str | None:
+        return self._properties.get("model")
 
     @property
-    def manufacturer(self) -> str:
-        return self._properties["manufacturer"]
+    def manufacturer(self) -> str | None:
+        return self._properties.get("manufacturer")
 
     @property
-    def room(self) -> str:
-        return self._properties["room"]
+    def room(self) -> str | None:
+        return self._properties.get("room")
 
     @property
     def attributes(self) -> Mapping[str, Attribute]:

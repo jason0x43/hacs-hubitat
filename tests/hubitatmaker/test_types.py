@@ -12,7 +12,9 @@ def test_device_can_serialize() -> None:
     d = Device(device_details["6"])
     assert (
         f"{d}"
-        == '<Device id="6" name="Office Door" type="Generic Z-Wave Contact Sensor">'
+        == '<Device id="6" name="Generic Z-Wave Contact Sensor" label="Office Door"'
+        ' type="Generic Z-Wave Contact Sensor" model="None"'
+        ' manufacturer="None" room="Office">'
     )
 
 
@@ -22,5 +24,5 @@ def test_device_records_last_update_time() -> None:
     update = d.last_update
     assert update is not None
 
-    d.update_attr("contact", "closed")
+    d.update_attr("contact", "closed", None)
     assert update != d.last_update

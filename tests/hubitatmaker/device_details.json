@@ -3,6 +3,8 @@
     "label": "Office Door",
     "commands": ["configure"],
     "name": "Generic Z-Wave Contact Sensor",
+    "type": "Generic Z-Wave Contact Sensor",
+    "room": "Office",
     "attributes": [
       {
         "currentValue": 100,
@@ -79,6 +81,7 @@
       }
     ],
     "name": "Generic Zigbee Moisture Sensor",
+    "type": "Generic Zigbee Moisture Sensor",
     "capabilities": [
       "TemperatureMeasurement",
       {
@@ -147,6 +150,7 @@
       }
     ],
     "name": "Generic Zigbee Outlet",
+    "type": "Generic Zigbee Outlet",
     "commands": ["configure", "off", "off", "on", "on", "refresh"],
     "label": "Loft Fan",
     "attributes": [

@@ -77,7 +77,7 @@ class HubitatBase(Removable):
         return self._device.type
 
     @property
-    def room(self) -> str:
+    def room(self) -> str | None:
         """Return the room name of this device."""
         return self._device.room
 
