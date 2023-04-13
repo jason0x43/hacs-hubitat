@@ -48,7 +48,7 @@ class HubitatBase(Removable):
 
         # if this entity's device isn't the hub, link it to the hub
         if self.device_id != self._hub.id:
-            info["name"] = self._device.name
+            info["name"] = self._device.label
             info["suggested_area"] = self.room
             info["via_device"] = (DOMAIN, self._hub.id)
             info["model"] = self.type
