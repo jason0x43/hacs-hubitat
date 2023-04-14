@@ -220,10 +220,10 @@ async def async_setup_entry(
 
 def _get_contact_device_class(device: Device) -> str:
     """Guess the type of contact sensor from the device's label."""
-    name = device.name
+    label = device.label
 
     for matcher in _CONTACT_MATCHERS:
-        if matcher[0].search(name):
+        if matcher[0].search(label):
             return matcher[1]
 
     return BinarySensorDeviceClass.DOOR
@@ -231,10 +231,10 @@ def _get_contact_device_class(device: Device) -> str:
 
 def _get_presence_device_class(device: Device) -> str:
     """Guess the type of presence sensor from the device's label."""
-    name = device.name
+    label = device.label
 
     for matcher in _PRESENCE_MATCHERS:
-        if matcher[0].search(name):
+        if matcher[0].search(label):
             return matcher[1]
 
     return BinarySensorDeviceClass.CONNECTIVITY

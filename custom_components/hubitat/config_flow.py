@@ -380,7 +380,7 @@ class HubitatOptionsFlow(OptionsFlow):
         default_value = []
 
         possible_overrides = {
-            id: devices[id].name for id in devices if matcher(devices[id])
+            id: devices[id].label for id in devices if matcher(devices[id])
         }
 
         if existing_overrides:

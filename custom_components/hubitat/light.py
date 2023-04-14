@@ -269,7 +269,7 @@ def is_light(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool
     if is_definitely_light(device):
         return True
     if DeviceCapability.SWITCH in device.capabilities and MATCH_LIGHT.search(
-        device.name
+        device.label
     ):
         return True
     if DeviceCapability.LIGHT in device.capabilities:

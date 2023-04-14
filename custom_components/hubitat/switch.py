@@ -45,7 +45,7 @@ class HubitatSwitch(HubitatEntity, SwitchEntity):
     @property
     def device_class(self) -> Optional[str]:
         """Return the class of this device, from component DEVICE_CLASSES."""
-        if _NAME_TEST.search(self._device.name):
+        if _NAME_TEST.search(self._device.label):
             return SwitchDeviceClass.SWITCH
         return SwitchDeviceClass.OUTLET
 
