@@ -186,16 +186,16 @@ _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatBinarySensor]], ...] = (
     (DeviceAttribute.ACCELERATION, HubitatAccelerationSensor),
     (DeviceAttribute.CARBON_DIOXIDE, HubitatCo2Sensor),
     (DeviceAttribute.CARBON_MONOXIDE, HubitatCoSensor),
-    (DeviceAttribute.NATURAL_GAS, HubitatNaturalGasSensor),
     (DeviceAttribute.CONTACT, HubitatContactSensor),
+    (DeviceAttribute.HEAT_ALARM, HubitatHeatSensor),
     (DeviceAttribute.MOTION, HubitatMotionSensor),
+    (DeviceAttribute.NATURAL_GAS, HubitatNaturalGasSensor),
     (DeviceAttribute.PRESENCE, HubitatPresenceSensor),
+    (DeviceAttribute.SHOCK, HubitatShockSensor),
     (DeviceAttribute.SMOKE, HubitatSmokeSensor),
     (DeviceAttribute.SOUND, HubitatSoundSensor),
-    (DeviceAttribute.SHOCK, HubitatShockSensor),
     (DeviceAttribute.TAMPER, HubitatTamperSensor),
     (DeviceAttribute.WATER, HubitatMoistureSensor),
-    (DeviceAttribute.HEAT_ALARM, HubitatHeatSensor),
 )
 
 
