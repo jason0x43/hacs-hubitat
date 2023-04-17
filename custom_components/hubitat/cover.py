@@ -169,11 +169,10 @@ class HubitatWindowControl(HubitatCover):
 
 
 _COVER_CAPS: Tuple[Tuple[str, Type[HubitatCover]], ...] = (
-    (DeviceCapability.WINDOW_SHADE, HubitatWindowShade),
-    (DeviceCapability.WINDOW_BLIND, HubitatWindowBlind),
-    (DeviceCapability.WINDOW_SHADE, HubitatWindowControl),  # TODO
-    (DeviceCapability.GARAGE_DOOR_CONTROL, HubitatGarageDoorControl),
     (DeviceCapability.DOOR_CONTROL, HubitatGarageDoorControl),
+    (DeviceCapability.GARAGE_DOOR_CONTROL, HubitatGarageDoorControl),
+    (DeviceCapability.WINDOW_BLIND, HubitatWindowBlind),
+    (DeviceCapability.WINDOW_SHADE, HubitatWindowShade),
 )
 
 
