@@ -1,7 +1,8 @@
 from asyncio import Future
-import pytest
 from typing import Awaitable
 from unittest.mock import patch
+
+import pytest
 
 
 @patch("custom_components.hubitat.config_flow.HubitatHub")

@@ -1,6 +1,7 @@
-import pytest
 from typing import List
 from unittest.mock import Mock, call, patch
+
+import pytest
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import Entity
@@ -14,9 +15,9 @@ async def test_setup_entry(create_emitters, create_entities) -> None:
     create_emitters.return_value = None
 
     from custom_components.hubitat.switch import (
-        async_setup_entry,
-        HubitatSwitch,
         HubitatPowerMeterSwitch,
+        HubitatSwitch,
+        async_setup_entry,
     )
 
     mock_hass = Mock(spec=["async_register"])
