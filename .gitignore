@@ -3,3 +3,4 @@
 *.pyc
 __pypackages__
 .pdm.toml
+.pdm-python

@@ -28,7 +28,7 @@ dev = [
     "black>=21.12b0",
     "ruff",
     "pre-commit<3.0.0,>=2.4.0",
-    "homeassistant==2023.4.0",
+    "homeassistant>=2023.4.0",
     "pytest-asyncio>=0.16.0",
     "setuptools>=62.2.0",
 ]
