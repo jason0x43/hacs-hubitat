@@ -11,6 +11,10 @@ clear_code:
     position:
       description: Index of code to delete
       example: 1
+      selector: 
+        number:
+          min: 1
+          mode: box
 
 set_code:
   description: Set a user code for a lock or keypad
@@ -25,12 +29,20 @@ set_code:
     position:
       description: Index of code to set
       example: 1
+      selector: 
+        number:
+          min: 1
+          mode: box
     code:
       description: Code
       example: 5213
+      selector: 
+        text:
     name:
       description: Friendly name for code
       example: Family
+      selector: 
+        text:
 
 set_code_length:
   description: Set the length of user codes for a lock or keypad
@@ -45,6 +57,11 @@ set_code_length:
     length:
       description: Length of acceptable codes
       example: 4
+      selector: 
+        number:
+          min: 1
+          max: 10
+          mode: box
 
 set_entry_delay:
   description: Set the entry delay for a keypad in seconds
@@ -59,6 +76,11 @@ set_entry_delay:
     delay:
       description: Delay in seconds
       example: 30
+      selector: 
+        number:
+          min: 1
+          max: 600
+          mode: box
 
 set_exit_delay:
   description: Set the exit delay for a keypad in seconds
@@ -73,6 +95,11 @@ set_exit_delay:
     delay:
       description: Delay in seconds
       example: 30
+      selector: 
+        number:
+          min: 1
+          max: 600
+          mode: box
 
 send_command:
   description: Send a command to a Hubitat device
