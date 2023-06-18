@@ -110,25 +110,35 @@ def async_register_services(
         delay = cast(int, service.data.get(ATTR_LENGTH))
         await entity.set_exit_delay(delay)
 
+    def get_target_hubs(service: ServiceCall):
+        """
+        Return the target hubs for a service call.
+
+        If ATTR_HUB is specified, return the hub with that ID. Otherwise,
+        return all the hubs.
+        """
+        hubs = []
+        if ATTR_HUB in service.data:
+            hub_id = cast(str, service.data.get(ATTR_HUB)).lower()
+            for hub in hass.data[DOMAIN].values():
+                if hub.id == hub_id:
+                    hubs.append(hub)
+            if len(hubs) == 0:
+                _LOGGER.error("Could not find a hub with ID %s", hub_id)
+        else:
+            hubs = cast(List[Hub], hass.data[DOMAIN].values())
+
+        return hubs
+
     async def set_hsm(service: ServiceCall) -> None:
-        hub_id = cast(str, service.data.get(ATTR_HUB)).lower()
-        hubs = cast(List[Hub], hass.data[DOMAIN].values())
-        for hub in hubs:
-            if hub.id == hub_id:
-                command = cast(str, service.data.get(ATTR_COMMAND))
-                await hub.set_hsm(command)
-                return
-        _LOGGER.error("Could not find a hub with ID %s", hub_id)
+        command = cast(str, service.data.get(ATTR_COMMAND))
+        for hub in get_target_hubs(service):
+            await hub.set_hsm(command)
 
     async def set_hub_mode(service: ServiceCall) -> None:
-        hub_id = cast(str, service.data.get(ATTR_HUB)).lower()
-        hubs = cast(List[Hub], hass.data[DOMAIN].values())
-        for hub in hubs:
-            if hub.id == hub_id:
-                mode = cast(str, service.data.get(ATTR_MODE))
-                await hub.set_mode(mode)
-                return
-        _LOGGER.error("Could not find a hub with ID %s", hub_id)
+        mode = cast(str, service.data.get(ATTR_MODE))
+        for hub in get_target_hubs(service):
+            await hub.set_mode(mode)
 
     hass.services.async_register(
         DOMAIN, ServiceName.CLEAR_CODE, clear_code, schema=CLEAR_CODE_SCHEMA
