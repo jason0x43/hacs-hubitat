@@ -93,6 +93,12 @@ Clone this repository and copy the `custom_components/hubitat` folder into your
 
 ## Setup
 
+The basic setup process is:
+
+1. Create a Maker API instance in Hubitat
+2. Add the devices you want to use in HA to the Maker API instance
+3. Setup the integration in HA
+
 First, create a Maker API instance in the Hubitat UI. Add whatever devices you’d
 like to make available to Home Assistant. If you plan to use the integration
 over SSL, you‘ll probably want to enable the “Ignore SSL Certificates” toggle.
