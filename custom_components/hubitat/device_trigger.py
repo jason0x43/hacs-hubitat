@@ -2,7 +2,7 @@
 import logging
 from itertools import chain
 from json import loads
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, cast
+from typing import Any, Callable, Dict, List, Optional, Sequence, cast
 
 import voluptuous as vol
 
@@ -33,7 +33,6 @@ from .const import (
     TRIGGER_BUTTONS,
     TRIGGER_CAPABILITIES,
 )
-from .error import DeviceError
 from .helpers import (
     are_config_entries_loaded,
     get_device_entry_by_device_id,
@@ -84,18 +83,19 @@ async def async_validate_trigger_config(
     device = get_device_entry_by_device_id(hass, config[CONF_DEVICE_ID])
 
     if are_config_entries_loaded(hass, device.id):
-        hubitat_device, _ = get_hubitat_device(hass, device.id)
-        types = get_trigger_types(hubitat_device)
-        trigger_type = config[CONF_TYPE]
-        if trigger_type not in types:
-            _LOGGER.warning("Device doesn't support '%s'", trigger_type)
-            raise InvalidDeviceAutomationConfig
+        hubitat_device = get_hubitat_device(hass, device.id)
+        if hubitat_device:
+            types = get_trigger_types(hubitat_device.device)
+            trigger_type = config[CONF_TYPE]
+            if trigger_type not in types:
+                _LOGGER.warning("Device doesn't support '%s'", trigger_type)
+                raise InvalidDeviceAutomationConfig
 
-        trigger_subtype = config.get(H_CONF_SUBTYPE)
-        if trigger_subtype:
-            subtypes = get_trigger_subtypes(hubitat_device, trigger_type)
-            if not subtypes or trigger_subtype not in subtypes:
-                _LOGGER.warning("Device doesn't support '%s'", trigger_subtype)
+            trigger_subtype = config.get(H_CONF_SUBTYPE)
+            if trigger_subtype:
+                subtypes = get_trigger_subtypes(hubitat_device.device, trigger_type)
+                if not subtypes or trigger_subtype not in subtypes:
+                    _LOGGER.warning("Device doesn't support '%s'", trigger_subtype)
 
     return config
 
@@ -104,15 +104,15 @@ async def async_get_triggers(
     hass: HomeAssistant, device_id: str
 ) -> Sequence[Dict[str, Any]]:
     """List device triggers for Hubitat devices."""
-    device, _ = get_hubitat_device(hass, device_id)
+    device = get_hubitat_device(hass, device_id)
     if device is None:
         return []
 
     triggers = []
-    trigger_types = get_trigger_types(device)
+    trigger_types = get_trigger_types(device.device)
 
     for trigger_type in trigger_types:
-        trigger_subtypes = get_trigger_subtypes(device, trigger_type)
+        trigger_subtypes = get_trigger_subtypes(device.device, trigger_type)
 
         if trigger_subtypes:
             for trigger_subtype in trigger_subtypes:
@@ -146,12 +146,9 @@ async def async_attach_trigger(
     automation_info: AutomationTriggerInfo,
 ) -> Callable[[], None]:
     """Attach a trigger."""
-    hubitat_device = None
-    hub = None
 
-    try:
-        hubitat_device, hub = get_hubitat_device(hass, config[CONF_DEVICE_ID])
-    except DeviceError:
+    hubitat_device = get_hubitat_device(hass, config[CONF_DEVICE_ID])
+    if hubitat_device is None:
         _LOGGER.warning(
             "Could not find Hubitat device for ID %s", config[CONF_DEVICE_ID]
         )
@@ -160,8 +157,8 @@ async def async_attach_trigger(
     # Event data should match up to the data a hubitat_event event would
     # contain
     event_data = {
-        ATTR_DEVICE_ID: hubitat_device.id,
-        ATTR_HUB: hub.id,
+        ATTR_DEVICE_ID: hubitat_device.device.id,
+        ATTR_HUB: hubitat_device.hub.id,
         ATTR_ATTRIBUTE: config[CONF_TYPE],
     }
     if H_CONF_SUBTYPE in config:
@@ -182,18 +179,34 @@ async def async_attach_trigger(
     )
 
 
-def get_hubitat_device(hass: HomeAssistant, device_id: str) -> Tuple[Device, Hub]:
+class DeviceWrapper:
+    def __init__(self, device: Device, hub: Hub):
+        self._device = device
+        self._hub = hub
+
+    @property
+    def device(self):
+        return self._device
+
+    @property
+    def hub(self):
+        return self._hub
+
+
+def get_hubitat_device(hass: HomeAssistant, device_id: str) -> Optional[DeviceWrapper]:
     """Return a Hubitat device for a given Home Assistant device ID."""
     device = get_device_entry_by_device_id(hass, device_id)
     hubitat_id = get_hubitat_device_id(device)
 
     hub = get_hub_for_device(hass, device)
     if not hub:
-        raise DeviceError(f"No Hubitat hub is associated with {device_id}")
+        _LOGGER.warning(f"No Hubitat hub is associated with {device_id}")
+        return None
     if hub.devices.get(hubitat_id) is None:
-        raise DeviceError(f"Invalid Hubitat ID for device {device_id}")
+        _LOGGER.warning(f"Invalid Hubitat ID for device {device_id}")
+        return None
 
-    return hub.devices[hubitat_id], hub
+    return DeviceWrapper(hub.devices[hubitat_id], hub)
 
 
 def get_trigger_types(device: Device) -> Sequence[str]:
