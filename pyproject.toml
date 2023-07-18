@@ -19,6 +19,10 @@ test = {shell = "pyright custom_components/hubitat && pytest tests"}
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning:pkg_resources",
+    "ignore:Inheritance class HomeAssistantApplication:DeprecationWarning"
+]
 
 [tool.pdm]
 includes = []
