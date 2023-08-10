@@ -3,8 +3,8 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 
 This integration uses [Hubitat’s](hubitat.com)
-[Maker API](https://docs.hubitat.com/index.php?title=Hubitat™_Maker_API) to make
-Hubitat devices available for use with Home Assistant.
+[Maker API](https://docs.hubitat.com/index.php?title=Hubitat™_Maker_API) to
+make Hubitat devices available for use with Home Assistant.
 
 ## Quick Start
 
@@ -103,6 +103,8 @@ Home Assistant UI and click the “+” button to add a new integration. Pick
 - The app ID of the Maker API instance (the 2, 3 or 4 digit number after
   `/apps/api/` in any of the Maker API URLs)
 - The API access token
+- Optional: An address for the event server to listen on (more about this
+  below); this will be chosen automatically by default
 - Optional: A port for the event server to listen on (more about this below);
   this will be chosen automatically by default
 - Optional: Provide the relative paths to an SSL private key and certificate
@@ -121,6 +123,9 @@ To receive these events, the integration starts up a Python-based web server and
 updates the POST URL setting in the Maker API instance. Note that for this to
 work, Hubitat must be able to see your Home Assistant server on your local
 network.
+
+> ⚠️ Note that the event server URL, if specified, should only include a
+> protocol and a host, _not_ a path. The server always listens at `/`.
 
 ### Device types
 
@@ -258,6 +263,9 @@ example, if the host running the HA instance is on the local network at
 192.168.0.10, then the event server URL would be set to http://192.168.0.10. The
 port should be set to some open port value (e.g., 12345), and then this port
 must be mapped from the host to the HA VM/container.
+
+> ⚠️ Note that the event server URL should only include a protocol and a host,
+> _not_ a path. The server always listens at `/`.
 
 ### Checking device capabilities
 
