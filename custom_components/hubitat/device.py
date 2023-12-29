@@ -91,6 +91,13 @@ class HubitatBase(Removable):
         return None
 
     @callback
+    def get_attr_unit(self, attr: str) -> str | None:
+        """Get the unit of an attribute."""
+        if attr in self._device.attributes:
+            return self._device.attributes[attr].unit
+        return None
+
+    @callback
     def get_float_attr(self, attr: str) -> float | None:
         """Get the current value of an attribute."""
         val = self.get_attr(attr)

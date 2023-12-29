@@ -4,8 +4,11 @@ from datetime import datetime
 from logging import getLogger
 from typing import Any, Type
 
-from homeassistant.components.number import NumberDeviceClass
-from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
@@ -32,7 +35,6 @@ from .const import (
     ATTR_HSM_STATUS,
     ATTR_MODE,
     TEMP_F,
-    DeviceType,
 )
 from .device import HubitatEntity
 from .entities import create_and_add_entities
@@ -44,14 +46,11 @@ from .types import EntityAdder
 _LOGGER = getLogger(__name__)
 
 
-class HubitatSensor(HubitatEntity):
+class HubitatSensor(HubitatEntity, SensorEntity):
     """A generic Hubitat sensor."""
 
     _attribute: str
     _attribute_name: str | None = None
-    _units: str | None
-    _device_class: str | None = None
-    _state_class: str | None = None
     _enabled_default: bool | None = None
 
     def __init__(
@@ -60,8 +59,8 @@ class HubitatSensor(HubitatEntity):
         attribute: str | None = None,
         attribute_name: str | None = None,
         units: str | None = None,
-        device_class: str | None = None,
-        state_class: str | None = None,
+        device_class: SensorDeviceClass | None = None,
+        state_class: SensorStateClass | None = None,
         enabled_default: bool | None = None,
         **kwargs: Any,
     ):
@@ -73,11 +72,11 @@ class HubitatSensor(HubitatEntity):
         if attribute_name is not None:
             self._attribute_name = attribute_name
         if units is not None:
-            self._units = units
+            self._attr_native_unit_of_measurement = units
         if device_class is not None:
-            self._device_class = device_class
+            self._attr_device_class = device_class
         if state_class is not None:
-            self._state_class = state_class
+            self._attr_state_class = state_class
         if enabled_default is not None:
             self._enabled_default = enabled_default
 
@@ -85,16 +84,6 @@ class HubitatSensor(HubitatEntity):
     def device_attrs(self) -> tuple[str, ...] | None:
         """Return this entity's associated attributes"""
         return (self._attribute,)
-
-    @property
-    def device_class(self) -> str | None:
-        """Return this sensor's device class."""
-        return self._device_class
-
-    @property
-    def state_class(self) -> str | None:
-        """Return this sensor's state class."""
-        return self._state_class
 
     @property
     def name(self) -> str:
@@ -105,22 +94,14 @@ class HubitatSensor(HubitatEntity):
         return f"{super().name} {attr_name}".title()
 
     @property
-    def state(self) -> float | int | str | None:
-        """Return this sensor's current state."""
+    def native_value(self) -> float | int | str | None:
+        """Return this sensor's current value."""
         return self.get_attr(self._attribute)
 
     @property
     def unique_id(self) -> str:
         """Return a unique ID for this sensor."""
         return f"{super().unique_id}::sensor::{self._attribute}"
-
-    @property
-    def unit_of_measurement(self) -> str | None:
-        """Return the units for this sensor's value."""
-        try:
-            return self._units
-        except AttributeError:
-            return None
 
     @property
     def entity_registry_enabled_default(self) -> bool:
@@ -137,7 +118,7 @@ class HubitatBatterySensor(HubitatSensor):
         """Initialize a battery sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.BATTERY
-        self._units = PERCENTAGE
+        self._attr_native_unit_of_measurement = PERCENTAGE
         self._device_class = SensorDeviceClass.BATTERY
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -149,7 +130,7 @@ class HubitatEnergySensor(HubitatSensor):
         """Initialize a energy sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.ENERGY
-        self._units = UnitOfEnergy.KILO_WATT_HOUR
+        self._attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
         self._device_class = SensorDeviceClass.ENERGY
         self._state_class = SensorStateClass.TOTAL
 
@@ -172,7 +153,7 @@ class HubitatHumiditySensor(HubitatSensor):
         """Initialize a humidity sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.HUMIDITY
-        self._units = PERCENTAGE
+        self._attr_native_unit_of_measurement = PERCENTAGE
         self._device_class = SensorDeviceClass.HUMIDITY
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -184,7 +165,7 @@ class HubitatIlluminanceSensor(HubitatSensor):
         """Initialize an illuminance sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.ILLUMINANCE
-        self._units = LIGHT_LUX
+        self._attr_native_unit_of_measurement = LIGHT_LUX
         self._device_class = SensorDeviceClass.ILLUMINANCE
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -196,7 +177,7 @@ class HubitatPowerSensor(HubitatSensor):
         """Initialize a power sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.POWER
-        self._units = UnitOfPower.WATT
+        self._attr_native_unit_of_measurement = UnitOfPower.WATT
         self._device_class = SensorDeviceClass.POWER
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -222,8 +203,10 @@ class HubitatTemperatureSensor(HubitatSensor):
         self._state_class = SensorStateClass.MEASUREMENT
 
     @property
-    def unit_of_measurement(self) -> str | None:
-        """Return the units for this sensor's value."""
+    def native_unit_of_measurement(self) -> str | None:
+        unit = self.get_attr_unit(self._attribute)
+        if unit is not None:
+            return unit
         return (
             UnitOfTemperature.FAHRENHEIT
             if self._hub.temperature_unit == TEMP_F
@@ -231,24 +214,13 @@ class HubitatTemperatureSensor(HubitatSensor):
         )
 
 
-class HubitatDewPointSensor(HubitatSensor):
+class HubitatDewPointSensor(HubitatTemperatureSensor):
     """A dewpoint sensor."""
 
     def __init__(self, *args: Any, **kwargs: Any):
         """Initialize a dewpoint sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.DEW_POINT
-        self._device_class = SensorDeviceClass.TEMPERATURE
-        self._state_class = SensorStateClass.MEASUREMENT
-
-    @property
-    def unit_of_measurement(self) -> str | None:
-        """Return the units for this sensor's value."""
-        return (
-            UnitOfTemperature.FAHRENHEIT
-            if self._hub.temperature_unit == TEMP_F
-            else UnitOfTemperature.CELSIUS
-        )
 
 
 class HubitatVoltageSensor(HubitatSensor):
@@ -258,7 +230,7 @@ class HubitatVoltageSensor(HubitatSensor):
         """Initialize a voltage sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.VOLTAGE
-        self._units = UnitOfElectricPotential.VOLT
+        self._attr_native_unit_of_measurement = UnitOfElectricPotential.VOLT
         self._device_class = SensorDeviceClass.VOLTAGE
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -274,7 +246,7 @@ class HubitatPressureSensor(HubitatSensor):
         # Maker API does not expose pressure unit
         # Override if necessary through customization.py
         # https://www.home-assistant.io/docs/configuration/customizing-devices/
-        self._units = UnitOfPressure.MBAR
+        self._attr_native_unit_of_measurement = UnitOfPressure.MBAR
         self._device_class = SensorDeviceClass.PRESSURE
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -286,7 +258,7 @@ class HubitatCarbonDioxide(HubitatSensor):
         """Initialize a CarbonDioxide sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.CARBON_DIOXIDE
-        self._units = CONCENTRATION_PARTS_PER_MILLION
+        self._attr_native_unit_of_measurement = CONCENTRATION_PARTS_PER_MILLION
         self._device_class = SensorDeviceClass.CO2
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -298,7 +270,6 @@ class HubitatCarbonDioxideLevel(HubitatSensor):
         """Initialize a CarbonDioxideLevel sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.CARBON_DIOXIDE_LEVEL
-        self._units = None
         self._device_class = SensorDeviceClass.CO2
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -310,7 +281,7 @@ class HubitatCarbonMonoxide(HubitatSensor):
         """Initialize a CarbonMonoxide sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.CARBON_MONOXIDE
-        self._units = CONCENTRATION_PARTS_PER_MILLION
+        self._attr_native_unit_of_measurement = CONCENTRATION_PARTS_PER_MILLION
         self._device_class = SensorDeviceClass.CO
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -322,7 +293,6 @@ class HubitatCarbonMonoxideLevel(HubitatSensor):
         """Initialize a CarbonMonoxideLevel sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.CARBON_MONOXIDE_LEVEL
-        self._units = None
         self._device_class = SensorDeviceClass.CO
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -334,7 +304,7 @@ class HubitatVOC(HubitatSensor):
         """Initialize a VOC sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.VOC
-        self._units = CONCENTRATION_PARTS_PER_BILLION
+        self._attr_native_unit_of_measurement = CONCENTRATION_PARTS_PER_BILLION
         self._device_class = SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -346,7 +316,6 @@ class HubitatVOCLevel(HubitatSensor):
         """Initialize a VOC-Level sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.VOC_LEVEL
-        self._units = None
         self._device_class = SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -358,8 +327,6 @@ class HubitatHomeHealth(HubitatSensor):
         """Initialize a HomeHealth sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.HOME_HEALTH
-        self._units = None
-        self._device_class = None
         self._state_class = SensorStateClass.MEASUREMENT
 
 
@@ -370,7 +337,7 @@ class HubitatCurrentSensor(HubitatSensor):
         """Initialize a current sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.AMPERAGE
-        self._units = UnitOfElectricCurrent.AMPERE
+        self._attr_native_unit_of_measurement = UnitOfElectricCurrent.AMPERE
         self._device_class = SensorDeviceClass.CURRENT
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -393,7 +360,6 @@ class HubitatAqiSensor(HubitatSensor):
         """Initialize an AQI sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.AQI
-        self._units = "AQI"
         self._device_class = SensorDeviceClass.AQI
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -405,7 +371,6 @@ class HubitatAirQualityIndexSensor(HubitatSensor):
         """Initialize an airQualityIndex sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.AIR_QUALITY_INDEX
-        self._units = "AQI"
         self._device_class = SensorDeviceClass.AQI
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -417,7 +382,7 @@ class HubitatPm1Sensor(HubitatSensor):
         """Initialize a PM1 sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.PM1
-        self._units = CONCENTRATION_MICROGRAMS_PER_CUBIC_METER
+        self._attr_native_unit_of_measurement = CONCENTRATION_MICROGRAMS_PER_CUBIC_METER
         self._device_class = SensorDeviceClass.PM1
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -429,7 +394,7 @@ class HubitatPm10Sensor(HubitatSensor):
         """Initialize a PM10 sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.PM10
-        self._units = CONCENTRATION_MICROGRAMS_PER_CUBIC_METER
+        self._attr_native_unit_of_measurement = CONCENTRATION_MICROGRAMS_PER_CUBIC_METER
         self._device_class = SensorDeviceClass.PM10
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -441,7 +406,7 @@ class HubitatPm25Sensor(HubitatSensor):
         """Initialize a PM2.5 sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.PM25
-        self._units = CONCENTRATION_MICROGRAMS_PER_CUBIC_METER
+        self._attr_native_unit_of_measurement = CONCENTRATION_MICROGRAMS_PER_CUBIC_METER
         self._device_class = SensorDeviceClass.PM25
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -453,7 +418,9 @@ class HubitatRainRateSensor(HubitatSensor):
         """Initialize a rain rate sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.RAIN_RATE
-        self._units = UnitOfVolumetricFlux.MILLIMETERS_PER_HOUR
+        self._attr_native_unit_of_measurement = (
+            UnitOfVolumetricFlux.MILLIMETERS_PER_HOUR
+        )
         self._device_class = SensorDeviceClass.PRECIPITATION_INTENSITY
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -465,7 +432,9 @@ class HubitatRainDailySensor(HubitatSensor):
         """Initialize a rain daily sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.RAIN_DAILY
-        self._units = UnitOfVolumetricFlux.MILLIMETERS_PER_HOUR
+        self._attr_native_unit_of_measurement = (
+            UnitOfVolumetricFlux.MILLIMETERS_PER_HOUR
+        )
         self._device_class = SensorDeviceClass.PRECIPITATION_INTENSITY
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -477,7 +446,7 @@ class HubitatWindDirectionSensor(HubitatSensor):
         """Initialize a wind direction sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.WIND_DIRECTION
-        self._units = DEGREE
+        self._attr_native_unit_of_measurement = DEGREE
         self._device_class = SensorDeviceClass.WIND_SPEED
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -489,7 +458,7 @@ class HubitatWindSpeedSensor(HubitatSensor):
         """Initialize a wind speed sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.WIND_SPEED
-        self._units = UnitOfSpeed.KILOMETERS_PER_HOUR
+        self._attr_native_unit_of_measurement = UnitOfSpeed.KILOMETERS_PER_HOUR
         self._device_class = SensorDeviceClass.WIND_SPEED
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -501,7 +470,7 @@ class HubitatWindGustSensor(HubitatSensor):
         """Initialize a wind gust sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.WIND_GUST
-        self._units = UnitOfSpeed.KILOMETERS_PER_HOUR
+        self._attr_native_unit_of_measurement = UnitOfSpeed.KILOMETERS_PER_HOUR
         self._device_class = SensorDeviceClass.WIND_SPEED
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -513,8 +482,6 @@ class HubitatRateSensor(HubitatSensor):
         """Initialize a rate sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.RATE
-        self._units = None
-        self._device_class = None
         self._state_class = SensorStateClass.MEASUREMENT
 
 
@@ -525,8 +492,8 @@ class HubitatWaterDayPriceSensor(HubitatSensor):
         """Initialize a water day liter price sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.DAY_EURO
-        self._units = CURRENCY_EURO
-        self._device_class = NumberDeviceClass.MONETARY
+        self._attr_native_unit_of_measurement = CURRENCY_EURO
+        self._device_class = SensorDeviceClass.MONETARY
         self._state_class = SensorStateClass.MEASUREMENT
 
 
@@ -537,7 +504,7 @@ class HubitatWaterDayLiterSensor(HubitatSensor):
         """Initialize a water day liter sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.DAY_LITER
-        self._units = UnitOfVolume.LITERS
+        self._attr_native_unit_of_measurement = UnitOfVolume.LITERS
         self._device_class = SensorDeviceClass.WATER
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -549,7 +516,7 @@ class HubitatWaterCumulativeLiterSensor(HubitatSensor):
         """Initialize a water cumulative liter sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.CUMULATIVE_LITER
-        self._units = UnitOfVolume.LITERS
+        self._attr_native_unit_of_measurement = UnitOfVolume.LITERS
         self._device_class = SensorDeviceClass.WATER
         self._state_class = SensorStateClass.TOTAL_INCREASING
 
@@ -561,7 +528,7 @@ class HubitatWaterCumulativeM3Sensor(HubitatSensor):
         """Initialize a water cumulative m3 sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.CUMULATIVE_CUBIC_METER
-        self._units = UnitOfVolume.CUBIC_METERS
+        self._attr_native_unit_of_measurement = UnitOfVolume.CUBIC_METERS
         self._device_class = SensorDeviceClass.WATER
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -573,7 +540,7 @@ class HubitatWaterDayM3Sensor(HubitatSensor):
         """Initialize a water day m3 sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.DAY_CUBIC_METER
-        self._units = UnitOfVolume.CUBIC_METERS
+        self._attr_native_unit_of_measurement = UnitOfVolume.CUBIC_METERS
         self._device_class = SensorDeviceClass.WATER
         self._state_class = SensorStateClass.MEASUREMENT
 
@@ -631,7 +598,7 @@ class HubitatHsmSensor(HubitatSensor):
         """Initialize an hsm status sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = ATTR_HSM_STATUS
-        self._device_class = DeviceType.HUB_HSM_STATUS
+        self._device_class = SensorDeviceClass.ENUM
         self._attribute_name = "HSM status"
 
 
@@ -644,7 +611,7 @@ class HubitatHubModeSensor(HubitatSensor):
         """Initialize an hsm status sensor."""
         super().__init__(*args, **kwargs)
         self._attribute = ATTR_MODE
-        self._device_class = DeviceType.HUB_MODE
+        self._device_class = SensorDeviceClass.ENUM
 
 
 _SENSOR_ATTRS: tuple[tuple[str, Type[HubitatSensor]], ...] = (
@@ -736,7 +703,7 @@ async def async_setup_entry(
                         device=device,
                         attribute=attr,
                         enabled_default=False,
-                        device_class="unknown",
+                        device_class=None,
                     )
                 )
                 _LOGGER.debug(f"Adding unknown entity for {device.id}:{attr}")

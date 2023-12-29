@@ -25,12 +25,13 @@ class Attribute:
             return None
         return self._properties["values"]
 
-    def update_value(self, value: str | float) -> None:
+    def update_value(self, value: str | float, unit: str | None = None) -> None:
         self._properties["currentValue"] = value
+        self._properties["unit"] = unit
 
     @property
-    def unit(self) -> str:
-        return self._properties["unit"]
+    def unit(self) -> str | None:
+        return self._properties.get("unit")
 
     def __iter__(self):
         for key in "name", "type", "value", "unit":
@@ -98,7 +99,7 @@ class Device:
         self, attr_name: str, value: str | int, value_unit: str | None
     ) -> None:
         attr = self.attributes[attr_name]
-        attr.update_value(value)
+        attr.update_value(value, value_unit)
         self._last_update = time()
 
     def update_state(self, properties: dict[str, Any]) -> None:
