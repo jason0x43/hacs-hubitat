@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from logging import getLogger
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Type, Union
+from typing import Any, Type
 
 from homeassistant.components.number import NumberDeviceClass
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
@@ -48,21 +48,21 @@ class HubitatSensor(HubitatEntity):
     """A generic Hubitat sensor."""
 
     _attribute: str
-    _attribute_name: Optional[str] = None
+    _attribute_name: str | None = None
     _units: str | None
-    _device_class: Optional[str] = None
-    _state_class: Optional[str] = None
-    _enabled_default: Optional[bool] = None
+    _device_class: str | None = None
+    _state_class: str | None = None
+    _enabled_default: bool | None = None
 
     def __init__(
         self,
         *args: Any,
-        attribute: Optional[str] = None,
-        attribute_name: Optional[str] = None,
-        units: Optional[str] = None,
-        device_class: Optional[str] = None,
-        state_class: Optional[str] = None,
-        enabled_default: Optional[bool] = None,
+        attribute: str | None = None,
+        attribute_name: str | None = None,
+        units: str | None = None,
+        device_class: str | None = None,
+        state_class: str | None = None,
+        enabled_default: bool | None = None,
         **kwargs: Any,
     ):
         """Initialize a battery sensor."""
@@ -82,17 +82,17 @@ class HubitatSensor(HubitatEntity):
             self._enabled_default = enabled_default
 
     @property
-    def device_attrs(self) -> Optional[Sequence[str]]:
+    def device_attrs(self) -> tuple[str, ...] | None:
         """Return this entity's associated attributes"""
         return (self._attribute,)
 
     @property
-    def device_class(self) -> Optional[str]:
+    def device_class(self) -> str | None:
         """Return this sensor's device class."""
         return self._device_class
 
     @property
-    def state_class(self) -> Optional[str]:
+    def state_class(self) -> str | None:
         """Return this sensor's state class."""
         return self._state_class
 
@@ -105,17 +105,9 @@ class HubitatSensor(HubitatEntity):
         return f"{super().name} {attr_name}".title()
 
     @property
-    def state(self) -> Union[float, int, str, None]:
+    def state(self) -> float | int | str | None:
         """Return this sensor's current state."""
         return self.get_attr(self._attribute)
-
-    @property
-    def old_unique_ids(self) -> List[str]:
-        """Return the legacy unique ID for this sensor."""
-        old_parent_ids = super().old_unique_ids
-        old_ids = [f"{super().unique_id}::{self._attribute}"]
-        old_ids.extend([f"{id}::{self._attribute}" for id in old_parent_ids])
-        return old_ids
 
     @property
     def unique_id(self) -> str:
@@ -123,7 +115,7 @@ class HubitatSensor(HubitatEntity):
         return f"{super().unique_id}::sensor::{self._attribute}"
 
     @property
-    def unit_of_measurement(self) -> Optional[str]:
+    def unit_of_measurement(self) -> str | None:
         """Return the units for this sensor's value."""
         try:
             return self._units
@@ -230,7 +222,7 @@ class HubitatTemperatureSensor(HubitatSensor):
         self._state_class = SensorStateClass.MEASUREMENT
 
     @property
-    def unit_of_measurement(self) -> Optional[str]:
+    def unit_of_measurement(self) -> str | None:
         """Return the units for this sensor's value."""
         return (
             UnitOfTemperature.FAHRENHEIT
@@ -250,7 +242,7 @@ class HubitatDewPointSensor(HubitatSensor):
         self._state_class = SensorStateClass.MEASUREMENT
 
     @property
-    def unit_of_measurement(self) -> Optional[str]:
+    def unit_of_measurement(self) -> str | None:
         """Return the units for this sensor's value."""
         return (
             UnitOfTemperature.FAHRENHEIT
@@ -592,11 +584,11 @@ class HubitatUpdateSensor(HubitatEntity):
     device.
     """
 
-    _last_converted_update: Optional[float] = None
-    _last_update_str: Optional[str] = None
+    _last_converted_update: float | None = None
+    _last_update_str: str | None = None
 
     @property
-    def device_class(self) -> Optional[str]:
+    def device_class(self) -> str | None:
         """Return this sensor's device class."""
         return SensorDeviceClass.TIMESTAMP
 
@@ -606,7 +598,7 @@ class HubitatUpdateSensor(HubitatEntity):
         return f"{super().name.title()} Last Update Time"
 
     @property
-    def state(self) -> Union[float, int, str, None]:
+    def state(self) -> float | int | str | None:
         """Return this sensor's current state."""
         if self._last_converted_update != self.last_update:
             # Cache the converted last_update time so we're not constantly
@@ -655,7 +647,7 @@ class HubitatHubModeSensor(HubitatSensor):
         self._device_class = DeviceType.HUB_MODE
 
 
-_SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatSensor]], ...] = (
+_SENSOR_ATTRS: tuple[tuple[str, Type[HubitatSensor]], ...] = (
     (DeviceAttribute.AIR_QUALITY_INDEX, HubitatAirQualityIndexSensor),
     (DeviceAttribute.AMPERAGE, HubitatCurrentSensor),
     (DeviceAttribute.AQI, HubitatAqiSensor),
@@ -695,9 +687,7 @@ _SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatSensor]], ...] = (
 )
 
 
-def is_update_sensor(
-    device: Device, overrides: Optional[Dict[str, str]] = None
-) -> bool:
+def is_update_sensor(device: Device, overrides: dict[str, str] | None = None) -> bool:
     """Every device can have an update sensor."""
     return True
 
@@ -718,9 +708,7 @@ async def async_setup_entry(
 
     for attr in _SENSOR_ATTRS:
 
-        def is_sensor(
-            device: Device, overrides: Optional[Dict[str, str]] = None
-        ) -> bool:
+        def is_sensor(device: Device, overrides: dict[str, str] | None = None) -> bool:
             return attr[0] in device.attributes
 
         create_and_add_entities(
@@ -729,7 +717,7 @@ async def async_setup_entry(
 
     # Create sensor entities for any attributes that don't correspond to known
     # sensor types
-    unknown_entities: List[HubitatEntity] = []
+    unknown_entities: list[HubitatEntity] = []
     hub = get_hub(hass, entry.entry_id)
 
     for id in hub.devices:

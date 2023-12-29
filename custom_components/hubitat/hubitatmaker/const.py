@@ -290,7 +290,7 @@ class DeviceState(StrEnum):
     UNLOCKED_WITH_TIMEOUT = "unlocked with timeout"
 
 
-class ColorMode(StrEnum):
+class HubitatColorMode(StrEnum):
     RGB = "RGB"
     CT = "CT"
 

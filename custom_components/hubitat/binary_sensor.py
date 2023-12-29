@@ -1,7 +1,7 @@
 """Hubitat binary sensor entities."""
 
 import re
-from typing import Dict, List, Optional, Sequence, Tuple, Type
+from typing import Type
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -30,10 +30,10 @@ class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):
 
     _active_state: str
     _attribute: str
-    _device_class: str
+    _device_class: BinarySensorDeviceClass
 
     @property
-    def device_attrs(self) -> Optional[Sequence[str]]:
+    def device_attrs(self) -> tuple[str, ...] | None:
         """Return this entity's associated attributes"""
         return (self._attribute,)
 
@@ -48,20 +48,12 @@ class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):
         return f"{super().name} {self._attribute}".title()
 
     @property
-    def old_unique_ids(self) -> List[str]:
-        """Return the legacy unique ID for this sensor."""
-        old_parent_ids = super().old_unique_ids
-        old_ids = [f"{super().unique_id}::{self._attribute}"]
-        old_ids.extend([f"{id}::{self._attribute}" for id in old_parent_ids])
-        return old_ids
-
-    @property
     def unique_id(self) -> str:
         """Return a unique ID for this sensor."""
         return f"{super().unique_id}::binary_sensor::{self._attribute}"
 
     @property
-    def device_class(self) -> Optional[str]:
+    def device_class(self) -> BinarySensorDeviceClass | None:
         """Return the class of this device."""
         try:
             return self._device_class
@@ -182,7 +174,7 @@ class HubitatHeatSensor(HubitatBinarySensor):
 
 
 # Presence is handled specially in async_setup_entry()
-_SENSOR_ATTRS: Tuple[Tuple[str, Type[HubitatBinarySensor]], ...] = (
+_SENSOR_ATTRS: tuple[tuple[str, Type[HubitatBinarySensor]], ...] = (
     (DeviceAttribute.ACCELERATION, HubitatAccelerationSensor),
     (DeviceAttribute.CARBON_DIOXIDE, HubitatCo2Sensor),
     (DeviceAttribute.CARBON_MONOXIDE, HubitatCoSensor),
@@ -208,9 +200,7 @@ async def async_setup_entry(
 
     for attr in _SENSOR_ATTRS:
 
-        def is_sensor(
-            device: Device, overrides: Optional[Dict[str, str]] = None
-        ) -> bool:
+        def is_sensor(device: Device, overrides: dict[str, str] | None = None) -> bool:
             return attr[0] in device.attributes
 
         create_and_add_entities(
@@ -218,7 +208,7 @@ async def async_setup_entry(
         )
 
 
-def _get_contact_device_class(device: Device) -> str:
+def _get_contact_device_class(device: Device) -> BinarySensorDeviceClass:
     """Guess the type of contact sensor from the device's label."""
     label = device.label
 
@@ -229,7 +219,7 @@ def _get_contact_device_class(device: Device) -> str:
     return BinarySensorDeviceClass.DOOR
 
 
-def _get_presence_device_class(device: Device) -> str:
+def _get_presence_device_class(device: Device) -> BinarySensorDeviceClass:
     """Guess the type of presence sensor from the device's label."""
     label = device.label
 

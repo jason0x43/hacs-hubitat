@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from logging import getLogger
 from ssl import SSLContext
 from types import MappingProxyType
-from typing import Any, Callable, Dict, Iterator, List, Mapping, Optional, Union
+from typing import Any, Callable, Iterator, Mapping
 from urllib.parse import ParseResult, quote, urlparse
 
 import aiohttp
@@ -48,9 +48,9 @@ class Hub:
         host: str,
         app_id: str,
         access_token: str,
-        port: Optional[int] = None,
-        event_url: Optional[str] = None,
-        ssl_context: Optional[SSLContext] = None,
+        port: int | None = None,
+        event_url: str | None = None,
+        ssl_context: SSLContext | None = None,
     ):
         """Initialize a Hubitat hub interface.
 
@@ -74,11 +74,11 @@ class Hub:
         if not host or not app_id or not access_token:
             raise InvalidConfig()
 
-        self._devices: Dict[str, Device] = {}
-        self._listeners: Dict[str, List[Listener]] = {}
-        self._modes: List[Mode] = []
+        self._devices: dict[str, Device] = {}
+        self._listeners: dict[str, list[Listener]] = {}
+        self._modes: list[Mode] = []
         self._mode_supported = None
-        self._hsm_status: Optional[str] = None
+        self._hsm_status: str | None = None
         self._hsm_supported = None
 
         self.event_url = _get_event_url(port, event_url)
@@ -102,7 +102,7 @@ class Hub:
         return MappingProxyType(self._devices)
 
     @property
-    def mode(self) -> Optional[str]:
+    def mode(self) -> str | None:
         """Return the current hub mode."""
         for mode in self._modes:
             if mode.active:
@@ -110,20 +110,20 @@ class Hub:
         return None
 
     @property
-    def mode_supported(self) -> Optional[bool]:
+    def mode_supported(self) -> bool | None:
         return self._mode_supported
 
     @property
-    def modes(self) -> List[str]:
+    def modes(self) -> list[str]:
         """Return the available hub modes."""
         return [m.name for m in self._modes]
 
     @property
-    def hsm_status(self) -> Optional[str]:
+    def hsm_status(self) -> str | None:
         return self._hsm_status
 
     @property
-    def hsm_supported(self) -> Optional[bool]:
+    def hsm_supported(self) -> bool | None:
         return self._hsm_supported
 
     def add_device_listener(self, device_id: str, listener: Listener) -> None:
@@ -170,7 +170,7 @@ class Hub:
     async def load_devices(self, force_refresh=False) -> None:
         """Load the current state of all devices."""
         if force_refresh or len(self._devices) == 0:
-            devices: List[Dict[str, Any]] = await self._api_request("devices")
+            devices: list[dict[str, Any]] = await self._api_request("devices")
             _LOGGER.debug("Loaded device list")
 
             # load devices sequentially to avoid overloading the hub
@@ -221,8 +221,8 @@ class Hub:
         await self._load_device(device_id, force_refresh=True)
 
     async def send_command(
-        self, device_id: str, command: str, arg: Optional[Union[str, int]]
-    ) -> Dict[str, Any]:
+        self, device_id: str, command: str, arg: str | int | None
+    ) -> dict[str, Any]:
         """Send a device command to the hub."""
         path = f"devices/{device_id}/{command}"
         if arg:
@@ -230,7 +230,7 @@ class Hub:
         _LOGGER.debug("Sending command %s(%s) to %s", command, arg, device_id)
         return await self._api_request(path)
 
-    async def set_event_url(self, event_url: Optional[str]) -> None:
+    async def set_event_url(self, event_url: str | None) -> None:
         """Set the URL that Hubitat will POST device events to."""
         if not event_url:
             event_url = self._server.url
@@ -243,7 +243,7 @@ class Hub:
 
         hsm_mode must be one of the HSM_* constants.
         """
-        new_mode: Dict[str, str] = await self._api_request(f"hsm/{hsm_mode}")
+        new_mode: dict[str, str] = await self._api_request(f"hsm/{hsm_mode}")
         self._hsm_status = new_mode["hsm"]
 
     async def set_mode(self, name: str) -> None:
@@ -257,7 +257,7 @@ class Hub:
             _LOGGER.error("Invalid mode: %s", name)
             raise InvalidMode(name)
 
-        new_modes: List[Dict[str, Any]] = await self._api_request(f"modes/{id}")
+        new_modes: list[dict[str, Any]] = await self._api_request(f"modes/{id}")
         self._modes = [Mode(m) for m in new_modes]
 
     def set_host(self, host: str) -> None:
@@ -280,7 +280,7 @@ class Hub:
             self._server.stop()
         await self._start_server()
 
-    async def set_ssl_context(self, ssl_context: Optional[SSLContext]) -> None:
+    async def set_ssl_context(self, ssl_context: SSLContext | None) -> None:
         """Set the SSLContext that the event listener server will use. Passing in a
         SSLContext object will make the event listener server HTTPS only. Passing in
         None will revert the server back to HTTP.
@@ -305,7 +305,7 @@ class Hub:
         """
         await self._api_request("devices")
 
-    def _process_event(self, event: Dict[str, Any]) -> None:
+    def _process_event(self, event: dict[str, Any]) -> None:
         """Process an event received from the hub."""
         try:
             content = event["content"]
@@ -353,7 +353,7 @@ class Hub:
                 listener(evt)
 
     def _update_device_attr(
-        self, device_id: str, attr_name: str, value: Union[int, str], value_unit: str
+        self, device_id: str, attr_name: str, value: int | str, value_unit: str
     ) -> None:
         """Update a device attribute value."""
         _LOGGER.debug(
@@ -387,13 +387,13 @@ class Hub:
 
     async def _load_hsm_status(self) -> None:
         """Load the current hub HSM status."""
-        hsm: Dict[str, str] = await self._api_request("hsm")
+        hsm: dict[str, str] = await self._api_request("hsm")
         _LOGGER.debug("Loaded hsm status")
         self._hsm_status = hsm["hsm"]
 
     async def _load_modes(self) -> None:
         """Load the current hub mode."""
-        modes: List[Dict[str, Any]] = await self._api_request("modes")
+        modes: list[dict[str, Any]] = await self._api_request("modes")
         _LOGGER.debug("Loaded modes")
         self._modes = [Mode(m) for m in modes]
 
@@ -492,7 +492,7 @@ def _open_socket(*args: Any, **kwargs: Any) -> Iterator[socket.socket]:
         s.close()
 
 
-def _get_event_port(port: Optional[int], event_url: Optional[str]) -> Optional[int]:
+def _get_event_port(port: int | None, event_url: str | None) -> int | None:
     """Given an optional port and event URL, return the event port"""
     if port is not None:
         return port
@@ -502,7 +502,7 @@ def _get_event_port(port: Optional[int], event_url: Optional[str]) -> Optional[i
     return None
 
 
-def _get_event_url(port: Optional[int], event_url: Optional[str]) -> Optional[str]:
+def _get_event_url(port: int | None, event_url: str | None) -> str | None:
     """Given an optional port and event URL, return a complete event URL"""
     if event_url is not None:
         u = urlparse(event_url)

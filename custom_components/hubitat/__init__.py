@@ -2,7 +2,7 @@
 import re
 from asyncio import gather
 from logging import getLogger
-from typing import Any, Dict
+from typing import Any
 
 import voluptuous as vol
 
@@ -22,7 +22,7 @@ _LOGGER = getLogger(__name__)
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 
 
-async def async_setup(hass: HomeAssistant, config: Dict[str, Any]) -> bool:
+async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     """Legacy setup -- not implemented."""
     return True
 

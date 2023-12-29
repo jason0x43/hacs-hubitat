@@ -1,6 +1,4 @@
 """Constants for the Hubitat integration."""
-from typing import Optional, Sequence
-
 from homeassistant.backports.enum import StrEnum
 
 from .hubitatmaker import DeviceAttribute, DeviceCapability
@@ -124,7 +122,7 @@ class TriggerInfo:
     """Trigger metadata."""
 
     def __init__(
-        self, attr: str, event: str, conf: str, subconfs: Optional[Sequence[str]] = None
+        self, attr: str, event: str, conf: str, subconfs: tuple[str, ...] | None = None
     ):
         """Initialize a TriggerInfo."""
         self.attr = attr

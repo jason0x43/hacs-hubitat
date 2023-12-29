@@ -2,14 +2,14 @@
 import logging
 from itertools import chain
 from json import loads
-from typing import Any, Callable, Dict, List, Optional, Sequence, cast
+from typing import Any, Callable, cast
 
 import voluptuous as vol
 
 from custom_components.hubitat.util import get_hubitat_device_id
 from homeassistant.components.automation import (
-    AutomationActionType,
-    AutomationTriggerInfo,
+    TriggerActionType,
+    TriggerInfo,
 )
 from homeassistant.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
@@ -76,8 +76,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_validate_trigger_config(
-    hass: HomeAssistant, config: Dict[str, Any]
-) -> Dict[str, Any]:
+    hass: HomeAssistant, config: dict[str, Any]
+) -> dict[str, Any]:
     """Validate a trigger config."""
     config = TRIGGER_SCHEMA(config)
     device = get_device_entry_by_device_id(hass, config[CONF_DEVICE_ID])
@@ -102,8 +102,8 @@ async def async_validate_trigger_config(
 
 async def async_get_triggers(
     hass: HomeAssistant, device_id: str
-) -> Sequence[Dict[str, Any]]:
-    """List device triggers for Hubitat devices."""
+) -> list[dict[str, Any]]:
+    """list device triggers for Hubitat devices."""
     device = get_hubitat_device(hass, device_id)
     if device is None:
         return []
@@ -142,8 +142,8 @@ async def async_get_triggers(
 async def async_attach_trigger(
     hass: HomeAssistant,
     config: ConfigType,
-    action: AutomationActionType,
-    automation_info: AutomationTriggerInfo,
+    action: TriggerActionType,
+    automation_info: TriggerInfo,
 ) -> Callable[[], None]:
     """Attach a trigger."""
 
@@ -193,7 +193,7 @@ class DeviceWrapper:
         return self._hub
 
 
-def get_hubitat_device(hass: HomeAssistant, device_id: str) -> Optional[DeviceWrapper]:
+def get_hubitat_device(hass: HomeAssistant, device_id: str) -> DeviceWrapper | None:
     """Return a Hubitat device for a given Home Assistant device ID."""
     device = get_device_entry_by_device_id(hass, device_id)
     hubitat_id = get_hubitat_device_id(device)
@@ -209,7 +209,7 @@ def get_hubitat_device(hass: HomeAssistant, device_id: str) -> Optional[DeviceWr
     return DeviceWrapper(hub.devices[hubitat_id], hub)
 
 
-def get_trigger_types(device: Device) -> Sequence[str]:
+def get_trigger_types(device: Device) -> list[str]:
     """Return the list of trigger types for a device."""
     types = []
 
@@ -228,9 +228,9 @@ def get_trigger_types(device: Device) -> Sequence[str]:
     return types
 
 
-def get_trigger_subtypes(device: Device, trigger_type: str) -> Sequence[str]:
+def get_trigger_subtypes(device: Device, trigger_type: str) -> list[str]:
     """Return the list of trigger subtypes for a device and a trigger type."""
-    subtypes: List[str] = []
+    subtypes: list[str] = []
 
     if trigger_type in (
         H_CONF_DOUBLE_TAPPED,
@@ -247,7 +247,7 @@ def get_trigger_subtypes(device: Device, trigger_type: str) -> Sequence[str]:
     return subtypes
 
 
-def get_valid_subtypes(trigger_type: str) -> Optional[Sequence[str]]:
+def get_valid_subtypes(trigger_type: str) -> tuple[str, ...] | None:
     """Return the list of valid trigger subtypes for a given type."""
     for trigger_info in TRIGGER_CAPABILITIES.values():
         if trigger_info.conf == trigger_type:
@@ -255,7 +255,7 @@ def get_valid_subtypes(trigger_type: str) -> Optional[Sequence[str]]:
     return None
 
 
-def get_lock_codes(device: Device) -> Sequence[str]:
+def get_lock_codes(device: Device) -> list[str]:
     """Return the lock codes for a lock."""
     try:
         codes_str = cast(str, device.attributes[DeviceAttribute.LOCK_CODES].value)

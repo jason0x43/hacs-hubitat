@@ -1,10 +1,10 @@
 from time import time
 from types import MappingProxyType
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Mapping, Sequence
 
 
 class Attribute:
-    def __init__(self, properties: Dict[str, Any]):
+    def __init__(self, properties: dict[str, Any]):
         self._properties = properties
 
     @property
@@ -16,16 +16,16 @@ class Attribute:
         return self._properties["dataType"]
 
     @property
-    def value(self) -> Union[str, float]:
+    def value(self) -> str | float:
         return self._properties["currentValue"]
 
     @property
-    def values(self) -> Optional[List[str]]:
+    def values(self) -> list[str] | None:
         if "values" not in self._properties:
             return None
         return self._properties["values"]
 
-    def update_value(self, value: Union[str, float]) -> None:
+    def update_value(self, value: str | float) -> None:
         self._properties["currentValue"] = value
 
     @property
@@ -44,7 +44,7 @@ class Attribute:
 
 
 class Device:
-    def __init__(self, properties: Dict[str, Any]):
+    def __init__(self, properties: dict[str, Any]):
         self.update_state(properties)
 
     @property
@@ -95,30 +95,30 @@ class Device:
         return self._last_update
 
     def update_attr(
-        self, attr_name: str, value: Union[str, int], value_unit: str | None
+        self, attr_name: str, value: str | int, value_unit: str | None
     ) -> None:
         attr = self.attributes[attr_name]
         attr.update_value(value)
         self._last_update = time()
 
-    def update_state(self, properties: Dict[str, Any]) -> None:
+    def update_state(self, properties: dict[str, Any]) -> None:
         self._properties = properties
         self._last_update = time()
 
-        self._attributes: Dict[str, Attribute] = {}
+        self._attributes: dict[str, Attribute] = {}
         self._attributes_ro = MappingProxyType(self._attributes)
         for attr in properties.get("attributes", []):
             self._attributes[attr["name"]] = Attribute(attr)
 
-        caps: List[str] = [
+        caps: list[str] = [
             p for p in properties.get("capabilities", []) if isinstance(p, str)
         ]
-        self._capabilities: Tuple[str, ...] = tuple(caps)
+        self._capabilities: tuple[str, ...] = tuple(caps)
 
-        commands: List[str] = [
+        commands: list[str] = [
             p for p in properties.get("commands", []) if isinstance(p, str)
         ]
-        self._commands: Tuple[str, ...] = tuple(commands)
+        self._commands: tuple[str, ...] = tuple(commands)
 
     def __iter__(self):
         for key in (
@@ -143,7 +143,7 @@ class Device:
 
 
 class Event:
-    def __init__(self, properties: Dict[str, Any]):
+    def __init__(self, properties: dict[str, Any]):
         self._properties = properties
 
     @property
@@ -151,11 +151,11 @@ class Event:
         return self._properties["deviceId"]
 
     @property
-    def device_name(self) -> Optional[str]:
+    def device_name(self) -> str | None:
         return self._properties.get("displayName")
 
     @property
-    def description(self) -> Optional[str]:
+    def description(self) -> str | None:
         return self._properties.get("descriptionText")
 
     @property
@@ -163,15 +163,15 @@ class Event:
         return self._properties["name"]
 
     @property
-    def type(self) -> Optional[str]:
+    def type(self) -> str | None:
         return self._properties.get("type")
 
     @property
-    def value(self) -> Union[str, float]:
+    def value(self) -> str | float:
         return self._properties["value"]
 
     @property
-    def unit(self) -> Optional[str]:
+    def unit(self) -> str | None:
         return self._properties.get("unit")
 
     def __iter__(self):
@@ -195,7 +195,7 @@ class Event:
 
 
 class Mode:
-    def __init__(self, properties: Dict[str, Any]):
+    def __init__(self, properties: dict[str, Any]):
         self._properties = properties
 
     @property

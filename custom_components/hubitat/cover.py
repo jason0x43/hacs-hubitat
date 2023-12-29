@@ -1,13 +1,11 @@
 from logging import getLogger
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Type
+from typing import Any, Type
 
 from homeassistant.components.cover import (
     ATTR_POSITION as HA_ATTR_POSITION,
-    SUPPORT_CLOSE,
-    SUPPORT_OPEN,
-    SUPPORT_SET_POSITION,
     CoverDeviceClass,
     CoverEntity,
+    CoverEntityFeature,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -30,11 +28,11 @@ class HubitatCover(HubitatEntity, CoverEntity):
     """Representation of a Hubitat cover."""
 
     _attribute: str
-    _features: int
-    _device_class: Optional[str]
+    _features: CoverEntityFeature
+    _device_class: CoverDeviceClass | None
 
     @property
-    def device_attrs(self) -> Optional[Sequence[str]]:
+    def device_attrs(self) -> tuple[str, ...] | None:
         """Return this entity's associated attributes"""
         return (
             self._attribute,
@@ -43,12 +41,12 @@ class HubitatCover(HubitatEntity, CoverEntity):
         )
 
     @property
-    def device_class(self) -> Optional[str]:
+    def device_class(self) -> CoverDeviceClass | None:
         """Return this sensor's device class."""
         return self._device_class
 
     @property
-    def current_cover_position(self) -> Optional[int]:
+    def current_cover_position(self) -> int | None:
         """Return current position of cover."""
         pos = self.get_int_attr(DeviceAttribute.POSITION)
         if pos is not None:
@@ -79,7 +77,7 @@ class HubitatCover(HubitatEntity, CoverEntity):
         return self.get_attr(self._attribute) == DeviceState.OPENING
 
     @property
-    def supported_features(self) -> int:
+    def supported_features(self) -> CoverEntityFeature:
         """Flag supported features."""
         return self._features
 
@@ -87,14 +85,6 @@ class HubitatCover(HubitatEntity, CoverEntity):
     def unique_id(self) -> str:
         """Return a unique ID for this cover."""
         return f"{super().unique_id}::cover::{self._attribute}"
-
-    @property
-    def old_unique_ids(self) -> List[str]:
-        """Return the legacy unique ID for this cover."""
-        old_parent_ids = super().old_unique_ids
-        old_ids = [f"{super().unique_id}::{self._attribute}"]
-        old_ids.extend([f"{id}::{self._attribute}" for id in old_parent_ids])
-        return old_ids
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close the cover."""
@@ -121,7 +111,7 @@ class HubitatDoorControl(HubitatCover):
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.DOOR
         self._device_class = CoverDeviceClass.DOOR
-        self._features = SUPPORT_OPEN | SUPPORT_CLOSE
+        self._features = CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE
 
 
 class HubitatGarageDoorControl(HubitatCover):
@@ -132,7 +122,7 @@ class HubitatGarageDoorControl(HubitatCover):
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.DOOR
         self._device_class = CoverDeviceClass.GARAGE
-        self._features = SUPPORT_OPEN | SUPPORT_CLOSE
+        self._features = CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE
 
 
 class HubitatWindowShade(HubitatCover):
@@ -143,7 +133,11 @@ class HubitatWindowShade(HubitatCover):
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.WINDOW_SHADE
         self._device_class = CoverDeviceClass.SHADE
-        self._features = SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_SET_POSITION
+        self._features = (
+            CoverEntityFeature.OPEN
+            | CoverEntityFeature.CLOSE
+            | CoverEntityFeature.SET_POSITION
+        )
 
 
 class HubitatWindowBlind(HubitatCover):
@@ -154,7 +148,11 @@ class HubitatWindowBlind(HubitatCover):
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.WINDOW_BLIND
         self._device_class = CoverDeviceClass.BLIND
-        self._features = SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_SET_POSITION
+        self._features = (
+            CoverEntityFeature.OPEN
+            | CoverEntityFeature.CLOSE
+            | CoverEntityFeature.SET_POSITION
+        )
 
 
 class HubitatWindowControl(HubitatCover):
@@ -165,10 +163,14 @@ class HubitatWindowControl(HubitatCover):
         super().__init__(*args, **kwargs)
         self._attribute = DeviceAttribute.WINDOW_SHADE
         self._device_class = CoverDeviceClass.WINDOW
-        self._features = SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_SET_POSITION
+        self._features = (
+            CoverEntityFeature.OPEN
+            | CoverEntityFeature.CLOSE
+            | CoverEntityFeature.SET_POSITION
+        )
 
 
-_COVER_CAPS: Tuple[Tuple[str, Type[HubitatCover]], ...] = (
+_COVER_CAPS: tuple[tuple[str, Type[HubitatCover]], ...] = (
     (DeviceCapability.DOOR_CONTROL, HubitatGarageDoorControl),
     (DeviceCapability.GARAGE_DOOR_CONTROL, HubitatGarageDoorControl),
     (DeviceCapability.WINDOW_BLIND, HubitatWindowBlind),
@@ -184,9 +186,7 @@ async def async_setup_entry(
     """Initialize cover devices."""
     for cap in _COVER_CAPS:
 
-        def is_cover(
-            device: Device, overrides: Optional[Dict[str, str]] = None
-        ) -> bool:
+        def is_cover(device: Device, overrides: dict[str, str] | None = None) -> bool:
             return _is_cover_type(device, cap[0])
 
         create_and_add_entities(
@@ -194,7 +194,7 @@ async def async_setup_entry(
         )
 
 
-def is_cover(dev: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
+def is_cover(dev: Device, overrides: dict[str, str] | None = None) -> bool:
     return (
         DeviceCapability.WINDOW_SHADE in dev.capabilities
         or DeviceCapability.WINDOW_BLIND in dev.capabilities

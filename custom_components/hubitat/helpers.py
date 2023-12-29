@@ -1,5 +1,3 @@
-from typing import Optional
-
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.helpers import device_registry
 from homeassistant.helpers.device_registry import DeviceEntry
@@ -31,7 +29,7 @@ def get_device_entry_by_device_id(
     return device
 
 
-def get_hub_for_device(hass: HomeAssistantType, device: DeviceEntry) -> Optional[Hub]:
+def get_hub_for_device(hass: HomeAssistantType, device: DeviceEntry) -> Hub | None:
     """Get the Hubitat hub associated with a device."""
     for entry_id in device.config_entries:
         hub = get_hub(hass, entry_id)

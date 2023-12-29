@@ -2,7 +2,9 @@
 
 from json import loads
 from logging import getLogger
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, cast
+
+from typing_extensions import override
 
 from homeassistant.core import callback
 from homeassistant.helpers import device_registry
@@ -20,7 +22,7 @@ _LOGGER = getLogger(__name__)
 class HubitatBase(Removable):
     """Base class for Hubitat entities and event emitters."""
 
-    def __init__(self, hub: Hub, device: Device, temp: Optional[bool] = False) -> None:
+    def __init__(self, hub: Hub, device: Device, temp: bool | None = False) -> None:
         """Initialize a device."""
         self._hub = hub
         self._device = device
@@ -57,11 +59,6 @@ class HubitatBase(Removable):
         return info
 
     @property
-    def old_unique_ids(self) -> List[str]:
-        """Return the legacy unique for this device."""
-        return self._old_ids
-
-    @property
     def unique_id(self) -> str:
         """Return a unique for this device."""
         return self._id
@@ -81,19 +78,20 @@ class HubitatBase(Removable):
         """Return the room name of this device."""
         return self._device.room
 
-    async def async_will_remove_from_hass(self) -> None:
+    @override
+    async def async_will_remove_from_hass(self):
         """Run when entity will be removed from hass."""
         self._hub.remove_device_listeners(self.device_id)
 
     @callback
-    def get_attr(self, attr: str) -> Union[float, int, str, None]:
+    def get_attr(self, attr: str) -> float | int | str | None:
         """Get the current value of an attribute."""
         if attr in self._device.attributes:
             return self._device.attributes[attr].value
         return None
 
     @callback
-    def get_float_attr(self, attr: str) -> Optional[float]:
+    def get_float_attr(self, attr: str) -> float | None:
         """Get the current value of an attribute."""
         val = self.get_attr(attr)
         if val is None:
@@ -101,7 +99,7 @@ class HubitatBase(Removable):
         return float(val)
 
     @callback
-    def get_int_attr(self, attr: str) -> Optional[int]:
+    def get_int_attr(self, attr: str) -> int | None:
         """Get the current value of an attribute."""
         val = self.get_float_attr(attr)
         if val is None:
@@ -109,15 +107,15 @@ class HubitatBase(Removable):
         return round(val)
 
     @callback
-    def get_json_attr(self, attr: str) -> Optional[Dict[str, Any]]:
+    def get_json_attr(self, attr: str) -> dict[str, Any] | None:
         """Get the current value of an attribute."""
         val = self.get_str_attr(attr)
         if val is None:
             return None
-        return cast(Dict[str, Any], loads(val))
+        return cast(dict[str, Any], loads(val))
 
     @callback
-    def get_str_attr(self, attr: str) -> Optional[str]:
+    def get_str_attr(self, attr: str) -> str | None:
         """Get the current value of an attribute."""
         val = self.get_attr(attr)
         if val is None:
@@ -133,7 +131,7 @@ class HubitatBase(Removable):
 class HubitatEntity(HubitatBase, UpdateableEntity):
     """An entity related to a Hubitat device."""
 
-    def __init__(self, hub: Hub, device: Device, temp: Optional[bool] = False) -> None:
+    def __init__(self, hub: Hub, device: Device, temp: bool | None = False) -> None:
         """Initialize an entity."""
         super().__init__(hub, device, temp)
 
@@ -143,7 +141,7 @@ class HubitatEntity(HubitatBase, UpdateableEntity):
             self._hub.add_device_listener(self._device.id, self.handle_event)
 
     @property
-    def device_attrs(self) -> Optional[str]:
+    def device_attrs(self) -> tuple[str, ...] | None:
         return None
 
     @property
@@ -162,9 +160,7 @@ class HubitatEntity(HubitatBase, UpdateableEntity):
         """Fetch new data for this device."""
         await self._hub.refresh_device(self.device_id)
 
-    async def send_command(
-        self, command: str, *args: Optional[Union[int, str]]
-    ) -> None:
+    async def send_command(self, command: str, *args: int | str | None) -> None:
         """Send a command to this device."""
         arg = ",".join([str(a) for a in args]) if args else None
         await self._hub.send_command(self.device_id, command, arg)

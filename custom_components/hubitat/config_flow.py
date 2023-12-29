@@ -1,7 +1,7 @@
 """Config flow for Hubitat integration."""
 import logging
 from copy import deepcopy
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Union, cast
+from typing import Any, Awaitable, Callable, cast
 
 import voluptuous as vol
 from voluptuous.schema_builder import Schema
@@ -69,7 +69,7 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
     VERSION = 1
     CONNECTION_CLASS = CONN_CLASS_LOCAL_PUSH
 
-    hub: Optional[HubitatHub] = None
+    hub: HubitatHub | None = None
     device_schema: Schema
 
     @staticmethod
@@ -78,10 +78,10 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
         return HubitatOptionsFlow(config_entry)
 
     async def async_step_user(
-        self, user_input: Optional[Dict[str, Any]] = None
+        self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the user step."""
-        errors: Dict[str, str] = {}
+        errors: dict[str, str] = {}
 
         if user_input is not None:
             try:
@@ -89,7 +89,7 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
                 entry_data = deepcopy(user_input)
                 self.hub = info["hub"]
 
-                placeholders: Dict[str, str] = {}
+                placeholders: dict[str, str] = {}
                 for key in user_input:
                     if user_input[key] is not None and key in placeholders:
                         placeholders[key] = user_input[key]
@@ -135,8 +135,8 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
 class HubitatOptionsFlow(OptionsFlow):
     """Handle an options flow for Hubitat."""
 
-    hub: Optional[HubitatHub] = None
-    overrides: Dict[str, str] = {}
+    hub: HubitatHub | None = None
+    overrides: dict[str, str] = {}
     should_remove_devices = False
 
     def __init__(self, config_entry: ConfigEntry):
@@ -146,23 +146,23 @@ class HubitatOptionsFlow(OptionsFlow):
         self.options = dict(config_entry.options)
 
     async def async_step_init(
-        self, user_input: Optional[Dict[str, str]] = None
+        self, user_input: dict[str, str] | None = None
     ) -> FlowResult:
         """Handle integration options."""
         return await self.async_step_user()
 
     async def async_step_user(
-        self, user_input: Optional[Dict[str, str]] = None
+        self, user_input: dict[str, str] | None = None
     ) -> FlowResult:
         """Handle integration options."""
         entry = self.config_entry
-        errors: Dict[str, str] = {}
+        errors: dict[str, str] = {}
 
         _LOGGER.debug("Setting up entry with user input: %s", user_input)
 
         if user_input is not None:
             try:
-                check_input: Dict[str, Union[str, None]] = {
+                check_input: dict[str, str | None] = {
                     CONF_HOST: user_input[CONF_HOST],
                     H_CONF_APP_ID: entry.data.get(H_CONF_APP_ID),
                     CONF_ACCESS_TOKEN: entry.data.get(CONF_ACCESS_TOKEN),
@@ -278,10 +278,10 @@ class HubitatOptionsFlow(OptionsFlow):
         )
 
     async def async_step_remove_devices(
-        self, user_input: Optional[Dict[str, Any]] = None
+        self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the device removal step."""
-        errors: Dict[str, str] = {}
+        errors: dict[str, str] = {}
 
         assert self.hass is not None
 
@@ -322,7 +322,7 @@ class HubitatOptionsFlow(OptionsFlow):
         )
 
     async def async_step_override_lights(
-        self, user_input: Optional[Dict[str, Any]] = None
+        self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Let the user manually specify some devices as lights."""
 
@@ -334,7 +334,7 @@ class HubitatOptionsFlow(OptionsFlow):
         )
 
     async def async_step_override_switches(
-        self, user_input: Optional[Dict[str, Any]] = None
+        self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Let the user manually specify some devices as switches."""
 
@@ -359,13 +359,13 @@ class HubitatOptionsFlow(OptionsFlow):
 
     async def _async_step_override_type(
         self,
-        user_input: Optional[Dict[str, Any]],
+        user_input: dict[str, Any] | None,
         platform: str,
         step_id: str,
         next_step: Callable[[], Awaitable[FlowResult]],
         matcher: Callable[[Device], bool],
     ) -> FlowResult:
-        errors: Dict[str, str] = {}
+        errors: dict[str, str] = {}
 
         assert self.hub is not None
 
@@ -420,11 +420,11 @@ class HubitatOptionsFlow(OptionsFlow):
         )
 
 
-def _get_devices(hass: HomeAssistant, config_entry: ConfigEntry) -> List[DeviceEntry]:
+def _get_devices(hass: HomeAssistant, config_entry: ConfigEntry) -> list[DeviceEntry]:
     """Return the devices associated with a given config entry."""
     dreg = device_registry.async_get(hass)
     all_devices = dreg.devices
-    devices: List[DeviceEntry] = []
+    devices: list[DeviceEntry] = []
 
     for id in all_devices:
         dev = all_devices[id]
@@ -437,7 +437,7 @@ def _get_devices(hass: HomeAssistant, config_entry: ConfigEntry) -> List[DeviceE
     return devices
 
 
-def _remove_devices(hass: HomeAssistant, device_ids: List[str]) -> None:
+def _remove_devices(hass: HomeAssistant, device_ids: list[str]) -> None:
     """Remove a list of devices."""
     _LOGGER.debug("Removing devices: %s", device_ids)
     dreg = device_registry.async_get(hass)
@@ -445,15 +445,15 @@ def _remove_devices(hass: HomeAssistant, device_ids: List[str]) -> None:
         dreg.async_remove_device(id)
 
 
-async def _validate_input(user_input: Dict[str, Any]) -> Dict[str, Any]:
+async def _validate_input(user_input: dict[str, Any]) -> dict[str, Any]:
     """Validate that the user input can create a working connection."""
 
     # data has the keys from CONFIG_SCHEMA with values provided by the user.
     host: str = user_input[CONF_HOST]
     app_id: str = user_input[H_CONF_APP_ID]
     token: str = user_input[CONF_ACCESS_TOKEN]
-    port: Optional[int] = user_input.get(H_CONF_SERVER_PORT)
-    event_url: Optional[str] = user_input.get(H_CONF_SERVER_URL)
+    port: int | None = user_input.get(H_CONF_SERVER_PORT)
+    event_url: str | None = user_input.get(H_CONF_SERVER_URL)
 
     if event_url:
         event_url = cv.url(event_url)

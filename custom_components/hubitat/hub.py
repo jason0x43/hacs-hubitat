@@ -2,7 +2,7 @@ import os
 import ssl
 from logging import getLogger
 from ssl import SSLContext
-from typing import Any, Callable, Dict, Mapping, Optional, Sequence, Union, cast
+from typing import Any, Callable, Mapping, TypeVar, cast
 
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
@@ -53,6 +53,9 @@ _TRIGGER_ATTRS = tuple([v.attr for v in TRIGGER_CAPABILITIES.values()])
 # A mapping from Hubitat attribute names to the attribute names that should be
 # used for HA events
 _TRIGGER_ATTR_MAP = {v.attr: v.event for v in TRIGGER_CAPABILITIES.values()}
+
+E = TypeVar("E", bound=UpdateableEntity)
+M = TypeVar("M", bound=Removable)
 
 
 class Hub:
@@ -118,42 +121,42 @@ class Hub:
         return get_hub_short_id(self._hub)
 
     @property
-    def port(self) -> Optional[int]:
+    def port(self) -> int | None:
         """The port used for the Hubitat event receiver."""
         return self._hub.port
 
     @property
-    def event_url(self) -> Optional[str]:
+    def event_url(self) -> str | None:
         """The event URL that Hubitat should POST events to."""
         return self._hub.event_url
 
     @property
-    def ssl_context(self) -> Optional[SSLContext]:
+    def ssl_context(self) -> SSLContext | None:
         """The SSLContext that the event listener server is using."""
         return self._hub.ssl_context
 
     @property
-    def mode(self) -> Optional[str]:
+    def mode(self) -> str | None:
         """Return the current mode of this hub."""
         return self._hub.mode
 
     @property
-    def modes(self) -> Optional[list[str]]:
+    def modes(self) -> list[str] | None:
         """Return the available modes of this hub."""
         return self._hub.modes
 
     @property
-    def mode_supported(self) -> Optional[bool]:
+    def mode_supported(self) -> bool | None:
         """Return true if this hub supports mode setting and status."""
         return self._hub.mode_supported
 
     @property
-    def hsm_status(self) -> Optional[str]:
+    def hsm_status(self) -> str | None:
         """Return the current HSM status of this hub."""
         return self._hub.hsm_status
 
     @property
-    def hsm_supported(self) -> Optional[bool]:
+    def hsm_supported(self) -> bool | None:
         """Return true if this hub supports HSM setting and status."""
         return self._hub.hsm_supported
 
@@ -171,11 +174,11 @@ class Hub:
                 self._device_listeners[device_id] = []
             self._device_listeners[device_id].append(listener)
 
-    def add_entities(self, entities: Sequence[UpdateableEntity]) -> None:
+    def add_entities(self, entities: list[E]) -> None:
         """Add entities to this hub."""
         self.entities.extend(entities)
 
-    def add_event_emitters(self, emitters: Sequence[Removable]) -> None:
+    def add_event_emitters(self, emitters: list[M]) -> None:
         """Add event emitters to this hub."""
         self.event_emitters.extend(emitters)
 
@@ -356,7 +359,7 @@ class Hub:
         _LOGGER.debug("Handling options update...")
         hub = get_hub(hass, config_entry.entry_id)
 
-        host: Optional[str] = config_entry.options.get(
+        host: str | None = config_entry.options.get(
             CONF_HOST, config_entry.data.get(CONF_HOST)
         )
         if host is not None and host != hub.host:
@@ -425,7 +428,7 @@ class Hub:
         await self._hub.refresh_device(device_id)
 
     async def send_command(
-        self, device_id: str, command: str, arg: Optional[Union[str, int]]
+        self, device_id: str, command: str, arg: str | int | None
     ) -> None:
         """Send a device command to Hubitat."""
         await self._hub.send_command(device_id, command, arg)
@@ -440,7 +443,7 @@ class Hub:
         _LOGGER.debug("Setting event listener port to %s", port)
         await self._hub.set_port(port)
 
-    async def set_ssl_context(self, ssl_context: Optional[SSLContext]) -> None:
+    async def set_ssl_context(self, ssl_context: SSLContext | None) -> None:
         """Set the SSLContext that the event listener server will use."""
         if ssl_context is None:
             _LOGGER.warn("Disabling SSL for event listener server")
@@ -448,7 +451,7 @@ class Hub:
             _LOGGER.warn("Enabling SSL for event listener server")
         await self._hub.set_ssl_context(ssl_context)
 
-    async def set_event_url(self, url: Optional[str]) -> None:
+    async def set_event_url(self, url: str | None) -> None:
         """Set the port that the event listener server will listen on."""
         _LOGGER.debug("Setting event server URL to %s", url)
         await self._hub.set_event_url(url)
@@ -459,7 +462,7 @@ class Hub:
             for listener in self._device_listeners[event.device_id]:
                 listener(event)
         if event.attribute in _TRIGGER_ATTRS:
-            evt: Dict[str, Any] = dict(event)
+            evt: dict[str, Any] = dict(event)
             evt[ATTR_ATTRIBUTE] = _TRIGGER_ATTR_MAP[event.attribute]
             evt[ATTR_HUB] = self.id
             evt[ATTR_HA_DEVICE_ID] = get_hub_device_id(self, event.device_id)
@@ -476,9 +479,7 @@ def get_hub(hass: HomeAssistant, config_entry_id: str) -> Hub:
     return hass.data[DOMAIN][config_entry_id]
 
 
-def _create_ssl_context(
-    ssl_cert: Optional[str], ssl_key: Optional[str]
-) -> Optional[SSLContext]:
+def _create_ssl_context(ssl_cert: str | None, ssl_key: str | None) -> SSLContext | None:
     if (
         ssl_cert is not None
         and os.path.isfile(ssl_cert)

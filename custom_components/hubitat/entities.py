@@ -1,12 +1,11 @@
 from logging import getLogger
-from typing import Callable, Dict, List, Optional, Type, TypeVar
+from typing import Callable, Type, TypeVar
 
 from custom_components.hubitat.util import get_device_overrides
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry
 
-from .const import DOMAIN
 from .device import HubitatEntity, HubitatEventEmitter
 from .hub import get_hub
 from .hubitatmaker import Device
@@ -23,8 +22,8 @@ def create_and_add_entities(
     async_add_entities: EntityAdder,
     platform: str,
     EntityClass: Type[E],
-    is_type: Callable[[Device, Optional[Dict[str, str]]], bool],
-) -> List[E]:
+    is_type: Callable[[Device, dict[str, str] | None], bool],
+) -> list[E]:
     """Create entites and add them to the entity registry."""
     hub = get_hub(hass, config_entry.entry_id)
     devices = hub.devices
@@ -35,12 +34,11 @@ def create_and_add_entities(
         devices[id] for id in devices if is_type(devices[id], overrides)
     ]
 
-    entities: List[E] = [
+    entities: list[E] = [
         EntityClass(hub=hub, device=device) for device in devices_with_entity
     ]
 
     if len(entities) > 0:
-        _migrate_old_unique_ids(hass, entities, platform)
         hub.add_entities(entities)
         async_add_entities(entities)
         _LOGGER.debug(f"Added {EntityClass.__name__} entities: {entities}")
@@ -72,7 +70,7 @@ def create_and_add_event_emitters(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
     is_emitter: Callable[[Device], bool],
-) -> List[HubitatEventEmitter]:
+) -> list[HubitatEventEmitter]:
     """Create event emitters."""
     hub = get_hub(hass, config_entry.entry_id)
     devices = hub.devices
@@ -88,22 +86,3 @@ def create_and_add_event_emitters(
     _LOGGER.debug("Added event emitters: %s", emitters)
 
     return emitters
-
-
-def _migrate_old_unique_ids(
-    hass: HomeAssistant, entities: List[E], platform: str
-) -> None:
-    """Migrate legacy unique IDs to the current format."""
-    _LOGGER.debug("Migrating unique_ids for %s...", platform)
-    ereg = entity_registry.async_get(hass)
-    for entity in entities:
-        old_ids = entity.old_unique_ids
-        _LOGGER.debug("Checking for existence of entity %s...", old_ids)
-        for id in old_ids:
-            # The async_get_entity_id args appear not to use standard names
-            entity_id = ereg.async_get_entity_id(
-                domain=platform, platform=DOMAIN, unique_id=id
-            )
-            if entity_id is not None:
-                _LOGGER.debug("Migrating unique_id for %s", entity_id)
-                ereg.async_update_entity(entity_id, new_unique_id=entity.unique_id)

@@ -2,7 +2,7 @@
 
 import re
 from logging import getLogger
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any
 
 import voluptuous as vol
 
@@ -33,7 +33,7 @@ class HubitatSwitch(HubitatEntity, SwitchEntity):
     _attribute: str
 
     @property
-    def device_attrs(self) -> Optional[Sequence[str]]:
+    def device_attrs(self) -> tuple[str, ...] | None:
         """Return this entity's associated attributes"""
         return ("switch", "power")
 
@@ -43,7 +43,7 @@ class HubitatSwitch(HubitatEntity, SwitchEntity):
         return self.get_str_attr("switch") == "on"
 
     @property
-    def device_class(self) -> Optional[str]:
+    def device_class(self) -> SwitchDeviceClass | None:
         """Return the class of this device, from component DEVICE_CLASSES."""
         if _NAME_TEST.search(self._device.label):
             return SwitchDeviceClass.SWITCH
@@ -56,14 +56,6 @@ class HubitatSwitch(HubitatEntity, SwitchEntity):
         if hasattr(self, "_attribute"):
             id += f"::{self._attribute}"
         return id
-
-    @property
-    def old_unique_ids(self) -> List[str]:
-        """Return the legacy unique ID for this switch."""
-        old_ids = [super().unique_id]
-        old_parent_ids = super().old_unique_ids
-        old_ids.extend(old_parent_ids)
-        return old_ids
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""
@@ -80,7 +72,7 @@ class HubitatPowerMeterSwitch(HubitatSwitch):
     _attribute = "power_meter"
 
     @property
-    def current_power_w(self) -> Optional[float]:
+    def current_power_w(self) -> float | None:
         """Return the current power usage in W."""
         return self.get_float_attr("power")
 
@@ -114,7 +106,7 @@ class HubitatAlarm(HubitatSwitch):
         await self.send_command(DeviceCommand.STROBE)
 
 
-def is_switch(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
+def is_switch(device: Device, overrides: dict[str, str] | None = None) -> bool:
     """Return True if device looks like a switch."""
     if overrides and overrides.get(device.id) is not None:
         return overrides[device.id] == "switch"
@@ -126,12 +118,12 @@ def is_switch(device: Device, overrides: Optional[Dict[str, str]] = None) -> boo
     )
 
 
-def is_energy_meter(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
+def is_energy_meter(device: Device, overrides: dict[str, str] | None = None) -> bool:
     """Return True if device can measure power."""
     return DeviceCapability.POWER_METER in device.capabilities
 
 
-def is_alarm(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
+def is_alarm(device: Device, overrides: dict[str, str] | None = None) -> bool:
     """Return True if the device is an alarm."""
     return DeviceCapability.ALARM in device.capabilities
 
@@ -154,7 +146,7 @@ async def async_setup_entry(
     """Initialize switch devices."""
 
     def _is_simple_switch(
-        device: Device, overrides: Optional[Dict[str, str]] = None
+        device: Device, overrides: dict[str, str] | None = None
     ) -> bool:
         return is_switch(device, overrides) and not is_energy_meter(device, overrides)
 
@@ -168,7 +160,7 @@ async def async_setup_entry(
     )
 
     def _is_smart_switch(
-        device: Device, overrides: Optional[Dict[str, str]] = None
+        device: Device, overrides: dict[str, str] | None = None
     ) -> bool:
         return is_switch(device, overrides) and is_energy_meter(device, overrides)
 
@@ -189,7 +181,7 @@ async def async_setup_entry(
 
     if len(alarms) > 0:
 
-        def get_entity(service: ServiceCall) -> Optional[HubitatAlarm]:
+        def get_entity(service: ServiceCall) -> HubitatAlarm | None:
             entity_id = service.data.get(ATTR_ENTITY_ID)
             for alarm in alarms:
                 if alarm.entity_id == entity_id:

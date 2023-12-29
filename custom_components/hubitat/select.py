@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Sequence, Union
+from typing import Any
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
@@ -12,16 +12,16 @@ from .types import EntityAdder
 
 class HubitatSelect(HubitatEntity, SelectEntity):
     _attribute: str
-    _options: List[str]
+    _options: list[str]
     _device_class: str
 
     @property
-    def device_attrs(self) -> Optional[Sequence[str]]:
+    def device_attrs(self) -> tuple[str, ...] | None:
         """Return this entity's associated attributes"""
         return (self._attribute,)
 
     @property
-    def device_class(self) -> Optional[str]:
+    def device_class(self) -> str | None:
         """Return this select's device class."""
         return self._device_class
 
@@ -31,7 +31,7 @@ class HubitatSelect(HubitatEntity, SelectEntity):
         return f"{super().name} {self._attribute}".title()
 
     @property
-    def current_option(self) -> Union[str, None]:
+    def current_option(self) -> str | None:
         """Return this select's current state."""
         return self.get_str_attr(self._attribute)
 
@@ -41,7 +41,7 @@ class HubitatSelect(HubitatEntity, SelectEntity):
         return f"{super().unique_id}::sensor::{self._attribute}"
 
     @property
-    def options(self) -> List[str]:
+    def options(self) -> list[str]:
         return self._options or []
 
 
@@ -53,7 +53,7 @@ class HubitatModeSelect(HubitatSelect):
         self._device_class = DeviceType.HUB_MODE
 
     @property
-    def options(self) -> List[str]:
+    def options(self) -> list[str]:
         return self._hub.modes or []
 
     async def async_select_option(self, option: str) -> None:

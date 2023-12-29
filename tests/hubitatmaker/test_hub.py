@@ -1,7 +1,7 @@
 import json
 import re
 from os.path import dirname, join
-from typing import Any, Dict, List, Union
+from typing import Any
 from unittest.mock import MagicMock, patch
 from urllib.parse import unquote
 
@@ -11,12 +11,12 @@ from custom_components.hubitat.hubitatmaker.const import HsmCommand
 from custom_components.hubitat.hubitatmaker.hub import Hub, InvalidConfig
 
 hub_edit_page: str = ""
-devices: Dict[str, Any] = {}
-device_details: Dict[str, Any] = {}
-events: Dict[str, Dict[str, Any]] = {}
-modes: List[Dict[str, Any]] = []
-hsm: Dict[str, str] = {}
-requests: List[Dict[str, Any]] = []
+devices: dict[str, Any] = {}
+device_details: dict[str, Any] = {}
+events: dict[str, dict[str, Any]] = {}
+modes: list[dict[str, Any]] = []
+hsm: dict[str, str] = {}
+requests: list[dict[str, Any]] = []
 
 
 def fake_get_mac_address(**kwargs: str):
@@ -27,7 +27,7 @@ class FakeResponse:
     def __init__(
         self,
         status=200,
-        data: Union[str, Dict, List] = "",
+        data: str | dict | list = "",
         method: str = "GET",
         url: str = "/",
         reason: str = "",
@@ -49,7 +49,7 @@ class FakeResponse:
         return json.dumps(self._data)
 
 
-def create_fake_request(responses: Dict = {}):
+def create_fake_request(responses: dict = {}):
     class FakeRequest:
         def __init__(self, method: str, url: str, **kwargs: Any):
             if url.endswith("/hub/edit"):

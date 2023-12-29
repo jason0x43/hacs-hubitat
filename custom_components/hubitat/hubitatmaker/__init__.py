@@ -4,11 +4,11 @@ from .const import (
     DEFAULT_FAN_SPEEDS,
     ID_HSM_STATUS,
     ID_MODE,
-    ColorMode,
     DeviceAttribute,
     DeviceCapability,
     DeviceCommand,
     DeviceState,
+    HubitatColorMode,
 )
 from .error import ConnectionError, InvalidConfig, InvalidToken, RequestError
 from .hub import Hub
@@ -16,7 +16,7 @@ from .types import Attribute, Device, Event
 
 __all__ = [
     "Attribute",
-    "ColorMode",
+    "HubitatColorMode",
     "ConnectionError",
     "DEFAULT_FAN_SPEEDS",
     "Device",

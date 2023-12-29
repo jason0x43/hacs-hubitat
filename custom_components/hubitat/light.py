@@ -3,7 +3,7 @@
 import json
 import re
 from logging import getLogger
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -15,7 +15,9 @@ from homeassistant.components.light import (
     SUPPORT_COLOR,
     SUPPORT_COLOR_TEMP,
     SUPPORT_FLASH,
+    ColorMode,
     LightEntity,
+    LightEntityFeature,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -25,27 +27,13 @@ from .cover import is_cover
 from .device import HubitatEntity
 from .entities import create_and_add_entities
 from .hubitatmaker import (
-    ColorMode,
     Device,
     DeviceAttribute,
     DeviceCapability,
     DeviceCommand,
+    HubitatColorMode,
 )
 from .types import EntityAdder
-
-try:
-    from homeassistant.components.light import (
-        COLOR_MODE_BRIGHTNESS,
-        COLOR_MODE_COLOR_TEMP,
-        COLOR_MODE_HS,
-        COLOR_MODE_ONOFF,
-    )
-except ImportError:
-    COLOR_MODE_BRIGHTNESS = "brightness"
-    COLOR_MODE_COLOR_TEMP = "color_temp"
-    COLOR_MODE_HS = "hs"
-    COLOR_MODE_ONOFF = "onoff"
-
 
 _LOGGER = getLogger(__name__)
 
@@ -64,27 +52,27 @@ class HubitatLight(HubitatEntity, LightEntity):
     """Representation of a Hubitat light."""
 
     @property
-    def device_attrs(self) -> Optional[Sequence[str]]:
+    def device_attrs(self) -> tuple[str, ...] | None:
         """Return this entity's associated attributes"""
         return _device_attrs
 
     @property
-    def color_mode(self) -> Optional[str]:
+    def color_mode(self) -> ColorMode | str | None:
         """Return this light's color mode."""
         he_color_mode = self.get_str_attr(DeviceAttribute.COLOR_MODE)
-        if he_color_mode == ColorMode.CT:
-            return COLOR_MODE_COLOR_TEMP
-        if he_color_mode == ColorMode.RGB:
-            return COLOR_MODE_HS
+        if he_color_mode == HubitatColorMode.CT:
+            return ColorMode.COLOR_TEMP
+        if he_color_mode == HubitatColorMode.RGB:
+            return ColorMode.RGB
         return None
 
     @property
-    def color_name(self) -> Optional[str]:
+    def color_name(self) -> str | None:
         """Return the name of this light's current color."""
         return self.get_str_attr(DeviceAttribute.COLOR_NAME)
 
     @property
-    def brightness(self) -> Optional[int]:
+    def brightness(self) -> int | None:
         """Return the level of this light."""
         level = self.get_int_attr(DeviceAttribute.LEVEL)
         if level is None:
@@ -92,10 +80,10 @@ class HubitatLight(HubitatEntity, LightEntity):
         return int(255 * level / 100)
 
     @property
-    def color_temp(self) -> Optional[float]:
+    def color_temp(self) -> int | None:
         """Return the CT color value in mireds."""
         mode = self.color_mode
-        if mode and mode != COLOR_MODE_COLOR_TEMP:
+        if mode and mode != ColorMode.COLOR_TEMP:
             return None
 
         temp = self.get_int_attr(DeviceAttribute.COLOR_TEMP)
@@ -105,10 +93,10 @@ class HubitatLight(HubitatEntity, LightEntity):
         return color_util.color_temperature_kelvin_to_mired(temp)
 
     @property
-    def hs_color(self) -> Optional[Tuple[float, float]]:
+    def hs_color(self) -> tuple[float, float] | None:
         """Return the hue and saturation color value [float, float]."""
         mode = self.color_mode
-        if mode and mode != COLOR_MODE_HS:
+        if mode and mode != ColorMode.HS:
             return None
 
         hue = self.get_float_attr(DeviceAttribute.HUE)
@@ -125,57 +113,37 @@ class HubitatLight(HubitatEntity, LightEntity):
         return self.get_str_attr(DeviceAttribute.SWITCH) == "on"
 
     @property
-    def supported_color_modes(self) -> set:
+    def supported_color_modes(self) -> set[ColorMode] | set[str] | None:
         caps = self._device.capabilities
         supported_modes = set()
 
         if DeviceCapability.COLOR_CONTROL in caps:
-            supported_modes.add(COLOR_MODE_HS)
+            supported_modes.add(ColorMode.HS)
         if DeviceCapability.COLOR_TEMP in caps:
-            supported_modes.add(COLOR_MODE_COLOR_TEMP)
+            supported_modes.add(ColorMode.COLOR_TEMP)
 
         if DeviceCapability.SWITCH_LEVEL in caps and not supported_modes:
-            supported_modes.add(COLOR_MODE_BRIGHTNESS)
+            supported_modes.add(ColorMode.BRIGHTNESS)
 
         if not supported_modes:
-            supported_modes.add(COLOR_MODE_ONOFF)
+            supported_modes.add(ColorMode.ONOFF)
 
         return supported_modes
 
     @property
-    def supported_features(self) -> int:
+    def supported_features(self) -> LightEntityFeature:
         """Return supported feature flags."""
-        features = 0
-        caps = self._device.capabilities
         cmds = self._device.commands
 
-        # deprecated, replaced by color modes
-        if DeviceCapability.COLOR_CONTROL in caps:
-            features |= SUPPORT_COLOR
-        # deprecated, replaced by color modes
-        if DeviceCapability.COLOR_TEMP in caps:
-            features |= SUPPORT_COLOR_TEMP
-        # deprecated, replaced by color modes
-        if DeviceCapability.SWITCH_LEVEL in caps:
-            features |= SUPPORT_BRIGHTNESS
-
         if DeviceCommand.FLASH in cmds:
-            features |= SUPPORT_FLASH
+            return LightEntityFeature.FLASH
 
-        return features
+        return LightEntityFeature(0)
 
     @property
     def unique_id(self) -> str:
         """Return a unique ID for this light."""
         return f"{super().unique_id}::light"
-
-    @property
-    def old_unique_ids(self) -> List[str]:
-        """Return the legacy unique ID for this light."""
-        old_ids = [super().unique_id]
-        old_parent_ids = super().old_unique_ids
-        old_ids.extend(old_parent_ids)
-        return old_ids
 
     def supports_feature(self, feature: int) -> bool:
         """Return True if light supports a given feature."""
@@ -185,7 +153,7 @@ class HubitatLight(HubitatEntity, LightEntity):
         """Turn on the light."""
         _LOGGER.debug(f"Turning on {self.name} with {kwargs}")
 
-        props: Dict[str, Union[int, str]] = {}
+        props: dict[str, int | str] = {}
 
         if ATTR_BRIGHTNESS in kwargs and self.supports_feature(SUPPORT_BRIGHTNESS):
             props["level"] = int(100 * kwargs[ATTR_BRIGHTNESS] / 255)
@@ -261,7 +229,7 @@ MATCH_LIGHT = re.compile(
 )
 
 
-def is_light(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
+def is_light(device: Device, overrides: dict[str, str] | None = None) -> bool:
     """Return True if device looks like a light."""
     if overrides and overrides.get(device.id) is not None:
         return overrides[device.id] == "light"
@@ -285,7 +253,7 @@ def is_light(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool
 
 
 def is_definitely_light(
-    device: Device, overrides: Optional[Dict[str, str]] = None
+    device: Device, overrides: dict[str, str] | None = None
 ) -> bool:
     """Return True if the device has light-specific capabilities."""
     return any(cap in device.capabilities for cap in LIGHT_CAPABILITIES)

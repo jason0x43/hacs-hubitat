@@ -1,4 +1,4 @@
-from typing import Callable, Iterable, List, Optional, Protocol
+from typing import Callable, Iterable, Protocol
 
 from homeassistant.helpers.entity import Entity
 
@@ -6,12 +6,12 @@ EntityAdder = Callable[[Iterable[Entity]], None]
 
 
 class UpdateableEntity(Entity):
-    def update_state(self):
+    def update_state(self) -> None:
         """Update the entity state in HA"""
         raise Exception("Must be implemented in a sublcass")
 
     @property
-    def device_attrs(self) -> Optional[List[str]]:
+    def device_attrs(self) -> tuple[str, ...] | None:
         """Return the device attributes associated with this entity"""
         raise Exception("Must be implemented in a sublcass")
 
@@ -22,7 +22,7 @@ class UpdateableEntity(Entity):
 
 
 class Removable(Protocol):
-    async def async_will_remove_from_hass(self):
+    async def async_will_remove_from_hass(self) -> None:
         """Remove the entity from HA"""
         raise Exception("Must be implemented in a sublcass")
 

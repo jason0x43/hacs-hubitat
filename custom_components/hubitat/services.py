@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import List, Union, cast
+from typing import cast
 
 import voluptuous as vol
 
@@ -65,7 +65,7 @@ def async_register_services(
 ) -> None:
     def get_entity(service: ServiceCall) -> HubitatEntity:
         entity_id = cast(str, service.data.get(ATTR_ENTITY_ID))
-        hubs = cast(List[Hub], hass.data[DOMAIN].values())
+        hubs = cast(list[Hub], hass.data[DOMAIN].values())
         for hub in hubs:
             for entity in hub.entities:
                 if entity.entity_id == entity_id:
@@ -73,7 +73,7 @@ def async_register_services(
         raise ValueError(f"Invalid or unknown entity '{entity_id}'")
 
     async def clear_code(service: ServiceCall) -> None:
-        entity = cast(Union[HubitatLock, HubitatSecurityKeypad], get_entity(service))
+        entity = cast(HubitatLock | HubitatSecurityKeypad, get_entity(service))
         pos = cast(int, service.data.get(ATTR_POSITION))
         await entity.clear_code(pos)
 
@@ -89,14 +89,14 @@ def async_register_services(
             await entity.send_command(cmd)
 
     async def set_code(service: ServiceCall) -> None:
-        entity = cast(Union[HubitatLock, HubitatSecurityKeypad], get_entity(service))
+        entity = cast(HubitatLock | HubitatSecurityKeypad, get_entity(service))
         pos = cast(int, service.data.get(ATTR_POSITION))
         code = cast(str, service.data.get(ATTR_CODE))
         name = cast(str, service.data.get(ATTR_NAME))
         await entity.set_code(pos, code, name)
 
     async def set_code_length(service: ServiceCall) -> None:
-        entity = cast(Union[HubitatLock, HubitatSecurityKeypad], get_entity(service))
+        entity = cast(HubitatLock | HubitatSecurityKeypad, get_entity(service))
         length = cast(int, service.data.get(ATTR_LENGTH))
         await entity.set_code_length(length)
 
@@ -126,7 +126,7 @@ def async_register_services(
             if len(hubs) == 0:
                 _LOGGER.error("Could not find a hub with ID %s", hub_id)
         else:
-            hubs = cast(List[Hub], hass.data[DOMAIN].values())
+            hubs = cast(list[Hub], hass.data[DOMAIN].values())
 
         return hubs
 
