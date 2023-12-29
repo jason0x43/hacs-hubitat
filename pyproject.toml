@@ -24,9 +24,6 @@ filterwarnings = [
     "ignore:Inheritance class HomeAssistantApplication:DeprecationWarning"
 ]
 
-[tool.pdm]
-includes = []
-
 [tool.pdm.dev-dependencies]
 dev = [
     "black>=21.12b0",
