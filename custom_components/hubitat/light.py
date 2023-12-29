@@ -11,10 +11,6 @@ from homeassistant.components.light import (
     ATTR_FLASH,
     ATTR_HS_COLOR,
     ATTR_TRANSITION,
-    SUPPORT_BRIGHTNESS,
-    SUPPORT_COLOR,
-    SUPPORT_COLOR_TEMP,
-    SUPPORT_FLASH,
     ColorMode,
     LightEntity,
     LightEntityFeature,
@@ -145,30 +141,40 @@ class HubitatLight(HubitatEntity, LightEntity):
         """Return a unique ID for this light."""
         return f"{super().unique_id}::light"
 
-    def supports_feature(self, feature: int) -> bool:
-        """Return True if light supports a given feature."""
-        return self.supported_features & feature != 0
-
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the light."""
         _LOGGER.debug(f"Turning on {self.name} with {kwargs}")
 
         props: dict[str, int | str] = {}
 
-        if ATTR_BRIGHTNESS in kwargs and self.supports_feature(SUPPORT_BRIGHTNESS):
+        if (
+            ATTR_BRIGHTNESS in kwargs
+            and self.supported_color_modes
+            and ColorMode.BRIGHTNESS in self.supported_color_modes
+        ):
             props["level"] = int(100 * kwargs[ATTR_BRIGHTNESS] / 255)
 
         if ATTR_TRANSITION in kwargs:
             props["time"] = kwargs[ATTR_TRANSITION]
 
-        if ATTR_HS_COLOR in kwargs and self.supports_feature(SUPPORT_COLOR):
+        if (
+            ATTR_HS_COLOR in kwargs
+            and self.supported_color_modes
+            and ColorMode.HS in self.supported_color_modes
+        ):
             # Hubitat hue is from 0 - 100
             props["hue"] = int(100 * kwargs[ATTR_HS_COLOR][0] / 360)
             props["sat"] = kwargs[ATTR_HS_COLOR][1]
 
-        if ATTR_COLOR_TEMP in kwargs and self.supports_feature(SUPPORT_COLOR_TEMP):
+        if (
+            ATTR_COLOR_TEMP in kwargs
+            and self.supported_color_modes
+            and ColorMode.COLOR_TEMP in self.supported_color_modes
+        ):
             mireds = kwargs[ATTR_COLOR_TEMP]
             props["temp"] = round(color_util.color_temperature_mired_to_kelvin(mireds))
+
+        _LOGGER.debug(f"Light {self.name} turn-on props: {props}")
 
         if "level" in props:
             if "time" in props:
@@ -211,7 +217,11 @@ class HubitatLight(HubitatEntity, LightEntity):
         if "temp" in props:
             await self.send_command(DeviceCommand.SET_COLOR_TEMP, props["temp"])
 
-        if ATTR_FLASH in kwargs and self.supports_feature(SUPPORT_FLASH):
+        if (
+            ATTR_FLASH in kwargs
+            and self.supported_features
+            and LightEntityFeature.FLASH in self.supported_features
+        ):
             await self.send_command(DeviceCommand.FLASH)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
