@@ -1,5 +1,6 @@
 """Hubitat API."""
 import asyncio
+import json
 import socket
 from contextlib import contextmanager
 from logging import getLogger
@@ -374,14 +375,14 @@ class Hub:
         """Return full info for a specific device."""
         if force_refresh or device_id not in self._devices:
             _LOGGER.debug("Loading device %s", device_id)
-            json = await self._api_request(f"devices/{device_id}")
+            data = await self._api_request(f"devices/{device_id}")
             try:
                 if device_id in self._devices:
-                    self._devices[device_id].update_state(json)
+                    self._devices[device_id].update_state(data)
                 else:
-                    self._devices[device_id] = Device(json)
+                    self._devices[device_id] = Device(data)
             except Exception as e:
-                _LOGGER.error("Invalid device info: %s", json)
+                _LOGGER.error("Invalid device info: %s", data)
                 raise e
             _LOGGER.debug("Loaded device %s", device_id)
 
@@ -431,10 +432,14 @@ class Hub:
                         else:
                             raise RequestError(resp)
                     try:
-                        json = await resp.json()
-                        if "error" in json and json["error"]:
+                        # Manually parse the response as JSON because Hubitat
+                        # sometimes mis-reports the content type as text/html
+                        # even though the data is JSON
+                        text = await resp.text()
+                        data = json.loads(text)
+                        if "error" in data and data["error"]:
                             raise RequestError(resp)
-                        return json
+                        return data
                     except ContentTypeError as e:
                         text = await resp.text()
                         _LOGGER.warn("Unable to parse as JSON: %s", text)
