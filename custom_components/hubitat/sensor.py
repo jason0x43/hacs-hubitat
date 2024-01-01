@@ -85,6 +85,11 @@ class HubitatSensor(HubitatEntity, SensorEntity):
         return (self._attribute,)
 
     @property
+    def name(self) -> str:
+        """Return the display name for this sensor."""
+        return f"{super().name} {self._attribute}".title()
+
+    @property
     def native_value(self) -> StateType | date | datetime | Decimal:
         """Return this sensor's current value."""
         return self.get_attr(self._attribute)

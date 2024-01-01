@@ -54,6 +54,11 @@ class HubitatCover(HubitatEntity, CoverEntity):
         )
 
     @property
+    def name(self) -> str:
+        """Return the display name for this select."""
+        return f"{super().name} {self._attribute}".title()
+
+    @property
     def current_cover_position(self) -> int | None:
         """Return current position of cover."""
         pos = self.get_int_attr(DeviceAttribute.POSITION)

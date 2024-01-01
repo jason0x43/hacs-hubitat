@@ -32,6 +32,11 @@ class HubitatSelect(HubitatEntity, SelectEntity):
         return (self._attribute,)
 
     @property
+    def name(self) -> str:
+        """Return the display name for this select."""
+        return f"{super().name} {self._attribute}".title()
+
+    @property
     def current_option(self) -> str | None:
         """Return this select's current state."""
         return self.get_str_attr(self._attribute)

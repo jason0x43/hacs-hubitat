@@ -52,6 +52,11 @@ class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):
         return (self._attribute,)
 
     @property
+    def name(self) -> str:
+        """Return the display name for this binary sensor."""
+        return f"{super().name} {self._attribute}".title()
+
+    @property
     def is_on(self) -> bool:
         """Return True if this sensor is on/active."""
         return self.get_str_attr(self._attribute) == self._active_state
