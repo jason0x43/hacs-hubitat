@@ -151,31 +151,20 @@ class HubitatLight(HubitatEntity, LightEntity):
         _LOGGER.debug(f"Turning on {self.name} with {kwargs}")
 
         props: dict[str, int | str] = {}
+        caps = self._device.capabilities
 
-        if (
-            ATTR_BRIGHTNESS in kwargs
-            and self.supported_color_modes
-            and ColorMode.BRIGHTNESS in self.supported_color_modes
-        ):
+        if ATTR_BRIGHTNESS in kwargs and DeviceCapability.SWITCH_LEVEL in caps:
             props["level"] = int(100 * kwargs[ATTR_BRIGHTNESS] / 255)
 
         if ATTR_TRANSITION in kwargs:
             props["time"] = kwargs[ATTR_TRANSITION]
 
-        if (
-            ATTR_HS_COLOR in kwargs
-            and self.supported_color_modes
-            and ColorMode.HS in self.supported_color_modes
-        ):
+        if ATTR_HS_COLOR in kwargs and DeviceCapability.COLOR_CONTROL in caps:
             # Hubitat hue is from 0 - 100
             props["hue"] = int(100 * kwargs[ATTR_HS_COLOR][0] / 360)
             props["sat"] = kwargs[ATTR_HS_COLOR][1]
 
-        if (
-            ATTR_COLOR_TEMP in kwargs
-            and self.supported_color_modes
-            and ColorMode.COLOR_TEMP in self.supported_color_modes
-        ):
+        if ATTR_COLOR_TEMP in kwargs and DeviceCapability.COLOR_TEMP in caps:
             mireds = kwargs[ATTR_COLOR_TEMP]
             props["temp"] = round(color_util.color_temperature_mired_to_kelvin(mireds))
 
@@ -222,11 +211,7 @@ class HubitatLight(HubitatEntity, LightEntity):
         if "temp" in props:
             await self.send_command(DeviceCommand.SET_COLOR_TEMP, props["temp"])
 
-        if (
-            ATTR_FLASH in kwargs
-            and self.supported_features
-            and LightEntityFeature.FLASH in self.supported_features
-        ):
+        if ATTR_FLASH in kwargs and LightEntityFeature.FLASH in self.supported_features:
             await self.send_command(DeviceCommand.FLASH)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
