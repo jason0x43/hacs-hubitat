@@ -47,7 +47,7 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
     """Representation of a Hubitat security keypad."""
 
     @property
-    def device_attrs(self) -> tuple[str, ...] | None:
+    def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return _device_attrs
 

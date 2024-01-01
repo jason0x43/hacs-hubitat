@@ -3,7 +3,7 @@
 import json
 import re
 from logging import getLogger
-from typing import Any
+from typing import Any, Unpack
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -20,7 +20,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import color as color_util
 
 from .cover import is_cover
-from .device import HubitatEntity
+from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
 from .hubitatmaker import (
     Device,
@@ -47,8 +47,13 @@ _device_attrs = (
 class HubitatLight(HubitatEntity, LightEntity):
     """Representation of a Hubitat light."""
 
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        """Initialize a Hubitat light."""
+        HubitatEntity.__init__(self, **kwargs)
+        LightEntity.__init__(self)
+
     @property
-    def device_attrs(self) -> tuple[str, ...] | None:
+    def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return _device_attrs
 
@@ -246,10 +251,12 @@ def is_light(device: Device, overrides: dict[str, str] | None = None) -> bool:
 
     if is_definitely_light(device):
         return True
+
     if DeviceCapability.SWITCH in device.capabilities and MATCH_LIGHT.search(
         device.label
     ):
         return True
+
     if DeviceCapability.LIGHT in device.capabilities:
         return True
 

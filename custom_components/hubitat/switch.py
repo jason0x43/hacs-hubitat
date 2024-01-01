@@ -2,10 +2,11 @@
 
 import re
 from logging import getLogger
-from typing import Any
+from typing import Any, Unpack
 
 import voluptuous as vol
 
+from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID
@@ -13,7 +14,7 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN, ICON_ALARM, ServiceName
-from .device import HubitatEntity
+from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities, create_and_add_event_emitters
 from .fan import is_fan
 from .hubitatmaker import Device, DeviceCapability, DeviceCommand
@@ -30,24 +31,30 @@ ENTITY_SCHEMA = vol.Schema({vol.Required(ATTR_ENTITY_ID): cv.entity_id})
 class HubitatSwitch(HubitatEntity, SwitchEntity):
     """Representation of a Hubitat switch."""
 
-    _attribute: str
+    _attribute: DeviceAttribute
+
+    def __init__(
+        self, attribute=DeviceAttribute.SWITCH, **kwargs: Unpack[HubitatEntityArgs]
+    ):
+        """Initialize a Hubitat switch."""
+        HubitatEntity.__init__(self, **kwargs)
+        SwitchEntity.__init__(self)
+        self._attribute = attribute
+        self._attr_device_class = (
+            SwitchDeviceClass.SWITCH
+            if _NAME_TEST.search(self._device.label)
+            else SwitchDeviceClass.OUTLET
+        )
 
     @property
-    def device_attrs(self) -> tuple[str, ...] | None:
+    def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
-        return ("switch", "power")
+        return (DeviceAttribute.SWITCH, DeviceAttribute.POWER)
 
     @property
     def is_on(self) -> bool:
         """Return True if the switch is on."""
-        return self.get_str_attr("switch") == "on"
-
-    @property
-    def device_class(self) -> SwitchDeviceClass | None:
-        """Return the class of this device, from component DEVICE_CLASSES."""
-        if _NAME_TEST.search(self._device.label):
-            return SwitchDeviceClass.SWITCH
-        return SwitchDeviceClass.OUTLET
+        return self.get_str_attr(DeviceAttribute.SWITCH) == "on"
 
     @property
     def unique_id(self) -> str:
@@ -69,26 +76,21 @@ class HubitatSwitch(HubitatEntity, SwitchEntity):
 
 
 class HubitatPowerMeterSwitch(HubitatSwitch):
-    _attribute = "power_meter"
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        """Initialize a Hubitat power meter switch."""
+        super().__init__(attribute=DeviceAttribute.POWER, **kwargs)
 
     @property
     def current_power_w(self) -> float | None:
         """Return the current power usage in W."""
-        return self.get_float_attr("power")
+        return self.get_float_attr(DeviceAttribute.POWER)
 
 
 class HubitatAlarm(HubitatSwitch):
-    _attribute = "alarm"
-
-    @property
-    def icon(self) -> str:
-        """Return the icon."""
-        return ICON_ALARM
-
-    @property
-    def name(self) -> str:
-        """Return this alarm's display name."""
-        return f"{super().name.title()} Alarm"
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        """Initialize a Hubitat alarm."""
+        super().__init__(attribute=DeviceAttribute.ALARM, **kwargs)
+        self._attr_icon = ICON_ALARM
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the alarm."""

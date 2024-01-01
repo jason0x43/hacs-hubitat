@@ -1,6 +1,7 @@
 import json
 from os.path import dirname, join
 
+from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 from custom_components.hubitat.hubitatmaker.types import Device
 
 with open(join(dirname(__file__), "device_details.json")) as f:
@@ -21,8 +22,9 @@ def test_device_can_serialize() -> None:
 def test_device_records_last_update_time() -> None:
     """A device should be serializable."""
     d = Device(device_details["6"])
-    update = d.last_update
-    assert update is not None
+    update_attr = d.attributes[DeviceAttribute.LAST_UPDATE]
+    assert update_attr is not None
+    last_update = update_attr.value
 
-    d.update_attr("contact", "closed", None)
-    assert update != d.last_update
+    d.update_attr(DeviceAttribute.CONTACT, "closed", None)
+    assert last_update != update_attr.value

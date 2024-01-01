@@ -1,34 +1,34 @@
-from typing import Any
+from typing import Unpack
 
+from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import ATTR_MODE, DeviceType
-from .device import HubitatEntity
+from .device import HubitatEntity, HubitatEntityArgs
 from .hub import get_hub
 from .types import EntityAdder
 
 
 class HubitatSelect(HubitatEntity, SelectEntity):
-    _attribute: str
-    _options: list[str]
-    _device_class: str
+    _attribute: DeviceAttribute
+
+    def __init__(
+        self,
+        *,
+        attribute: DeviceAttribute,
+        options: list[str] = [],
+        **kwargs: Unpack[HubitatEntityArgs],
+    ):
+        HubitatEntity.__init__(self, **kwargs)
+        SelectEntity.__init__(self)
+
+        self._attr_options = options
 
     @property
-    def device_attrs(self) -> tuple[str, ...] | None:
+    def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return (self._attribute,)
-
-    @property
-    def device_class(self) -> str | None:
-        """Return this select's device class."""
-        return self._device_class
-
-    @property
-    def name(self) -> str:
-        """Return this select's display name."""
-        return f"{super().name} {self._attribute}".title()
 
     @property
     def current_option(self) -> str | None:
@@ -40,21 +40,12 @@ class HubitatSelect(HubitatEntity, SelectEntity):
         """Return a unique ID for this sensor."""
         return f"{super().unique_id}::sensor::{self._attribute}"
 
-    @property
-    def options(self) -> list[str]:
-        return self._options or []
-
 
 class HubitatModeSelect(HubitatSelect):
-    def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__(*args, **kwargs)
-        # TODO use constant
-        self._attribute = ATTR_MODE
-        self._device_class = DeviceType.HUB_MODE
-
-    @property
-    def options(self) -> list[str]:
-        return self._hub.modes or []
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        super().__init__(
+            attribute=DeviceAttribute.MODE, options=kwargs["hub"].modes or [], **kwargs
+        )
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""

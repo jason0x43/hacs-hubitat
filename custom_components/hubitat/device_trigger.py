@@ -239,7 +239,7 @@ def get_trigger_subtypes(device: Device, trigger_type: str) -> list[str]:
     ):
         num_buttons = 1
         if DeviceAttribute.NUM_BUTTONS in device.attributes:
-            num_buttons = int(device.attributes[DeviceAttribute.NUM_BUTTONS].value)
+            num_buttons = device.attributes[DeviceAttribute.NUM_BUTTONS].int_value
         subtypes.extend(TRIGGER_BUTTONS[0:num_buttons])
     elif trigger_type == H_CONF_UNLOCKED_WITH_CODE:
         subtypes.extend(get_lock_codes(device))

@@ -2,13 +2,13 @@
 
 from logging import getLogger
 from math import modf
-from typing import Any
+from typing import Any, Unpack
 
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .device import HubitatEntity
+from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
 from .hubitatmaker import (
     DEFAULT_FAN_SPEEDS,
@@ -33,8 +33,14 @@ _speeds = {}
 class HubitatFan(HubitatEntity, FanEntity):
     """Representation of a Hubitat fan."""
 
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        """Initialize a Hubitat fan."""
+        HubitatEntity.__init__(self, **kwargs)
+        FanEntity.__init__(self)
+        self._attr_supported_features = FanEntityFeature.SET_SPEED
+
     @property
-    def device_attrs(self) -> tuple[str, ...] | None:
+    def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return _device_attrs
 
@@ -101,11 +107,6 @@ class HubitatFan(HubitatEntity, FanEntity):
     def unique_id(self) -> str:
         """Return a unique ID for this fan."""
         return f"{super().unique_id}::fan"
-
-    @property
-    def supported_features(self) -> FanEntityFeature:
-        """Flag supported features."""
-        return FanEntityFeature.SET_SPEED
 
     async def async_turn_on(
         self,

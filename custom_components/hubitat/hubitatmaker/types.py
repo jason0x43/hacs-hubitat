@@ -1,10 +1,22 @@
-from time import time
+from datetime import datetime
+from json import loads
 from types import MappingProxyType
-from typing import Any, Mapping, Sequence
+from typing import Any, Literal, Mapping, Sequence, TypedDict, cast
+
+from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
+
+
+class AttributeData(TypedDict):
+    name: str
+    dataType: Literal[
+        "ENUM", "STRING", "DYNAMIC_ENUM", "JSON_OBJECT", "NUMBER", "DATE", "VECTOR3"
+    ]
+    currentValue: str | float | datetime
+    unit: str | None
 
 
 class Attribute:
-    def __init__(self, properties: dict[str, Any]):
+    def __init__(self, properties: AttributeData):
         self._properties = properties
 
     @property
@@ -16,8 +28,38 @@ class Attribute:
         return self._properties["dataType"]
 
     @property
-    def value(self) -> str | float:
+    def value(self) -> str | float | datetime:
         return self._properties["currentValue"]
+
+    @property
+    def float_value(self) -> float | None:
+        val = self.value
+        if val is None:
+            return None
+        if isinstance(val, datetime):
+            return float(val.timestamp())
+        return float(val)
+
+    @property
+    def int_value(self) -> int | None:
+        val = self.float_value
+        if val is None:
+            return None
+        return round(val)
+
+    @property
+    def str_value(self) -> str | None:
+        val = self.value
+        if val is None:
+            return None
+        return str(val)
+
+    @property
+    def json_value(self) -> dict[str, Any] | None:
+        val = self.str_value
+        if val is None:
+            return None
+        return cast(dict[str, Any], loads(val))
 
     @property
     def values(self) -> list[str] | None:
@@ -25,7 +67,9 @@ class Attribute:
             return None
         return self._properties["values"]
 
-    def update_value(self, value: str | float, unit: str | None = None) -> None:
+    def update_value(
+        self, value: str | float | datetime, unit: str | None = None
+    ) -> None:
         self._properties["currentValue"] = value
         self._properties["unit"] = unit
 
@@ -77,7 +121,7 @@ class Device:
         return self._properties.get("room")
 
     @property
-    def attributes(self) -> Mapping[str, Attribute]:
+    def attributes(self) -> Mapping[DeviceAttribute, Attribute]:
         return self._attributes_ro
 
     @property
@@ -88,25 +132,19 @@ class Device:
     def commands(self) -> Sequence[str]:
         return self._commands
 
-    @property
-    def last_update(self) -> float:
-        """
-        Return the last time this device was updated as a unix timestamp.
-        """
-        return self._last_update
-
     def update_attr(
-        self, attr_name: str, value: str | int, value_unit: str | None
+        self, attr_name: DeviceAttribute, value: str | int, value_unit: str | None
     ) -> None:
         attr = self.attributes[attr_name]
         attr.update_value(value, value_unit)
-        self._last_update = time()
+
+        # Update a virtual hubitat_last_update attribute
+        self.attributes[DeviceAttribute.LAST_UPDATE].update_value(datetime.now())
 
     def update_state(self, properties: dict[str, Any]) -> None:
         self._properties = properties
-        self._last_update = time()
 
-        self._attributes: dict[str, Attribute] = {}
+        self._attributes: dict[DeviceAttribute, Attribute] = {}
         self._attributes_ro = MappingProxyType(self._attributes)
         for attr in properties.get("attributes", []):
             self._attributes[attr["name"]] = Attribute(attr)
@@ -120,6 +158,15 @@ class Device:
             p for p in properties.get("commands", []) if isinstance(p, str)
         ]
         self._commands: tuple[str, ...] = tuple(commands)
+
+        self._attributes[DeviceAttribute.LAST_UPDATE] = Attribute(
+            {
+                "name": "hubitat_last_update",
+                "dataType": "NUMBER",
+                "currentValue": datetime.now(),
+                "unit": None,
+            }
+        )
 
     def __iter__(self):
         for key in (

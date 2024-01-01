@@ -1,11 +1,11 @@
-from typing import Any
+from typing import Any, Unpack
 
 from homeassistant.components.lock import LockEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import HassStateAttribute
-from .device import HubitatEntity
+from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
 from .hubitatmaker import (
     Device,
@@ -28,8 +28,13 @@ _device_attrs = (
 class HubitatLock(HubitatEntity, LockEntity):
     """Representation of a Hubitat lock."""
 
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        """Initialize a Hubitat lock."""
+        HubitatEntity.__init__(self, **kwargs)
+        LockEntity.__init__(self)
+
     @property
-    def device_attrs(self) -> tuple[str, ...] | None:
+    def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return _device_attrs
 

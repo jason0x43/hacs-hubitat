@@ -16,7 +16,7 @@ from aiohttp.client_exceptions import (
 )
 
 from . import server
-from .const import ID_HSM_STATUS, ID_MODE
+from .const import ID_HSM_STATUS, ID_MODE, DeviceAttribute
 from .error import InvalidConfig, InvalidMode, InvalidToken, RequestError
 from .types import Device, Event, Mode
 
@@ -354,7 +354,11 @@ class Hub:
                 listener(evt)
 
     def _update_device_attr(
-        self, device_id: str, attr_name: str, value: int | str, value_unit: str
+        self,
+        device_id: str,
+        attr_name: DeviceAttribute,
+        value: int | str,
+        value_unit: str,
     ) -> None:
         """Update a device attribute value."""
         _LOGGER.debug(

@@ -4,6 +4,7 @@ from logging import getLogger
 from ssl import SSLContext
 from typing import Any, Callable, Mapping, TypeVar, cast
 
+from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -12,6 +13,7 @@ from homeassistant.const import (
     CONF_HOST,
     CONF_ID,
     CONF_TEMPERATURE_UNIT,
+    UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry
@@ -161,9 +163,13 @@ class Hub:
         return self._hub.hsm_supported
 
     @property
-    def temperature_unit(self) -> str:
+    def temperature_unit(self) -> UnitOfTemperature:
         """The units used for temperature values."""
-        return self._temperature_unit
+        return (
+            UnitOfTemperature.FAHRENHEIT
+            if self._temperature_unit == TEMP_F
+            else UnitOfTemperature.CELSIUS
+        )
 
     def add_device_listener(self, device_id: str, listener: Listener) -> None:
         """Add a listener for events for a specific device."""
@@ -319,24 +325,30 @@ class Hub:
         if self.mode_supported:
 
             def handle_mode_event(event: Event):
-                self.device.update_attr("mode", cast(str, event.value), None)
+                self.device.update_attr(
+                    DeviceAttribute.MODE, cast(str, event.value), None
+                )
                 for listener in self._hub_device_listeners:
                     listener(event)
 
             self._hub.add_mode_listener(handle_mode_event)
             if self.mode:
-                self.device.update_attr("mode", self.mode, None)
+                self.device.update_attr(DeviceAttribute.MODE, self.mode, None)
 
         if self.hsm_supported:
 
             def handle_hsm_status_event(event: Event):
-                self.device.update_attr("hsm_status", cast(str, event.value), None)
+                self.device.update_attr(
+                    DeviceAttribute.HSM_STATUS, cast(str, event.value), None
+                )
                 for listener in self._hub_device_listeners:
                     listener(event)
 
             self._hub.add_hsm_listener(handle_hsm_status_event)
             if self.hsm_status:
-                self.device.update_attr("hsm_status", self.hsm_status, None)
+                self.device.update_attr(
+                    DeviceAttribute.HSM_STATUS, self.hsm_status, None
+                )
 
         return True
 

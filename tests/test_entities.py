@@ -24,8 +24,8 @@ def mock_get_reg(_: HomeAssistant) -> EntityRegistry:
 )
 @pytest.mark.asyncio
 async def test_entity_migration(get_hub: Mock) -> None:
-    mock_device_1 = NonCallableMock(type="switch", attributes=["state"])
-    mock_device_2 = NonCallableMock(type="fan", attributes=["state"])
+    mock_device_1 = NonCallableMock(type="switch", attributes=["state"], label="Switch")
+    mock_device_2 = NonCallableMock(type="fan", attributes=["state"], label="Fan")
     MockHub = Mock(spec=Hub)
     mock_hub = MockHub()
     mock_hub.configure_mock(

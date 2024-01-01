@@ -1,8 +1,9 @@
 """Support for Hubitat thermostats."""
 
-from typing import Any
+from typing import Any, Unpack
 
 from custom_components.hubitat.const import TEMP_C, TEMP_F
+from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 from homeassistant.backports.enum import StrEnum
 from homeassistant.components.climate import (
     ClimateEntity,
@@ -27,26 +28,10 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 
-from .device import HubitatEntity
+from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
 from .hubitatmaker import Device, DeviceCapability, DeviceCommand
 from .types import EntityAdder
-
-
-class ClimateAttr(StrEnum):
-    COOLING_SETPOINT = "coolingSetpoint"
-    FAN_MODE = "thermostatFanMode"
-    HEATING_SETPOINT = "heatingSetpoint"
-    HUMIDITY = "humidity"
-    MODE = "thermostatMode"
-    NEST_MODE = "nestThermostatMode"
-    NEST_SUPPORTED_MODES = "supportedNestThermostatModes"
-    OPERATING_STATE = "thermostatOperatingState"
-    PRESENCE = "presence"
-    SUPPORTED_FAN_MODES = "supportedThermostatFanModes"
-    SUPPORTED_MODES = "supportedThermostatModes"
-    TEMP = "temperature"
-    TEMP_UNIT = "temperatureUnit"
 
 
 class ClimateMode(StrEnum):
@@ -73,55 +58,74 @@ class ClimatePresence(StrEnum):
     AWAY = "not present"
 
 
-PRESET_AWAY_AND_ECO = "Away and Eco"
-HASS_PRESET_MODES = [PRESET_HOME, PRESET_AWAY]
-HASS_NEST_PRESET_MODES = [PRESET_HOME, PRESET_AWAY, PRESET_ECO, PRESET_AWAY_AND_ECO]
-
-
 class ClimateFanMode(StrEnum):
     ON = "on"
     AUTO = "auto"
     CIRCULATE = "circulate"
 
 
+PRESET_AWAY_AND_ECO = "Away and Eco"
 HASS_FAN_MODES = [FAN_ON, FAN_AUTO]
+HASS_PRESET_MODES = [PRESET_HOME, PRESET_AWAY]
+HASS_NEST_PRESET_MODES = [PRESET_HOME, PRESET_AWAY, PRESET_ECO, PRESET_AWAY_AND_ECO]
+
 
 _device_attrs = (
-    ClimateAttr.COOLING_SETPOINT,
-    ClimateAttr.FAN_MODE,
-    ClimateAttr.HEATING_SETPOINT,
-    ClimateAttr.HUMIDITY,
-    ClimateAttr.MODE,
-    ClimateAttr.NEST_MODE,
-    ClimateAttr.OPERATING_STATE,
-    ClimateAttr.PRESENCE,
-    ClimateAttr.TEMP,
-    ClimateAttr.TEMP_UNIT,
+    DeviceAttribute.COOLING_SETPOINT,
+    DeviceAttribute.FAN_MODE,
+    DeviceAttribute.HEATING_SETPOINT,
+    DeviceAttribute.HUMIDITY,
+    DeviceAttribute.THERMOSTAT_MODE,
+    DeviceAttribute.NEST_MODE,
+    DeviceAttribute.OPERATING_STATE,
+    DeviceAttribute.PRESENCE,
+    DeviceAttribute.TEMP,
+    DeviceAttribute.TEMP_UNIT,
 )
 
 
 class HubitatThermostat(HubitatEntity, ClimateEntity):
     """Representation of a Hubitat switch."""
 
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        HubitatEntity.__init__(self, **kwargs)
+        ClimateEntity.__init__(self)
+
+        self._attr_hvac_modes = [
+            HVACMode.AUTO,
+            HVACMode.HEAT,
+            HVACMode.HEAT_COOL,
+            HVACMode.COOL,
+            HVACMode.OFF,
+        ]
+        self._attr_fan_modes = HASS_FAN_MODES
+        self._attr_supported_features = (
+            ClimateEntityFeature.TARGET_TEMPERATURE
+            | ClimateEntityFeature.PRESET_MODE
+            | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+            | ClimateEntityFeature.FAN_MODE
+        )
+        self._attr_precision = PRECISION_TENTHS
+
     @property
-    def device_attrs(self) -> tuple[str, ...] | None:
+    def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return _device_attrs
 
     @property
     def current_humidity(self) -> int | None:
         """Return the current humidity."""
-        return self.get_int_attr(ClimateAttr.HUMIDITY)
+        return self.get_int_attr(DeviceAttribute.HUMIDITY)
 
     @property
     def current_temperature(self) -> float | None:
         """Return the current temperature."""
-        return self.get_float_attr(ClimateAttr.TEMP)
+        return self.get_float_attr(DeviceAttribute.TEMP)
 
     @property
     def fan_mode(self) -> str | None:
         """Return the fan setting."""
-        mode = self.get_str_attr(ClimateAttr.FAN_MODE)
+        mode = self.get_str_attr(DeviceAttribute.FAN_MODE)
         if mode == ClimateFanMode.CIRCULATE or mode == ClimateFanMode.ON:
             return FAN_ON
         if mode == ClimateFanMode.AUTO:
@@ -129,14 +133,9 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         return None
 
     @property
-    def fan_modes(self) -> list[str] | None:
-        """Return the list of available fan modes."""
-        return HASS_FAN_MODES
-
-    @property
     def hvac_mode(self) -> str:
         """Return hvac operation ie. heat, cool mode."""
-        mode = self.get_str_attr(ClimateAttr.MODE)
+        mode = self.get_str_attr(DeviceAttribute.THERMOSTAT_MODE)
         if mode == ClimateMode.OFF:
             return HVACMode.OFF
         if mode == ClimateMode.HEAT or mode == ClimateMode.EMERGENCY_HEAT:
@@ -146,20 +145,9 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         return HVACMode.AUTO
 
     @property
-    def hvac_modes(self) -> list[HVACMode]:
-        """Return the list of available hvac operation modes."""
-        return [
-            HVACMode.AUTO,
-            HVACMode.HEAT,
-            HVACMode.HEAT_COOL,
-            HVACMode.COOL,
-            HVACMode.OFF,
-        ]
-
-    @property
     def hvac_action(self) -> HVACAction | None:
         """Return the current running hvac operation if supported."""
-        opstate = self.get_str_attr(ClimateAttr.OPERATING_STATE)
+        opstate = self.get_str_attr(DeviceAttribute.OPERATING_STATE)
         if opstate == ClimateOpState.PENDING_HEAT or opstate == ClimateOpState.HEATING:
             return HVACAction.HEATING
         if opstate == ClimateOpState.PENDING_COOL or opstate == ClimateOpState.COOLING:
@@ -173,8 +161,8 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
     @property
     def preset_mode(self) -> str | None:
         """Return the current preset mode, e.g., home, away, temp."""
-        nest_mode = self.get_str_attr(ClimateAttr.NEST_MODE)
-        presence = self.get_str_attr(ClimateAttr.PRESENCE)
+        nest_mode = self.get_str_attr(DeviceAttribute.NEST_MODE)
+        presence = self.get_str_attr(DeviceAttribute.PRESENCE)
         if nest_mode == ClimateMode.NEST_ECO:
             if presence == ClimatePresence.AWAY:
                 return PRESET_AWAY_AND_ECO
@@ -186,62 +174,43 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
     @property
     def preset_modes(self) -> list[str] | None:
         """Return a list of available preset modes."""
-        nest_mode = self.get_str_attr(ClimateAttr.NEST_MODE)
+        nest_mode = self.get_str_attr(DeviceAttribute.NEST_MODE)
         if nest_mode is not None:
             return HASS_NEST_PRESET_MODES
         return HASS_PRESET_MODES
 
     @property
-    def supported_features(self) -> ClimateEntityFeature:
-        """Return the list of supported features."""
-        return (
-            ClimateEntityFeature.TARGET_TEMPERATURE
-            | ClimateEntityFeature.PRESET_MODE
-            | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
-            | ClimateEntityFeature.FAN_MODE
-        )
-
-    @property
     def target_temperature(self) -> float | None:
         """Return the temperature we try to reach."""
         if self.hvac_mode == HVACMode.HEAT:
-            return self.get_float_attr(ClimateAttr.HEATING_SETPOINT)
+            return self.get_float_attr(DeviceAttribute.HEATING_SETPOINT)
         if self.hvac_mode == HVACMode.COOL:
-            return self.get_float_attr(ClimateAttr.COOLING_SETPOINT)
+            return self.get_float_attr(DeviceAttribute.COOLING_SETPOINT)
         return None
 
     @property
     def target_temperature_high(self) -> float | None:
         """Return the highbound target temperature we try to reach."""
         if self.hvac_mode == HVACMode.HEAT_COOL or self.hvac_mode == HVACMode.AUTO:
-            return self.get_float_attr(ClimateAttr.COOLING_SETPOINT)
+            return self.get_float_attr(DeviceAttribute.COOLING_SETPOINT)
         return None
 
     @property
     def target_temperature_low(self) -> float | None:
         """Return the lowbound target temperature we try to reach."""
         if self.hvac_mode == HVACMode.HEAT_COOL or self.hvac_mode == HVACMode.AUTO:
-            return self.get_float_attr(ClimateAttr.HEATING_SETPOINT)
+            return self.get_float_attr(DeviceAttribute.HEATING_SETPOINT)
         return None
 
     @property
     def temperature_unit(self) -> str:
         """Return the unit of measurement used by the platform."""
-        unit = self.get_str_attr(ClimateAttr.TEMP_UNIT)
+        unit = self.get_str_attr(DeviceAttribute.TEMP_UNIT)
         if unit == TEMP_F:
             return UnitOfTemperature.FAHRENHEIT
         if unit == TEMP_C:
             return UnitOfTemperature.CELSIUS
-        return (
-            UnitOfTemperature.FAHRENHEIT
-            if self._hub.temperature_unit == TEMP_F
-            else UnitOfTemperature.CELSIUS
-        )
-
-    @property
-    def precision(self) -> float:
-        """Return current temperature precision in tenths."""
-        return PRECISION_TENTHS
+        return self._hub.temperature_unit
 
     @property
     def unique_id(self) -> str:
