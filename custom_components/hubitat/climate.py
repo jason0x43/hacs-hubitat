@@ -133,7 +133,7 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         return None
 
     @property
-    def hvac_mode(self) -> str:
+    def hvac_mode(self) -> HVACMode | None:
         """Return hvac operation ie. heat, cool mode."""
         mode = self.get_str_attr(DeviceAttribute.THERMOSTAT_MODE)
         if mode == ClimateMode.OFF:
