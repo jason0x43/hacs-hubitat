@@ -32,6 +32,7 @@ from .const import (
     TEMP_C,
     TEMP_F,
     ConfigStep,
+    Platform,
 )
 from .hubitatmaker import (
     ConnectionError,
@@ -360,7 +361,7 @@ class HubitatOptionsFlow(OptionsFlow):
     async def _async_step_override_type(
         self,
         user_input: dict[str, Any] | None,
-        platform: str,
+        platform: Platform,
         step_id: str,
         next_step: Callable[[], Awaitable[FlowResult]],
         matcher: Callable[[Device], bool],

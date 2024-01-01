@@ -1,15 +1,10 @@
 """Constants for the Hubitat integration."""
+from typing import Literal, get_args
+
+import homeassistant.components.select as _  # noqa: F401
 from homeassistant.backports.enum import StrEnum
 
 from .hubitatmaker import DeviceAttribute, DeviceCapability
-
-# select entities aren't supported in HA < 2021.7
-try:
-    import homeassistant.components.select as _  # noqa: F401
-
-    has_select = True
-except Exception:
-    has_select = False
 
 DOMAIN = "hubitat"
 
@@ -78,20 +73,20 @@ class DeviceType(StrEnum):
 
 ICON_ALARM = "mdi:alarm-bell"
 
-PLATFORMS = [
+Platform = Literal[
     "alarm_control_panel",
     "binary_sensor",
     "climate",
     "cover",
     "light",
     "lock",
+    "select",
     "sensor",
     "switch",
     "fan",
 ]
 
-if has_select:
-    PLATFORMS.append("select")
+PLATFORMS: tuple[Platform, ...] = get_args(Platform)
 
 
 class ServiceName(StrEnum):

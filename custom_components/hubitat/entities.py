@@ -1,6 +1,7 @@
 from logging import getLogger
 from typing import Callable, Type, TypeVar
 
+from custom_components.hubitat.const import Platform
 from custom_components.hubitat.util import get_device_overrides
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -20,7 +21,7 @@ def create_and_add_entities(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
     async_add_entities: EntityAdder,
-    platform: str,
+    platform: Platform,
     EntityClass: Type[E],
     is_type: Callable[[Device, dict[str, str] | None], bool],
 ) -> list[E]:
