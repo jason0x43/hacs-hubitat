@@ -24,6 +24,7 @@ class HubitatSelect(HubitatEntity, SelectEntity):
         SelectEntity.__init__(self)
 
         self._attr_options = options
+        self._attribute = attribute
 
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
