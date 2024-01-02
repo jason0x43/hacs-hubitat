@@ -31,6 +31,7 @@ class HubitatBase(Removable):
             f"{self._hub.host}::{self._hub.app_id}::{self._device.id}",
         ]
         self._temp = temp
+        self._attr_name = self._device.label
 
     @property
     def device_id(self) -> str:
@@ -62,11 +63,6 @@ class HubitatBase(Removable):
     def unique_id(self) -> str:
         """Return a unique for this device."""
         return self._id
-
-    @property
-    def name(self) -> str:
-        """Return the display name of this device."""
-        return self._device.label
 
     @property
     def type(self) -> str:
@@ -197,4 +193,4 @@ class HubitatEventEmitter(HubitatBase):
 
     def __repr__(self) -> str:
         """Return the representation."""
-        return f"<HubitatEventEmitter {self.name}>"
+        return f"<HubitatEventEmitter {self._attr_name}>"

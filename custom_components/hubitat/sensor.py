@@ -65,14 +65,12 @@ class HubitatSensor(HubitatEntity, SensorEntity):
 
         self._attribute = attribute
 
-        device_name = super(HubitatEntity, self).name
         attr_name = (
             attribute_name
             if attribute_name is not None
             else attribute.replace("_", " ")
         )
-        self._attr_name = f"{device_name} {attr_name}".title()
-
+        self._attr_name = f"{super(HubitatEntity, self).name} {attr_name}".title()
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
         self._attr_state_class = state_class
@@ -82,11 +80,6 @@ class HubitatSensor(HubitatEntity, SensorEntity):
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return (self._attribute,)
-
-    @property
-    def name(self) -> str:
-        """Return the display name for this sensor."""
-        return f"{super().name} {self._attribute}".title()
 
     @property
     def native_value(self) -> StateType | date | datetime | Decimal:
@@ -609,9 +602,6 @@ class HubitatUpdateSensor(HubitatSensor):
     A sensor that reports the last time a state update was received for a
     device.
     """
-
-    _last_converted_update: float | None = None
-    _last_update_str: str | None = None
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         """Initialize an hubitat last update status sensor."""
