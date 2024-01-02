@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 from logging import getLogger
-from typing import Type, Unpack
+from typing import Type, Unpack, cast
 
 from homeassistant.components.sensor import (
     Decimal,
@@ -32,7 +32,6 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 
-from .const import TEMP_F
 from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
 from .hub import get_hub
@@ -219,14 +218,11 @@ class HubitatTemperatureSensor(HubitatSensor):
 
     @property
     def native_unit_of_measurement(self) -> str | None:
-        unit = self.get_attr_unit(self._attribute)
-        if unit is not None:
-            return unit
-        return (
-            UnitOfTemperature.FAHRENHEIT
-            if self._hub.temperature_unit == TEMP_F
-            else UnitOfTemperature.CELSIUS
-        )
+        unit: UnitOfTemperature = self._hub.temperature_unit
+        attr_unit: str | None = self.get_attr_unit(self._attribute)
+        if attr_unit is not None:
+            unit = cast(UnitOfTemperature, attr_unit)
+        return unit
 
 
 class HubitatDewPointSensor(HubitatTemperatureSensor):
