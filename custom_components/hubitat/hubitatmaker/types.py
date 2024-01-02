@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from json import loads
 from types import MappingProxyType
 from typing import Any, Literal, Mapping, Sequence, TypedDict, cast
@@ -139,7 +139,7 @@ class Device:
         attr.update_value(value, value_unit)
 
         # Update a virtual hubitat_last_update attribute
-        self.attributes[DeviceAttribute.LAST_UPDATE].update_value(datetime.now())
+        self.attributes[DeviceAttribute.LAST_UPDATE].update_value(datetime.now(UTC))
 
     def update_state(self, properties: dict[str, Any]) -> None:
         self._properties = properties
@@ -163,7 +163,7 @@ class Device:
             {
                 "name": "hubitat_last_update",
                 "dataType": "NUMBER",
-                "currentValue": datetime.now(),
+                "currentValue": datetime.now(UTC),
                 "unit": None,
             }
         )

@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from os.path import dirname, join
 
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
@@ -24,7 +25,11 @@ def test_device_records_last_update_time() -> None:
     d = Device(device_details["6"])
     update_attr = d.attributes[DeviceAttribute.LAST_UPDATE]
     assert update_attr is not None
+
     last_update = update_attr.value
+    assert isinstance(last_update, datetime)
+    # HomeAssistant requires datetimes to have timezone info
+    assert last_update.tzinfo is not None
 
     d.update_attr(DeviceAttribute.CONTACT, "closed", None)
     assert last_update != update_attr.value
