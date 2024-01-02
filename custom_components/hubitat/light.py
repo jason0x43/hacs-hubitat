@@ -64,7 +64,7 @@ class HubitatLight(HubitatEntity, LightEntity):
         if he_color_mode == HubitatColorMode.CT:
             return ColorMode.COLOR_TEMP
         if he_color_mode == HubitatColorMode.RGB:
-            return ColorMode.RGB
+            return ColorMode.HS
         return None
 
     @property
