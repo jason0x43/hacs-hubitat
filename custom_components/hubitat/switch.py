@@ -90,6 +90,7 @@ class HubitatAlarm(HubitatSwitch):
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         """Initialize a Hubitat alarm."""
         super().__init__(attribute=DeviceAttribute.ALARM, **kwargs)
+        self._attr_name = f"{super(HubitatEntity, self).name} Alarm".title()
         self._attr_icon = ICON_ALARM
 
     async def async_turn_on(self, **kwargs: Any) -> None:
