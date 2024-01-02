@@ -52,11 +52,6 @@ class HubitatSwitch(HubitatEntity, SwitchEntity):
         return (DeviceAttribute.SWITCH, DeviceAttribute.POWER)
 
     @property
-    def name(self) -> str:
-        """Return the display name for this select."""
-        return f"{super().name} {self._attribute}".title()
-
-    @property
     def is_on(self) -> bool:
         """Return True if the switch is on."""
         return self.get_str_attr(DeviceAttribute.SWITCH) == "on"
