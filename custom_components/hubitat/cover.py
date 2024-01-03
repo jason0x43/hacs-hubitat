@@ -80,12 +80,6 @@ class HubitatCover(HubitatEntity, CoverEntity):
         return self.get_attr(self._attribute) == DeviceState.CLOSING
 
     @property
-    def is_open(self) -> bool:
-        """Return True if the cover is open."""
-        state = self.get_attr(self._attribute)
-        return state == DeviceState.OPEN or state == DeviceState.PARTIALLY_OPEN
-
-    @property
     def is_opening(self) -> bool:
         """Return True if the cover is opening."""
         state = self.get_attr(self._attribute)
