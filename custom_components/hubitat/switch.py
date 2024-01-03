@@ -45,6 +45,9 @@ class HubitatSwitch(HubitatEntity, SwitchEntity):
             if _NAME_TEST.search(self._device.label)
             else SwitchDeviceClass.OUTLET
         )
+        self._attr_unique_id = f"{super().unique_id}::switch"
+        if attribute != DeviceAttribute.SWITCH:
+            self._attr_unique_id += f"::{attribute}"
 
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
@@ -55,14 +58,6 @@ class HubitatSwitch(HubitatEntity, SwitchEntity):
     def is_on(self) -> bool:
         """Return True if the switch is on."""
         return self.get_str_attr(DeviceAttribute.SWITCH) == "on"
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID for this switch."""
-        id = f"{super().unique_id}::switch"
-        if hasattr(self, "_attribute"):
-            id += f"::{self._attribute}"
-        return id
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""

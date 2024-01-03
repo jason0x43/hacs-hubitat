@@ -106,6 +106,7 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
             | ClimateEntityFeature.FAN_MODE
         )
         self._attr_precision = PRECISION_TENTHS
+        self._attr_unique_id = f"{super().unique_id}::climate"
 
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
@@ -211,11 +212,6 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         if unit == TEMP_C:
             return UnitOfTemperature.CELSIUS
         return self._hub.temperature_unit
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID for this climate."""
-        return f"{super().unique_id}::climate"
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new target fan mode."""

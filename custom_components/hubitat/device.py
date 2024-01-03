@@ -26,17 +26,17 @@ class HubitatBase(Removable):
         """Initialize a device."""
         self._hub = hub
         self._device = device
-        self._id = get_hub_device_id(hub, device)
-        self._old_ids = [
-            f"{self._hub.host}::{self._hub.app_id}::{self._device.id}",
-        ]
         self._temp = temp
-        self._attr_name = self._device.label
 
     @property
     def device_id(self) -> str:
         """Return the hub-local id for this device."""
         return self._device.id
+
+    @property
+    def device_name(self) -> str:
+        """Return the hub-local name for this device."""
+        return self._device.name
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -58,11 +58,6 @@ class HubitatBase(Removable):
             info["manufacturer"] = "Hubitat"
 
         return info
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique for this device."""
-        return self._id
 
     @property
     def type(self) -> str:
@@ -135,6 +130,8 @@ class HubitatEntity(HubitatBase, UpdateableEntity):
         HubitatBase.__init__(self, **kwargs)
         UpdateableEntity.__init__(self)
 
+        self._attr_name = self._device.label
+        self._attr_unique_id = get_hub_device_id(self._hub, self._device)
         self._attr_device_class = device_class
 
         # Sometimes entities may be temporary, created only to compute entity
@@ -193,4 +190,4 @@ class HubitatEventEmitter(HubitatBase):
 
     def __repr__(self) -> str:
         """Return the representation."""
-        return f"<HubitatEventEmitter {self._attr_name}>"
+        return f"<HubitatEventEmitter {self.device_name}>"

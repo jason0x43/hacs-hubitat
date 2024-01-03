@@ -26,6 +26,11 @@ class HubitatSelect(HubitatEntity, SelectEntity):
         self._attr_options = options
         self._attribute = attribute
 
+        # TODO: this should be using ::select:: instead of ::sensor::, but the
+        # published integration has been using ::sensor:: for a while now;
+        # migrate it at some point
+        self._attr_unique_id = f"{super().unique_id}::sensor::{attribute}"
+
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
@@ -40,11 +45,6 @@ class HubitatSelect(HubitatEntity, SelectEntity):
     def current_option(self) -> str | None:
         """Return this select's current state."""
         return self.get_str_attr(self._attribute)
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID for this sensor."""
-        return f"{super().unique_id}::sensor::{self._attribute}"
 
 
 class HubitatModeSelect(HubitatSelect):

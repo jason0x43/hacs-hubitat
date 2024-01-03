@@ -63,17 +63,18 @@ class HubitatSensor(HubitatEntity, SensorEntity):
         HubitatEntity.__init__(self, **kwargs)
         SensorEntity.__init__(self)
 
-        self._attribute = attribute
-
         attr_name = (
             attribute_name
             if attribute_name is not None
             else attribute.replace("_", " ")
         )
+
+        self._attribute = attribute
         self._attr_name = f"{super(HubitatEntity, self).name} {attr_name}".title()
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
         self._attr_state_class = state_class
+        self._attr_unique_id = f"{super().unique_id}::sensor::{attribute}"
         self._enabled_default = enabled_default
 
     @property
@@ -85,11 +86,6 @@ class HubitatSensor(HubitatEntity, SensorEntity):
     def native_value(self) -> StateType | date | datetime | Decimal:
         """Return this sensor's current value."""
         return self.get_attr(self._attribute)
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID for this sensor."""
-        return f"{super().unique_id}::sensor::{self._attribute}"
 
     @property
     def entity_registry_enabled_default(self) -> bool:

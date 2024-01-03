@@ -45,6 +45,7 @@ class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):
 
         self._attribute = attribute
         self._active_state = active_state
+        self._attr_unique_id = f"{super().unique_id}::binary_sensor::{self._attribute}"
 
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
@@ -60,11 +61,6 @@ class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):
     def is_on(self) -> bool:
         """Return True if this sensor is on/active."""
         return self.get_str_attr(self._attribute) == self._active_state
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID for this sensor."""
-        return f"{super().unique_id}::binary_sensor::{self._attribute}"
 
 
 class HubitatAccelerationSensor(HubitatBinarySensor):

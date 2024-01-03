@@ -51,6 +51,7 @@ class HubitatLight(HubitatEntity, LightEntity):
         """Initialize a Hubitat light."""
         HubitatEntity.__init__(self, **kwargs)
         LightEntity.__init__(self)
+        self._attr_unique_id = f"{super().unique_id}::light"
 
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
@@ -140,11 +141,6 @@ class HubitatLight(HubitatEntity, LightEntity):
             return LightEntityFeature.FLASH
 
         return LightEntityFeature(0)
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID for this light."""
-        return f"{super().unique_id}::light"
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the light."""

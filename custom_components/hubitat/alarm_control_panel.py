@@ -1,7 +1,7 @@
 """Support for Hubitat security keypads."""
 
 from logging import getLogger
-from typing import Any
+from typing import Any, Unpack
 
 from homeassistant.components.alarm_control_panel import (
     AlarmControlPanelEntity,
@@ -18,7 +18,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 
 from .const import HassStateAttribute
-from .device import HubitatEntity
+from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
 from .hubitatmaker.const import (
     DeviceAttribute,
@@ -45,6 +45,12 @@ _device_attrs = (
 
 class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
     """Representation of a Hubitat security keypad."""
+
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        """Initialize a Hubitat security keypad."""
+        HubitatEntity.__init__(self, **kwargs)
+        AlarmControlPanelEntity.__init__(self)
+        self._attr_unique_id = f"{super().unique_id}::alarm_control_panel"
 
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
@@ -136,11 +142,6 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
         if DeviceCapability.ALARM in self._device.capabilities:
             features |= AlarmControlPanelEntityFeature.TRIGGER
         return features
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID for this cover."""
-        return f"{super().unique_id}::alarm_control_panel"
 
     async def async_alarm_disarm(self, code: str | None = None) -> None:
         """Send disarm command."""

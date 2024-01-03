@@ -32,6 +32,7 @@ class HubitatLock(HubitatEntity, LockEntity):
         """Initialize a Hubitat lock."""
         HubitatEntity.__init__(self, **kwargs)
         LockEntity.__init__(self)
+        self._attr_unique_id = f"{super().unique_id}::lock"
 
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
@@ -83,11 +84,6 @@ class HubitatLock(HubitatEntity, LockEntity):
             HassStateAttribute.LAST_CODE_NAME: self.last_code_name,
             HassStateAttribute.MAX_CODES: self.max_codes,
         }
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID for this lock."""
-        return f"{super().unique_id}::lock"
 
     async def async_lock(self, **kwargs: Any) -> None:
         """Lock the lock."""

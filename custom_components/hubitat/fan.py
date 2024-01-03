@@ -38,6 +38,7 @@ class HubitatFan(HubitatEntity, FanEntity):
         HubitatEntity.__init__(self, **kwargs)
         FanEntity.__init__(self)
         self._attr_supported_features = FanEntityFeature.SET_SPEED
+        self._attr_unique_id = f"{super().unique_id}::fan"
 
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
@@ -102,11 +103,6 @@ class HubitatFan(HubitatEntity, FanEntity):
         return (
             self._device.attributes[DeviceAttribute.SPEED].values or DEFAULT_FAN_SPEEDS
         )
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID for this fan."""
-        return f"{super().unique_id}::fan"
 
     async def async_turn_on(
         self,

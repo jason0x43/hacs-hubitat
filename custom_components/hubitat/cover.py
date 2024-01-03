@@ -43,6 +43,7 @@ class HubitatCover(HubitatEntity, CoverEntity):
 
         self._attribute = attribute
         self._attr_supported_features = features
+        self._attr_unique_id = f"{super().unique_id}::cover::{attribute}"
 
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
@@ -83,11 +84,6 @@ class HubitatCover(HubitatEntity, CoverEntity):
         """Return True if the cover is opening."""
         state = self.get_attr(self._attribute)
         return state == DeviceState.OPEN or state == DeviceState.PARTIALLY_OPEN
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID for this cover."""
-        return f"{super().unique_id}::cover::{self._attribute}"
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close the cover."""
