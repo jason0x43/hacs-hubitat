@@ -184,7 +184,7 @@ class HubitatPowerSourceSensor(HubitatSensor):
         """Initialize a power source sensor."""
         super().__init__(
             attribute=DeviceAttribute.POWER_SOURCE,
-            device_class=SensorDeviceClass.POWER,
+            device_class=SensorDeviceClass.ENUM,
             **kwargs,
         )
 
