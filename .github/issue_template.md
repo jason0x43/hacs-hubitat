@@ -1,12 +1,3 @@
----
-name: Bug report
-about: Report a problem with the integration
-title: ''
-labels: ''
-assignees: ''
-
----
-
 Before opening an issue, please make sure you're running the most recent version of the integration.
 
 **Describe the bug**
