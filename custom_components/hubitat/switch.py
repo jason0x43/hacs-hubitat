@@ -1,6 +1,7 @@
 """Support for Hubitat switches."""
 
 import re
+from enum import StrEnum
 from logging import getLogger
 from typing import Any, Unpack
 
@@ -28,26 +29,31 @@ _NAME_TEST = re.compile(r"\bswitch\b", re.IGNORECASE)
 ENTITY_SCHEMA = vol.Schema({vol.Required(ATTR_ENTITY_ID): cv.entity_id})
 
 
+class SwitchType(StrEnum):
+    SWITCH = "switch"
+    POWER = "power_meter"
+    ALARM = "alarm"
+
+
 class HubitatSwitch(HubitatEntity, SwitchEntity):
     """Representation of a Hubitat switch."""
 
-    _attribute: DeviceAttribute
-
     def __init__(
-        self, attribute=DeviceAttribute.SWITCH, **kwargs: Unpack[HubitatEntityArgs]
+        self,
+        type: SwitchType = SwitchType.SWITCH,
+        **kwargs: Unpack[HubitatEntityArgs],
     ):
         """Initialize a Hubitat switch."""
         HubitatEntity.__init__(self, **kwargs)
         SwitchEntity.__init__(self)
-        self._attribute = attribute
         self._attr_device_class = (
             SwitchDeviceClass.SWITCH
             if _NAME_TEST.search(self._device.label)
             else SwitchDeviceClass.OUTLET
         )
         self._attr_unique_id = f"{super().unique_id}::switch"
-        if attribute != DeviceAttribute.SWITCH:
-            self._attr_unique_id += f"::{attribute}"
+        if type != SwitchType.SWITCH:
+            self._attr_unique_id += f"::{type}"
 
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
@@ -73,7 +79,7 @@ class HubitatSwitch(HubitatEntity, SwitchEntity):
 class HubitatPowerMeterSwitch(HubitatSwitch):
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         """Initialize a Hubitat power meter switch."""
-        super().__init__(attribute=DeviceAttribute.POWER, **kwargs)
+        super().__init__(type=SwitchType.POWER, **kwargs)
 
     @property
     def current_power_w(self) -> float | None:
@@ -84,7 +90,7 @@ class HubitatPowerMeterSwitch(HubitatSwitch):
 class HubitatAlarm(HubitatSwitch):
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         """Initialize a Hubitat alarm."""
-        super().__init__(attribute=DeviceAttribute.ALARM, **kwargs)
+        super().__init__(type=SwitchType.ALARM, **kwargs)
         self._attr_name = f"{super(HubitatEntity, self).name} Alarm".title()
         self._attr_icon = ICON_ALARM
 
