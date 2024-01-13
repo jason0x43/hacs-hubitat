@@ -32,7 +32,8 @@ from .const import (
     H_CONF_SERVER_URL,
     PLATFORMS,
     TEMP_F,
-    TRIGGER_CAPABILITIES,
+    _TRIGGER_ATTRS,
+    _TRIGGER_ATTR_MAP,
 )
 from .hubitatmaker import (
     Device,
@@ -48,13 +49,6 @@ Listener = Callable[[Event], None]
 
 HUB_DEVICE_NAME = "Hub"
 HUB_NAME = "Hubitat Elevation"
-
-
-# Hubitat attributes that should be emitted as HA events
-_TRIGGER_ATTRS = tuple([v.attr for v in TRIGGER_CAPABILITIES.values()])
-# A mapping from Hubitat attribute names to the attribute names that should be
-# used for HA events
-_TRIGGER_ATTR_MAP = {v.attr: v.event for v in TRIGGER_CAPABILITIES.values()}
 
 E = TypeVar("E", bound=UpdateableEntity)
 M = TypeVar("M", bound=Removable)

@@ -78,6 +78,7 @@ Platform = Literal[
     "binary_sensor",
     "climate",
     "cover",
+    "event",
     "light",
     "lock",
     "select",
@@ -169,3 +170,9 @@ TRIGGER_CAPABILITIES = {
         H_CONF_UNLOCKED_WITH_CODE,
     ),
 }
+
+# Hubitat attributes that should be emitted as HA events
+_TRIGGER_ATTRS = tuple([v.attr for v in TRIGGER_CAPABILITIES.values()])
+# A mapping from Hubitat attribute names to the attribute names that should be
+# used for HA events
+_TRIGGER_ATTR_MAP = {v.attr: v.event for v in TRIGGER_CAPABILITIES.values()}
