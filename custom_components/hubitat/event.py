@@ -42,6 +42,9 @@ class HubitatButtonEvent(HubitatEntity, EventEntity):
         return f"{super().name} button {self._button_id}".title()
 
     def handle_event(self, event: Event) -> None:
+        if self.is_disabled:
+            return
+
         if event.attribute not in _TRIGGER_ATTRS:
             return
 
