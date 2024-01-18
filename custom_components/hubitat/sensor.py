@@ -1,5 +1,6 @@
 """Hubitat sensor entities."""
 
+import re
 from datetime import date, datetime
 from logging import getLogger
 from typing import Type, Unpack
@@ -107,6 +108,21 @@ class HubitatBatterySensor(HubitatSensor):
             state_class=SensorStateClass.MEASUREMENT,
             **kwargs,
         )
+
+    @property
+    def native_value(self) -> StateType | date | datetime | Decimal:
+        """Return this battery sensor's current value."""
+        value = self.get_attr(self._attribute)
+        if isinstance(value, str):
+            try:
+                value = float(value)
+            except ValueError:
+                # Some devices don't follow the spec
+                # See https://github.com/jason0x43/hacs-hubitat/issues/252#issuecomment-1896327401
+                match = re.match(r"Battery (\d.*)%", value)
+                if match:
+                    value = float(match.group(1))
+        return value
 
 
 class HubitatEnergySensor(HubitatSensor):
