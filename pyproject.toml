@@ -16,6 +16,7 @@ homepage = "https://github.com/jason0x43/hacs-hubitat"
 [tool.pdm.scripts]
 init = {shell = "pdm install && pre-commit install"}
 test = {shell = "pyright custom_components/hubitat && pytest tests"}
+pub = {shell = "python scripts/publish.py"}
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -32,6 +33,7 @@ dev = [
     "homeassistant==2023.12.4",
     "pytest-asyncio>=0.16.0",
     "setuptools>=62.2.0",
+    "tomlkit>=0.12.3",
 ]
 
 [tool.black]
