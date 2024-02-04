@@ -20,10 +20,6 @@ _CONTACT_MATCHERS = (
     (re.compile("window", re.IGNORECASE), BinarySensorDeviceClass.WINDOW),
 )
 
-_PRESENCE_MATCHERS = (
-    (re.compile("presence", re.IGNORECASE), BinarySensorDeviceClass.PRESENCE),
-)
-
 
 class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):
     """A generic Hubitat sensor."""
@@ -162,7 +158,7 @@ class HubitatPresenceSensor(HubitatBinarySensor):
         super().__init__(
             attribute=DeviceAttribute.PRESENCE,
             active_state="present",
-            device_class=_get_presence_device_class(kwargs["device"]),
+            device_class=BinarySensorDeviceClass.PRESENCE,
             **kwargs,
         )
 
@@ -276,14 +272,3 @@ def _get_contact_device_class(device: Device) -> BinarySensorDeviceClass:
             return matcher[1]
 
     return BinarySensorDeviceClass.DOOR
-
-
-def _get_presence_device_class(device: Device) -> BinarySensorDeviceClass:
-    """Guess the type of presence sensor from the device's label."""
-    label = device.label
-
-    for matcher in _PRESENCE_MATCHERS:
-        if matcher[0].search(label):
-            return matcher[1]
-
-    return BinarySensorDeviceClass.CONNECTIVITY
