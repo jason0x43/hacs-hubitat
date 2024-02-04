@@ -133,6 +133,7 @@ class DeviceAttribute(StrEnum):
     NATURAL_GAS = "naturalGas"
     NEST_MODE = "nestThermostatMode"
     NEST_SUPPORTED_MODES = "supportedNestThermostatModes"
+    NETWORK_STATUS = "networkStatus"
     NUM_BUTTONS = "numberOfButtons"
     OPERATING_STATE = "thermostatOperatingState"
     PH = "pH"
