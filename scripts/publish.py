@@ -43,3 +43,5 @@ update_manifest(new_version)
 
 check_call('git commit --all -m "chore: update version number"', shell=True)
 check_call(f"git tag v{new_version}", shell=True)
+check_call("git push", shell=True)
+check_call("git push --tags", shell=True)
