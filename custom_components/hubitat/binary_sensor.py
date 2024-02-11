@@ -1,7 +1,8 @@
 """Hubitat binary sensor entities."""
 
 import re
-from typing import Type, Unpack
+from dataclasses import dataclass
+from typing import Pattern, Type, Unpack
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -15,14 +16,25 @@ from .entities import create_and_add_entities
 from .hubitatmaker import Device, DeviceAttribute
 from .types import EntityAdder
 
-_CONTACT_MATCHERS = (
-    (re.compile("garage door", re.IGNORECASE), BinarySensorDeviceClass.GARAGE_DOOR),
-    (re.compile("window", re.IGNORECASE), BinarySensorDeviceClass.WINDOW),
-)
 
-_PRESENCE_MATCHERS = (
-    (re.compile("presence", re.IGNORECASE), BinarySensorDeviceClass.PRESENCE),
-)
+@dataclass
+class ContactInfo:
+    matcher: Pattern[str]
+    device_class: BinarySensorDeviceClass
+
+
+_CONTACT_INFOS: list[ContactInfo] = [
+    ContactInfo(
+        re.compile("garage door", re.IGNORECASE),
+        BinarySensorDeviceClass.GARAGE_DOOR,
+    ),
+    ContactInfo(
+        re.compile("door", re.IGNORECASE),
+        BinarySensorDeviceClass.DOOR,
+    ),
+    ContactInfo(re.compile("window", re.IGNORECASE), BinarySensorDeviceClass.WINDOW),
+    ContactInfo(re.compile(".*"), BinarySensorDeviceClass.OPENING),
+]
 
 
 class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):
@@ -39,7 +51,6 @@ class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):
         device_class: BinarySensorDeviceClass | None = None,
         **kwargs: Unpack[HubitatEntityArgs],
     ):
-        """Initialize a battery sensor."""
         HubitatEntity.__init__(self, device_class=device_class, **kwargs)
         BinarySensorEntity.__init__(self)
 
@@ -67,7 +78,6 @@ class HubitatAccelerationSensor(HubitatBinarySensor):
     """An acceleration sensor."""
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
-        """Initialize an acceleration sensor."""
         super().__init__(
             attribute=DeviceAttribute.ACCELERATION,
             active_state="active",
@@ -80,7 +90,6 @@ class HubitatCo2Sensor(HubitatBinarySensor):
     """A carbon dioxide sensor."""
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
-        """Initialize a CO2 sensor."""
         super().__init__(
             attribute=DeviceAttribute.CARBON_DIOXIDE,
             active_state="detected",
@@ -93,22 +102,8 @@ class HubitatCoSensor(HubitatBinarySensor):
     """A carbon monoxide sensor."""
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
-        """Initialize a CO sensor."""
         super().__init__(
             attribute=DeviceAttribute.CARBON_MONOXIDE,
-            active_state="detected",
-            device_class=BinarySensorDeviceClass.GAS,
-            **kwargs,
-        )
-
-
-class HubitatNaturalGasSensor(HubitatBinarySensor):
-    """A natural gas sensor."""
-
-    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
-        """Initialize a natural gas sensor."""
-        super().__init__(
-            attribute=DeviceAttribute.NATURAL_GAS,
             active_state="detected",
             device_class=BinarySensorDeviceClass.GAS,
             **kwargs,
@@ -119,11 +114,12 @@ class HubitatContactSensor(HubitatBinarySensor):
     """A generic contact sensor."""
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
-        """Initialize a contact sensor."""
+        info = _get_contact_info(kwargs["device"])
+
         super().__init__(
             attribute=DeviceAttribute.CONTACT,
             active_state="open",
-            device_class=_get_contact_device_class(kwargs["device"]),
+            device_class=info.device_class,
             **kwargs,
         )
 
@@ -132,7 +128,6 @@ class HubitatMoistureSensor(HubitatBinarySensor):
     """A moisture sensor."""
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
-        """Initialize a moisture sensor."""
         super().__init__(
             attribute=DeviceAttribute.WATER,
             active_state="wet",
@@ -145,7 +140,6 @@ class HubitatMotionSensor(HubitatBinarySensor):
     """A motion sensor."""
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
-        """Initialize a motion sensor."""
         super().__init__(
             attribute=DeviceAttribute.MOTION,
             active_state="active",
@@ -154,15 +148,38 @@ class HubitatMotionSensor(HubitatBinarySensor):
         )
 
 
+class HubitatNaturalGasSensor(HubitatBinarySensor):
+    """A natural gas sensor."""
+
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        super().__init__(
+            attribute=DeviceAttribute.NATURAL_GAS,
+            active_state="detected",
+            device_class=BinarySensorDeviceClass.GAS,
+            **kwargs,
+        )
+
+
+class HubitatNetworkStatusSensor(HubitatBinarySensor):
+    """A network status sensor."""
+
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        super().__init__(
+            attribute=DeviceAttribute.NETWORK_STATUS,
+            active_state="online",
+            device_class=BinarySensorDeviceClass.CONNECTIVITY,
+            **kwargs,
+        )
+
+
 class HubitatPresenceSensor(HubitatBinarySensor):
     """A presence sensor."""
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
-        """Initialize a presence sensor."""
         super().__init__(
             attribute=DeviceAttribute.PRESENCE,
             active_state="present",
-            device_class=_get_presence_device_class(kwargs["device"]),
+            device_class=BinarySensorDeviceClass.PRESENCE,
             **kwargs,
         )
 
@@ -171,7 +188,6 @@ class HubitatSmokeSensor(HubitatBinarySensor):
     """A smoke sensor."""
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
-        """Initialize a smoke sensor."""
         super().__init__(
             attribute=DeviceAttribute.SMOKE,
             active_state="detected",
@@ -184,7 +200,6 @@ class HubitatSoundSensor(HubitatBinarySensor):
     """A sound sensor."""
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
-        """Initialize a sound sensor."""
         super().__init__(
             attribute=DeviceAttribute.SOUND,
             active_state="detected",
@@ -197,7 +212,6 @@ class HubitatTamperSensor(HubitatBinarySensor):
     """A tamper sensor."""
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
-        """Initialize a tamper sensor."""
         super().__init__(
             attribute=DeviceAttribute.TAMPER,
             active_state="detected",
@@ -210,7 +224,6 @@ class HubitatShockSensor(HubitatBinarySensor):
     """A shock sensor."""
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
-        """Initialize a shock sensor."""
         super().__init__(
             attribute=DeviceAttribute.SHOCK,
             active_state="detected",
@@ -223,11 +236,22 @@ class HubitatHeatSensor(HubitatBinarySensor):
     """A heatAlarm sensor."""
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
-        """Initialize a heatAlarm sensor."""
         super().__init__(
             attribute=DeviceAttribute.HEAT_ALARM,
             active_state="overheat",
             device_class=BinarySensorDeviceClass.HEAT,
+            **kwargs,
+        )
+
+
+class HubitatValveSensor(HubitatBinarySensor):
+    """A valve sensor."""
+
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        super().__init__(
+            attribute=DeviceAttribute.VALVE,
+            active_state="open",
+            device_class=BinarySensorDeviceClass.OPENING,
             **kwargs,
         )
 
@@ -241,11 +265,13 @@ _SENSOR_ATTRS: tuple[tuple[DeviceAttribute, Type[HubitatBinarySensor]], ...] = (
     (DeviceAttribute.HEAT_ALARM, HubitatHeatSensor),
     (DeviceAttribute.MOTION, HubitatMotionSensor),
     (DeviceAttribute.NATURAL_GAS, HubitatNaturalGasSensor),
+    (DeviceAttribute.NETWORK_STATUS, HubitatNetworkStatusSensor),
     (DeviceAttribute.PRESENCE, HubitatPresenceSensor),
     (DeviceAttribute.SHOCK, HubitatShockSensor),
     (DeviceAttribute.SMOKE, HubitatSmokeSensor),
     (DeviceAttribute.SOUND, HubitatSoundSensor),
     (DeviceAttribute.TAMPER, HubitatTamperSensor),
+    (DeviceAttribute.VALVE, HubitatValveSensor),
     (DeviceAttribute.WATER, HubitatMoistureSensor),
 )
 
@@ -267,23 +293,12 @@ async def async_setup_entry(
         )
 
 
-def _get_contact_device_class(device: Device) -> BinarySensorDeviceClass:
+def _get_contact_info(device: Device) -> ContactInfo:
     """Guess the type of contact sensor from the device's label."""
     label = device.label
 
-    for matcher in _CONTACT_MATCHERS:
-        if matcher[0].search(label):
-            return matcher[1]
+    for info in _CONTACT_INFOS:
+        if info.matcher.search(label):
+            return info
 
-    return BinarySensorDeviceClass.DOOR
-
-
-def _get_presence_device_class(device: Device) -> BinarySensorDeviceClass:
-    """Guess the type of presence sensor from the device's label."""
-    label = device.label
-
-    for matcher in _PRESENCE_MATCHERS:
-        if matcher[0].search(label):
-            return matcher[1]
-
-    return BinarySensorDeviceClass.CONNECTIVITY
+    return _CONTACT_INFOS[len(_CONTACT_INFOS) - 1]

@@ -1,0 +1,123 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+
+	"id": "https://jasoncheatham.com/hass-integration.json",
+
+	"additionalProperties": true,
+
+	"properties": {
+		"domain": {
+			"type": "string",
+			"description": "A short unique name for the integration consisting of characters and underscores."
+		},
+
+		"name": {
+			"description": "The extension's display name",
+			"type": "string"
+		},
+
+		"version": {
+			"description": "A version for the integration; it must follow a standard versioning scheme.",
+			"type": "string"
+		},
+
+		"after_dependencies": {
+			"description": "Other Home Assistant integrations that may be used by this integration, but aren't reuqired",
+			"type": "array",
+			"items": {
+				"type": "string"
+			}
+		},
+
+		"codeowners": {
+			"description": "IDs (e.g., GitHub handles) of the code owners",
+			"type": "array",
+			"items": {
+				"type": "string"
+			}
+		},
+
+		"dependencies": {
+			"description": "Other Home Assistant integrations that should be setup before this integration is loaded",
+			"type": "array",
+			"items": {
+				"type": "string"
+			}
+		},
+
+		"documentation": {
+			"type": "string",
+			"description": "A URL pointing to the integration's documentation."
+		},
+
+		"integration_type": {
+			"type": "string",
+			"enum": [
+				"device",
+				"entity",
+				"hardware",
+				"helper",
+				"hub",
+				"service",
+				"system",
+				"virtual"
+			],
+			"description": "What the integration provides to Home Assistant."
+		},
+
+		"iot_class": {
+			"type": "string",
+			"enum": [
+				"assumed_state",
+				"cloud_polling",
+				"cloud_push",
+				"local_polling",
+				"local_push",
+				"calculated"
+			],
+			"description": "How an integration connects with a device or service."
+		},
+
+		"issue_tracker": {
+			"type": "string",
+			"description": "A URL where issues can be filed and viewed."
+		},
+
+		"loggers": {
+			"description": "A list of names that the integration uses for getLogger calls",
+			"type": "array",
+			"items": {
+				"type": "string"
+			}
+		},
+
+		"requirements": {
+			"description": "Python libraries that must be available for this integration.",
+			"type": "array",
+			"items": {
+				"type": "string"
+			}
+		},
+
+    "quality_scale": {
+			"type": "string",
+      "enum": ["silver", "gold", "platinum", "internal"],
+			"description": "A score rating the code quality and user experience of the integration."
+		}
+	},
+
+	"required": [
+		"domain",
+		"name",
+		"codeowners",
+		"dependencies",
+		"documentation",
+		"integration_type",
+		"iot_class",
+		"requirements"
+	],
+
+	"title": "JSON schema for Home Assistant integration manifest files",
+
+	"type": "object"
+}
