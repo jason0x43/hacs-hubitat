@@ -10,10 +10,7 @@ from homeassistant.components.event import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import (
-    _TRIGGER_ATTRS,
-    _TRIGGER_ATTR_MAP,
-)
+from .const import EventName
 from .device import HubitatEntity, HubitatEntityArgs
 from .hub import get_hub
 from .hubitatmaker import DeviceAttribute, Event
@@ -21,8 +18,14 @@ from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
+ATTR_EVENTS = {
+    DeviceAttribute.PUSHED: EventName.PUSHED,
+    DeviceAttribute.HELD: EventName.HELD,
+    DeviceAttribute.DOUBLE_TAPPED: EventName.DOUBLE_TAPPED,
+    DeviceAttribute.RELEASED: EventName.RELEASED
+}
 
-class HubitatButtonEvent(HubitatEntity, EventEntity):
+class HubitatButtonEventEntity(HubitatEntity, EventEntity):
     """Representation of an Hubitat button event"""
 
     _button_id: str
@@ -34,37 +37,25 @@ class HubitatButtonEvent(HubitatEntity, EventEntity):
 
         self._button_id = button_id
         self._attr_unique_id = f"{super().unique_id}::button_event::{self._button_id}"
+        self._attr_name = f"{super().name} button {self._button_id}".title()
         self._attr_event_types = self.get_event_types()
-
-    @property
-    def name(self) -> str:
-        """Return the display name for this button event entity."""
-        return f"{super().name} button {self._button_id}".title()
 
     def handle_event(self, event: Event) -> None:
         if self.is_disabled:
             return
 
-        if event.attribute not in _TRIGGER_ATTRS:
+        if event.attribute not in ATTR_EVENTS:
             return
 
         if event.value != self._button_id:
             return
 
-        event_type = _TRIGGER_ATTR_MAP[event.attribute]
+        event_type = ATTR_EVENTS[event.attribute]
         self._trigger_event(event_type)
         self.async_write_ha_state()
 
     def get_event_types(self) -> list[str]:
-        event_attrs = filter(
-            lambda attr: attr in self._device.attributes,
-            _TRIGGER_ATTRS
-        )
-        event_types = map(
-            lambda attr: _TRIGGER_ATTR_MAP[attr],
-            list(event_attrs)
-        )
-        return list(event_types)
+        return [ATTR_EVENTS[attr] for attr in self._device.attributes if attr in ATTR_EVENTS]
 
 
 async def async_setup_entry(
@@ -87,7 +78,7 @@ async def async_setup_entry(
 
         for i in range(1, num_buttons + 1):
             event_entities.append(
-                HubitatButtonEvent(
+                HubitatButtonEventEntity(
                     button_id=str(i),
                     hub=hub,
                     device=device
