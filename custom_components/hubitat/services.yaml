@@ -11,10 +11,21 @@ clear_code:
     position:
       description: Index of code to delete
       example: 1
-      selector: 
+      selector:
         number:
           min: 1
           mode: box
+
+get_codes:
+  description: Gets the user codes from a lock or keypad
+  fields:
+    entity_id:
+      description: Entity ID of a lock or keypad
+      required: true
+      name: Entity
+      selector:
+        entity:
+          integration: hubitat
 
 set_code:
   description: Set a user code for a lock or keypad

@@ -91,6 +91,7 @@ PLATFORMS: tuple[Platform, ...] = get_args(Platform)
 
 class ServiceName(StrEnum):
     CLEAR_CODE = "clear_code"
+    GET_CODES = "get_codes"
     SEND_COMMAND = "send_command"
     SET_CODE = "set_code"
     SET_CODE_LENGTH = "set_code_length"

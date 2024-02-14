@@ -180,6 +180,13 @@ This integration adds several service calls to Home Assistant.
     entity_id: lock.some_lock
     length: 4
   ```
+- Get the user codes for a lock or keypad
+  ```yaml
+  service: hubitat.get_codes
+  data:
+    entity_id: lock.some_lock
+  response_variable: codes
+  ```
 - Set the entry delay for a security keypad in seconds
   ```yaml
   service: hubitat.set_entry_delay

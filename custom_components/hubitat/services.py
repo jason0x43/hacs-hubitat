@@ -30,6 +30,9 @@ _LOGGER = getLogger(__name__)
 CLEAR_CODE_SCHEMA = vol.Schema(
     {vol.Required(ATTR_ENTITY_ID): cv.entity_id, vol.Required(ATTR_POSITION): int}
 )
+GET_CODES_SCHEMA = vol.Schema(
+    {vol.Required(ATTR_ENTITY_ID): cv.entity_id}
+)
 SEND_COMMAND_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
@@ -76,6 +79,10 @@ def async_register_services(
         entity = cast(HubitatLock | HubitatSecurityKeypad, get_entity(service))
         pos = cast(int, service.data.get(ATTR_POSITION))
         await entity.clear_code(pos)
+
+    async def get_codes(service: ServiceCall) -> str | dict[str, dict[str, str]] | None:
+        entity = cast(HubitatLock | HubitatSecurityKeypad, get_entity(service))
+        return await entity.get_codes()
 
     async def send_command(service: ServiceCall) -> None:
         entity = get_entity(service)
@@ -142,6 +149,9 @@ def async_register_services(
 
     hass.services.async_register(
         DOMAIN, ServiceName.CLEAR_CODE, clear_code, schema=CLEAR_CODE_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN, ServiceName.GET_CODES, get_codes, schema=GET_CODES_SCHEMA
     )
     hass.services.async_register(
         DOMAIN, ServiceName.SEND_COMMAND, send_command, schema=SEND_COMMAND_SCHEMA
