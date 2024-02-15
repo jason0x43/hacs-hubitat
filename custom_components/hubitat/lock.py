@@ -56,13 +56,27 @@ class HubitatLock(HubitatEntity, LockEntity):
         return self.get_int_attr(DeviceAttribute.CODE_LENGTH)
 
     @property
-    def codes(self, mask=True) -> str | dict[str, dict[str, str]] | None:
+    def codes(self) -> str | dict[str, dict[str, str]] | None:
         try:
             codes = self.get_json_attr(DeviceAttribute.LOCK_CODES)
-            if codes and mask:
+            if codes:
                 for id in codes:
                     del codes[id]["code"]
             return codes
+        except Exception:
+            return self.get_str_attr(DeviceAttribute.LOCK_CODES)
+
+    @property
+    def code_list(self) -> str | list[dict[str, str]] | None:
+        try:
+            code_list = []
+            codes = self.get_json_attr(DeviceAttribute.LOCK_CODES)
+            if codes:
+                for id in codes:
+                    code_list.append({ "position": id } | codes[id])
+                return code_list
+            else:
+                return None
         except Exception:
             return self.get_str_attr(DeviceAttribute.LOCK_CODES)
 
@@ -95,8 +109,10 @@ class HubitatLock(HubitatEntity, LockEntity):
     async def clear_code(self, position: int) -> None:
         await self.send_command(DeviceCommand.DELETE_CODE, position)
 
-    async def get_codes(self) -> str | dict[str, dict[str, str]] | None:
-        return await self.send_command(DeviceCommand.GET_CODES)
+    async def get_codes(self) -> str | list[dict[str, str]] | None:
+        await self.send_command(DeviceCommand.GET_CODES)
+        self.get_json_attr(DeviceAttribute.LOCK_CODES)
+        return self.code_list()
 
     async def set_code(self, position: int, code: str, name: str | None) -> None:
         arg = f"{position},{code}"

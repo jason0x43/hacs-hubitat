@@ -80,7 +80,7 @@ def async_register_services(
         pos = cast(int, service.data.get(ATTR_POSITION))
         await entity.clear_code(pos)
 
-    async def get_codes(service: ServiceCall) -> str | dict[str, dict[str, str]] | None:
+    async def get_codes(service: ServiceCall) -> str | list[dict[str, str]] | None:
         entity = cast(HubitatLock | HubitatSecurityKeypad, get_entity(service))
         return await entity.get_codes()
 
