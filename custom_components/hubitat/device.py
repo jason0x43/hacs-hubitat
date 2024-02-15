@@ -163,7 +163,13 @@ class HubitatEntity(HubitatBase, UpdateableEntity):
     async def send_command(self, command: str, *args: int | str | None) -> None:
         """Send a command to this device."""
         arg = ",".join([str(a) for a in args]) if args else None
-        return_value = await self._hub.send_command(self.device_id, command, arg)
+        await self._hub.send_command(self.device_id, command, arg)
+        _LOGGER.debug("sent %s to %s", command, self.device_id)
+
+    async def send_request(self, command: str, *args: int | str | None) -> dict[str, Any]:
+        """Send a request for data to this device and get a response."""
+        arg = ",".join([str(a) for a in args]) if args else None
+        return_value = await self._hub.send_request(self.device_id, command, arg)
         _LOGGER.debug("sent %s to %s", command, self.device_id)
         return return_value
 
