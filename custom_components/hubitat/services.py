@@ -5,7 +5,7 @@ import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_COMMAND, ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
 from homeassistant.helpers import config_validation as cv
 
 from .alarm_control_panel import HubitatSecurityKeypad
@@ -80,7 +80,7 @@ def async_register_services(
         pos = cast(int, service.data.get(ATTR_POSITION))
         await entity.clear_code(pos)
 
-    async def get_codes(service: ServiceCall) -> str | list[dict[str, str]] | None:
+    async def get_codes(service: ServiceCall) -> ServiceResponse:
         entity = cast(HubitatLock | HubitatSecurityKeypad, get_entity(service))
         return await entity.get_codes()
 
@@ -151,7 +151,8 @@ def async_register_services(
         DOMAIN, ServiceName.CLEAR_CODE, clear_code, schema=CLEAR_CODE_SCHEMA
     )
     hass.services.async_register(
-        DOMAIN, ServiceName.GET_CODES, get_codes, schema=GET_CODES_SCHEMA
+        DOMAIN, ServiceName.GET_CODES, get_codes, schema=GET_CODES_SCHEMA,
+        supports_response=SupportsResponse.ONLY
     )
     hass.services.async_register(
         DOMAIN, ServiceName.SEND_COMMAND, send_command, schema=SEND_COMMAND_SCHEMA
