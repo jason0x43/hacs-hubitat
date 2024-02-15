@@ -53,7 +53,7 @@ def create_and_add_entities(
 
     # Remove any existing entities that were overridden
     entity_unique_ids_to_remove = [
-        EntityClass(hub=hub, device=d, temp=True).unique_id
+        EntityClass(hub=hub, device=d).unique_id
         for d in original_devices_with_entity
         if d not in devices_with_entity
     ]

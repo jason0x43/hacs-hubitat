@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from logging import getLogger
-from typing import Any, NotRequired, TypedDict, Unpack
+from typing import Any, TypedDict, Unpack
 
 from typing_extensions import override
 
@@ -22,11 +22,10 @@ _LOGGER = getLogger(__name__)
 class HubitatBase(Removable):
     """Base class for Hubitat entities and event emitters."""
 
-    def __init__(self, hub: Hub, device: Device, temp: bool | None = False) -> None:
+    def __init__(self, hub: Hub, device: Device) -> None:
         """Initialize a device."""
         self._hub = hub
         self._device = device
-        self._temp = temp
 
     @property
     def device_id(self) -> str:
@@ -116,8 +115,6 @@ class HubitatBase(Removable):
 class HubitatEntityArgs(TypedDict):
     hub: Hub
     device: Device
-    temp: NotRequired[bool]
-    """Whether this entity is temporary"""
 
 
 class HubitatEntity(HubitatBase, UpdateableEntity):
@@ -133,12 +130,10 @@ class HubitatEntity(HubitatBase, UpdateableEntity):
         self._attr_name = self._device.label
         self._attr_unique_id = get_hub_device_id(self._hub, self._device)
         self._attr_device_class = device_class
+        self._hub.add_device_listener(self._device.id, self.handle_event)
 
-        # Sometimes entities may be temporary, created only to compute entity
-        # metadata. Don't register device listeners for temprorary entities.
-        temp: bool = kwargs.get("temp", False)
-        if not temp:
-            self._hub.add_device_listener(self._device.id, self.handle_event)
+    def __del__(self):
+        self._hub.remove_device_listener(self._device.id, self.handle_event)
 
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:

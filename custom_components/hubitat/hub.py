@@ -179,6 +179,18 @@ class Hub:
                 self._device_listeners[device_id] = []
             self._device_listeners[device_id].append(listener)
 
+    def remove_device_listener(self, device_id: str, listener: Listener) -> None:
+        """Remove a listener for events for a specific device."""
+        if device_id == self.id:
+            if listener in self._hub_device_listeners:
+                self._hub_device_listeners.remove(listener)
+        else:
+            if (
+                device_id in self._device_listeners
+                and listener in self._device_listeners[device_id]
+            ):
+                self._device_listeners[device_id].remove(listener)
+
     def add_entities(self, entities: list[E]) -> None:
         """Add entities to this hub."""
         self.entities.extend(entities)
