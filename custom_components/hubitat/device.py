@@ -165,7 +165,6 @@ class HubitatEntity(HubitatBase, UpdateableEntity):
         arg = ",".join([str(a) for a in args]) if args else None
         return_value = await self._hub.send_command(self.device_id, command, arg)
         _LOGGER.debug("sent %s to %s", command, self.device_id)
-        _LOGGER.debug(f"received {return_value}")
         return return_value
 
     def handle_event(self, event: Event) -> None:

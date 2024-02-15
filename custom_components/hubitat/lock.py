@@ -1,10 +1,12 @@
 from typing import Any, Unpack
+from logging import getLogger
+from json import loads, JSONDecodeError
 
 from homeassistant.components.lock import LockEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceResponse
 
-from .const import HassStateAttribute
+from .const import HassStateAttribute, ATTR_POSITION
 from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
 from .hubitatmaker import (
@@ -15,6 +17,8 @@ from .hubitatmaker import (
     DeviceState,
 )
 from .types import EntityAdder
+
+_LOGGER = getLogger(__name__)
 
 _device_attrs = (
     DeviceAttribute.CODE_LENGTH,
@@ -67,20 +71,6 @@ class HubitatLock(HubitatEntity, LockEntity):
             return self.get_str_attr(DeviceAttribute.LOCK_CODES)
 
     @property
-    def code_list(self) -> str | list[dict[str, str]] | None:
-        try:
-            code_list = []
-            codes = self.get_json_attr(DeviceAttribute.LOCK_CODES)
-            if codes:
-                for id in codes:
-                    code_list.append({ "position": id } | codes[id])
-                return code_list
-            else:
-                return None
-        except Exception:
-            return self.get_str_attr(DeviceAttribute.LOCK_CODES)
-
-    @property
     def last_code_name(self) -> str | None:
         return self.get_str_attr(DeviceAttribute.LAST_CODE_NAME)
 
@@ -109,10 +99,19 @@ class HubitatLock(HubitatEntity, LockEntity):
     async def clear_code(self, position: int) -> None:
         await self.send_command(DeviceCommand.DELETE_CODE, position)
 
-    async def get_codes(self) -> str | list[dict[str, str]] | None:
-        await self.send_command(DeviceCommand.GET_CODES)
-        self.get_json_attr(DeviceAttribute.LOCK_CODES)
-        return self.code_list()
+    async def get_codes(self) -> ServiceResponse:
+        response = await self.send_command(DeviceCommand.GET_CODES)
+        if response:
+            codes_str = next((attr['currentValue'] for attr in response['attributes']
+                        if attr.get('name') == DeviceAttribute.LOCK_CODES), None)
+            if codes_str:
+                try:
+                    codes = loads(codes_str)
+                except JSONDecodeError:
+                    return {HassStateAttribute.CODES: []}
+                code_list = [{ATTR_POSITION: key, **value} for key, value in codes.items()]
+                return {HassStateAttribute.CODES: code_list}
+        return {HassStateAttribute.CODES: []}
 
     async def set_code(self, position: int, code: str, name: str | None) -> None:
         arg = f"{position},{code}"
