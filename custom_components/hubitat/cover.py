@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import Any, Type, Unpack
+from typing import TYPE_CHECKING, Any, Type, Unpack
 
 from homeassistant.components.cover import (
     ATTR_POSITION as HA_ATTR_POSITION,
@@ -44,24 +44,20 @@ class HubitatCover(HubitatEntity, CoverEntity):
         self._attribute = attribute
         self._attr_supported_features = features
         self._attr_unique_id = f"{super().unique_id}::cover::{attribute}"
-
-    @property
-    def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
-        """Return this entity's associated attributes"""
-        return (
+        self._attr_name = f"{super().name} {self._attribute}".title()
+        self._device_attrs = (
             self._attribute,
             DeviceAttribute.LEVEL,
             DeviceAttribute.POSITION,
         )
 
-    @property
-    def name(self) -> str:
-        """Return the display name for this select."""
-        return f"{super().name} {self._attribute}".title()
+    def load_state(self):
+        self._attr_current_cover_position = self._get_current_cover_position()
+        self._attr_is_closed = self._get_is_closed()
+        self._attr_is_closing = self._get_is_closing()
+        self._attr_is_opening = self._get_is_opening()
 
-    @property
-    def current_cover_position(self) -> int | None:
-        """Return current position of cover."""
+    def _get_current_cover_position(self) -> int | None:
         pos = self.get_int_attr(DeviceAttribute.POSITION)
         if pos is not None:
             return pos
@@ -69,21 +65,19 @@ class HubitatCover(HubitatEntity, CoverEntity):
         # using the 'level' parameter
         return self.get_int_attr(DeviceAttribute.LEVEL)
 
-    @property
-    def is_closed(self) -> bool:
-        """Return True if the cover is closed."""
+    def _get_is_closed(self) -> bool:
         return self.get_attr(self._attribute) == DeviceState.CLOSED
 
-    @property
-    def is_closing(self) -> bool:
-        """Return True if the cover is closing."""
+    def _get_is_closing(self) -> bool:
         return self.get_attr(self._attribute) == DeviceState.CLOSING
 
+    def _get_is_opening(self) -> bool:
+        return self.get_attr(self._attribute) == DeviceState.OPENING
+
     @property
-    def is_opening(self) -> bool:
-        """Return True if the cover is opening."""
-        state = self.get_attr(self._attribute)
-        return state == DeviceState.OPENING
+    def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
+        """Return this entity's associated attributes"""
+        return self._device_attrs
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close the cover."""
@@ -228,3 +222,14 @@ def _is_cover_type(dev: Device, cap: DeviceCapability) -> bool:
         return False
 
     return cap == cover_type
+
+
+if TYPE_CHECKING:
+    from .hub import DEVICE_TYPECHECK, HUB_TYPECHECK
+
+    test_alarm = HubitatCover(
+        hub=HUB_TYPECHECK,
+        device=DEVICE_TYPECHECK,
+        attribute=DeviceAttribute.DOOR,
+        features=(CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE),
+    )

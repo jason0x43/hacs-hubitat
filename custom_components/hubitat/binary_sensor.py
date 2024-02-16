@@ -2,7 +2,7 @@
 
 import re
 from dataclasses import dataclass
-from typing import Pattern, Type, Unpack
+from typing import TYPE_CHECKING, Pattern, Type, Unpack
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -57,21 +57,15 @@ class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):
         self._attribute = attribute
         self._active_state = active_state
         self._attr_unique_id = f"{super().unique_id}::binary_sensor::{self._attribute}"
+        self._attr_name = f"{super().name} {self._attribute}".title()
+
+    def load_state(self):
+        self._attr_is_on = self.get_str_attr(self._attribute) == self._active_state
 
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return (self._attribute,)
-
-    @property
-    def name(self) -> str:
-        """Return the display name for this binary sensor."""
-        return f"{super().name} {self._attribute}".title()
-
-    @property
-    def is_on(self) -> bool:
-        """Return True if this sensor is on/active."""
-        return self.get_str_attr(self._attribute) == self._active_state
 
 
 class HubitatAccelerationSensor(HubitatBinarySensor):
@@ -302,3 +296,14 @@ def _get_contact_info(device: Device) -> ContactInfo:
             return info
 
     return _CONTACT_INFOS[len(_CONTACT_INFOS) - 1]
+
+
+if TYPE_CHECKING:
+    from .hub import DEVICE_TYPECHECK, HUB_TYPECHECK
+
+    test_alarm = HubitatBinarySensor(
+        hub=HUB_TYPECHECK,
+        device=DEVICE_TYPECHECK,
+        attribute=DeviceAttribute.CONTACT,
+        active_state="open",
+    )

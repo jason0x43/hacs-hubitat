@@ -22,8 +22,9 @@ ATTR_EVENTS = {
     DeviceAttribute.PUSHED: EventName.PUSHED,
     DeviceAttribute.HELD: EventName.HELD,
     DeviceAttribute.DOUBLE_TAPPED: EventName.DOUBLE_TAPPED,
-    DeviceAttribute.RELEASED: EventName.RELEASED
+    DeviceAttribute.RELEASED: EventName.RELEASED,
 }
+
 
 class HubitatButtonEventEntity(HubitatEntity, EventEntity):
     """Representation of an Hubitat button event"""
@@ -40,8 +41,11 @@ class HubitatButtonEventEntity(HubitatEntity, EventEntity):
         self._attr_name = f"{super().name} button {self._button_id}".title()
         self._attr_event_types = self.get_event_types()
 
+    def load_state(self):
+        pass
+
     def handle_event(self, event: Event) -> None:
-        if self.is_disabled:
+        if not self.enabled:
             return
 
         if event.attribute not in ATTR_EVENTS:
@@ -55,7 +59,9 @@ class HubitatButtonEventEntity(HubitatEntity, EventEntity):
         self.async_write_ha_state()
 
     def get_event_types(self) -> list[str]:
-        return [ATTR_EVENTS[attr] for attr in self._device.attributes if attr in ATTR_EVENTS]
+        return [
+            ATTR_EVENTS[attr] for attr in self._device.attributes if attr in ATTR_EVENTS
+        ]
 
 
 async def async_setup_entry(
@@ -78,11 +84,7 @@ async def async_setup_entry(
 
         for i in range(1, num_buttons + 1):
             event_entities.append(
-                HubitatButtonEventEntity(
-                    button_id=str(i),
-                    hub=hub,
-                    device=device
-                )
+                HubitatButtonEventEntity(button_id=str(i), hub=hub, device=device)
             )
 
     if len(event_entities) > 0:

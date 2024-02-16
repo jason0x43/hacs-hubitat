@@ -42,6 +42,8 @@ def create_and_add_entities(
     if len(entities) > 0:
         hub.add_entities(entities)
         async_add_entities(entities)
+        for entity in entities:
+            entity.load_state()
         _LOGGER.debug(f"Added {EntityClass.__name__} entities: {entities}")
 
     _LOGGER.debug(f"Removing overridden {platform} entities...")

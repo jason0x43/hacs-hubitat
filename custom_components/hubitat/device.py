@@ -8,7 +8,7 @@ from typing_extensions import override
 
 from homeassistant.core import callback
 from homeassistant.helpers import device_registry
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, Entity
 
 from .const import DOMAIN
 from .hub import Hub
@@ -36,27 +36,6 @@ class HubitatBase(Removable):
     def device_name(self) -> str:
         """Return the hub-local name for this device."""
         return self._device.name
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return the device info."""
-        dev_identifier = self.device_id
-        if self._hub.id != self.device_id:
-            dev_identifier = f"{self._hub.id}:{self.device_id}"
-
-        info: DeviceInfo = {
-            "identifiers": {(DOMAIN, dev_identifier)},
-        }
-
-        # if this entity's device isn't the hub, link it to the hub
-        if self.device_id != self._hub.id:
-            info["name"] = self._device.label
-            info["suggested_area"] = self.room
-            info["via_device"] = (DOMAIN, self._hub.id)
-            info["model"] = self.type
-            info["manufacturer"] = "Hubitat"
-
-        return info
 
     @property
     def type(self) -> str:
@@ -117,7 +96,7 @@ class HubitatEntityArgs(TypedDict):
     device: Device
 
 
-class HubitatEntity(HubitatBase, UpdateableEntity):
+class HubitatEntity(HubitatBase, Entity, UpdateableEntity):
     """An entity related to a Hubitat device."""
 
     def __init__(
@@ -130,6 +109,8 @@ class HubitatEntity(HubitatBase, UpdateableEntity):
         self._attr_name = self._device.label
         self._attr_unique_id = get_hub_device_id(self._hub, self._device)
         self._attr_device_class = device_class
+        self._attr_should_poll = False
+        self._attr_device_info = get_device_info(self._hub, self._device)
         self._hub.add_device_listener(self._device.id, self.handle_event)
 
     def __del__(self):
@@ -138,18 +119,6 @@ class HubitatEntity(HubitatBase, UpdateableEntity):
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         return None
-
-    @property
-    def should_poll(self) -> bool:
-        # Hubitat will push device updates
-        return False
-
-    @property
-    def is_disabled(self) -> bool:
-        """Indicate whether this device is currently disabled."""
-        if self.registry_entry:
-            return self.registry_entry.disabled_by is not None
-        return False
 
     async def async_update(self) -> None:
         """Fetch new data for this device."""
@@ -162,12 +131,14 @@ class HubitatEntity(HubitatBase, UpdateableEntity):
         _LOGGER.debug("sent %s to %s", command, self.device_id)
 
     def handle_event(self, event: Event) -> None:
-        """Handle a device event."""
-        self.update_state()
+        """
+        Handle a device event.
 
-    def update_state(self) -> None:
-        """Request that Home Assistant update this device's state."""
-        if not self.is_disabled:
+        If this entity is enabled, reload the entity state from the underlying
+        device and tell HA that the state has updated.
+        """
+        if self.enabled:
+            self.load_state()
             self.async_schedule_update_ha_state()
 
 
@@ -180,9 +151,32 @@ class HubitatEventEmitter(HubitatBase):
         # automatically do that as it does for entities.
         entry = self._hub.config_entry
         dreg = device_registry.async_get(self._hub.hass)
-        dreg.async_get_or_create(config_entry_id=entry.entry_id, **self.device_info)
+        dreg.async_get_or_create(
+            config_entry_id=entry.entry_id, **get_device_info(self._hub, self._device)
+        )
         _LOGGER.debug("Created device for %s", self)
 
     def __repr__(self) -> str:
         """Return the representation."""
         return f"<HubitatEventEmitter {self.device_name}>"
+
+
+def get_device_info(hub: Hub, device: Device) -> DeviceInfo:
+    """Return the device info."""
+    dev_identifier = device.id
+    if hub.id != device.id:
+        dev_identifier = f"{hub.id}:{device.id}"
+
+    info: DeviceInfo = {
+        "identifiers": {(DOMAIN, dev_identifier)},
+    }
+
+    # if this entity's device isn't the hub, link it to the hub
+    if device.id != hub.id:
+        info["name"] = device.label
+        info["suggested_area"] = device.room
+        info["via_device"] = (DOMAIN, hub.id)
+        info["model"] = device.type
+        info["manufacturer"] = "Hubitat"
+
+    return info

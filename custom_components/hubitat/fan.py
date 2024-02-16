@@ -2,7 +2,7 @@
 
 from logging import getLogger
 from math import modf
-from typing import Any, Unpack
+from typing import TYPE_CHECKING, Any, Unpack
 
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
@@ -40,20 +40,21 @@ class HubitatFan(HubitatEntity, FanEntity):
         self._attr_supported_features = FanEntityFeature.SET_SPEED
         self._attr_unique_id = f"{super().unique_id}::fan"
 
-    @property
-    def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
-        """Return this entity's associated attributes"""
-        return _device_attrs
+    def load_state(self):
+        """Load the state of the fan."""
+        self._attr_is_on = self._get_is_on()
+        self._attr_percentage = self._get_percentage()
+        self._attr_preset_mode = self._get_preset_mode()
+        self._attr_preset_modes = self._get_preset_modes()
+        self._attr_speed_count = self._get_speed_count()
 
-    @property
-    def is_on(self) -> bool:
+    def _get_is_on(self) -> bool:
         """Return true if the entity is on."""
         if DeviceCapability.SWITCH in self._device.capabilities:
             return self.get_str_attr(DeviceAttribute.SWITCH) == DeviceState.ON
         return self.get_str_attr(DeviceAttribute.SPEED) != DeviceState.OFF
 
-    @property
-    def percentage(self) -> int | None:
+    def _get_percentage(self) -> int | None:
         """Return the current speed as a percentage."""
         speed = self.get_str_attr(DeviceAttribute.SPEED)
         _LOGGER.debug("hubitat speed: %s", speed)
@@ -72,25 +73,27 @@ class HubitatFan(HubitatEntity, FanEntity):
         )
         return round(self.percentage_step * (idx + 1))
 
-    @property
-    def preset_mode(self) -> str | None:
+    def _get_preset_mode(self) -> str | None:
         """Return the current preset mode"""
         if self.get_str_attr(DeviceAttribute.SPEED) == "auto":
             return "auto"
         return None
 
-    @property
-    def preset_modes(self) -> list[str] | None:
+    def _get_preset_modes(self) -> list[str] | None:
         """Return a list of available preset modes."""
         if "auto" in self.speeds_and_modes:
             return ["auto"]
         return None
 
-    @property
-    def speed_count(self) -> int:
+    def _get_speed_count(self) -> int:
         """Return the number of speeds supported by this fan."""
         # Hubitat speeds include 'on', 'off', and 'auto'
         return len(self.speeds)
+
+    @property
+    def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
+        """Return this entity's associated attributes"""
+        return _device_attrs
 
     @property
     def speeds(self) -> list[str]:
@@ -163,3 +166,12 @@ async def async_setup_entry(
 ) -> None:
     """Initialize fan devices."""
     create_and_add_entities(hass, entry, async_add_entities, "fan", HubitatFan, is_fan)
+
+
+if TYPE_CHECKING:
+    from .hub import DEVICE_TYPECHECK, HUB_TYPECHECK
+
+    test_alarm = HubitatFan(
+        hub=HUB_TYPECHECK,
+        device=DEVICE_TYPECHECK,
+    )

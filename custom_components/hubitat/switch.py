@@ -3,7 +3,7 @@
 import re
 from enum import StrEnum
 from logging import getLogger
-from typing import Any, Unpack
+from typing import TYPE_CHECKING, Any, Unpack
 
 import voluptuous as vol
 
@@ -55,15 +55,17 @@ class HubitatSwitch(HubitatEntity, SwitchEntity):
         if type != SwitchType.SWITCH:
             self._attr_unique_id += f"::{type}"
 
+    def load_state(self):
+        self._attr_is_on = self._get_is_on()
+
+    def _get_is_on(self) -> bool:
+        """Return True if the switch is on."""
+        return self.get_str_attr(DeviceAttribute.SWITCH) == "on"
+
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return (DeviceAttribute.SWITCH, DeviceAttribute.POWER)
-
-    @property
-    def is_on(self) -> bool:
-        """Return True if the switch is on."""
-        return self.get_str_attr(DeviceAttribute.SWITCH) == "on"
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""
@@ -209,3 +211,12 @@ async def async_setup_entry(
         hass.services.async_register(
             DOMAIN, ServiceName.ALARM_STROBE_ON, strobe_on, schema=ENTITY_SCHEMA
         )
+
+
+if TYPE_CHECKING:
+    from .hub import DEVICE_TYPECHECK, HUB_TYPECHECK
+
+    test_alarm = HubitatSwitch(
+        hub=HUB_TYPECHECK,
+        device=DEVICE_TYPECHECK,
+    )

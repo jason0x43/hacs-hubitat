@@ -2,10 +2,9 @@ import os
 import ssl
 from logging import getLogger
 from ssl import SSLContext
-from typing import Any, Callable, Mapping, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, Mapping, TypeVar, cast
 
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
-from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_HIDDEN,
@@ -432,8 +431,7 @@ class Hub:
         if temp_unit != hub.temperature_unit:
             hub.set_temperature_unit(temp_unit)
             for entity in hub.entities:
-                if entity.device_class == SensorDeviceClass.TEMPERATURE:
-                    entity.update_state()
+                entity.load_state()
             _LOGGER.debug("Set temperature units to %s", temp_unit)
 
         hass.states.async_set(
@@ -601,3 +599,23 @@ def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:
             _LOGGER.info(
                 f"Updated identifiers of device {dev.identifiers} to {new_ids}"
             )
+
+
+HUB_TYPECHECK: Hub
+"""A hub instance that will only exist during development."""
+
+DEVICE_TYPECHECK: Device
+"""A device instance that will only exist during development."""
+
+if TYPE_CHECKING:
+    test_hass = HomeAssistant("")
+    test_entry = ConfigEntry(
+        version=1,
+        domain="Hubitat",
+        title="Hubitat",
+        data={},
+        source="",
+        minor_version=0,  # type: ignore
+    )
+    HUB_TYPECHECK = Hub(hass=test_hass, entry=test_entry, index=0)
+    DEVICE_TYPECHECK = Device({})

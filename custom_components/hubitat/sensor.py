@@ -3,7 +3,7 @@
 import re
 from datetime import date, datetime
 from logging import getLogger
-from typing import Type, Unpack
+from typing import TYPE_CHECKING, Type, Unpack
 
 from homeassistant.components.sensor import (
     Decimal,
@@ -76,24 +76,21 @@ class HubitatSensor(HubitatEntity, SensorEntity):
         self._attr_device_class = device_class
         self._attr_state_class = state_class
         self._attr_unique_id = f"{super().unique_id}::sensor::{attribute}"
-        self._enabled_default = enabled_default
+        self._attr_entity_registry_enabled_default = (
+            enabled_default if enabled_default is not None else True
+        )
+
+    def load_state(self):
+        self._attr_native_value = self._get_native_value()
 
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return (self._attribute,)
 
-    @property
-    def native_value(self) -> StateType | date | datetime | Decimal:
+    def _get_native_value(self) -> StateType | date | datetime | Decimal:
         """Return this sensor's current value."""
         return self.get_attr(self._attribute)
-
-    @property
-    def entity_registry_enabled_default(self) -> bool:
-        """Update sensors are disabled by default."""
-        if self._enabled_default is not None:
-            return self._enabled_default
-        return True
 
 
 class HubitatBatterySensor(HubitatSensor):
@@ -109,8 +106,11 @@ class HubitatBatterySensor(HubitatSensor):
             **kwargs,
         )
 
-    @property
-    def native_value(self) -> StateType | date | datetime | Decimal:
+    def load_state(self):
+        super().load_state()
+        self._attr_native_value = self._get_native_value()
+
+    def _get_native_value(self) -> StateType | date | datetime | Decimal:
         """Return this battery sensor's current value."""
         value = self.get_attr(self._attribute)
         if isinstance(value, str):
@@ -221,8 +221,11 @@ class HubitatTemperatureSensor(HubitatSensor):
             **kwargs,
         )
 
-    @property
-    def native_unit_of_measurement(self) -> str | None:
+    def load_state(self):
+        super().load_state()
+        self._attr_native_unit_of_measurement = self._get_native_unit_of_measurement()
+
+    def _get_native_unit_of_measurement(self) -> str | None:
         unit: UnitOfTemperature = self._hub.temperature_unit
         attr_unit: str | None = self.get_attr_unit(self._attribute)
         if attr_unit is not None:
@@ -754,6 +757,8 @@ async def async_setup_entry(
     if len(unknown_entities) > 0:
         hub.add_entities(unknown_entities)
         async_add_entities(unknown_entities)
+        for entity in unknown_entities:
+            entity.load_state()
 
 
 def add_hub_entities(
@@ -773,3 +778,15 @@ def add_hub_entities(
     if len(hub_entities) > 0:
         hub.add_entities(hub_entities)
         async_add_entities(hub_entities)
+        for entity in hub_entities:
+            entity.load_state()
+
+
+if TYPE_CHECKING:
+    from .hub import DEVICE_TYPECHECK, HUB_TYPECHECK
+
+    test_alarm = HubitatSensor(
+        hub=HUB_TYPECHECK,
+        device=DEVICE_TYPECHECK,
+        attribute=DeviceAttribute.MODE,
+    )

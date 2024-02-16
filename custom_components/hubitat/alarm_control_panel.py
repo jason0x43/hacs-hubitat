@@ -1,7 +1,7 @@
 """Support for Hubitat security keypads."""
 
 from logging import getLogger
-from typing import Any, Unpack
+from typing import TYPE_CHECKING, Unpack
 
 from homeassistant.components.alarm_control_panel import (
     AlarmControlPanelEntity,
@@ -51,6 +51,52 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
         HubitatEntity.__init__(self, **kwargs)
         AlarmControlPanelEntity.__init__(self)
         self._attr_unique_id = f"{super().unique_id}::alarm_control_panel"
+        self._attr_code_arm_required = False
+        self._attr_extra_state_attributes = {
+            HassStateAttribute.ALARM: self.alarm,
+            HassStateAttribute.CODES: self.codes,
+            HassStateAttribute.CODE_LENGTH: self.code_length,
+            HassStateAttribute.ENTRY_DELAY: self.entry_delay,
+            HassStateAttribute.EXIT_DELAY: self.exit_delay,
+            HassStateAttribute.MAX_CODES: self.max_codes,
+        }
+        self._attr_supported_features = (
+            AlarmControlPanelEntityFeature.ARM_AWAY
+            | AlarmControlPanelEntityFeature.ARM_HOME
+        )
+        if DeviceCommand.ARM_NIGHT in self._device.commands:
+            self._attr_supported_features |= AlarmControlPanelEntityFeature.ARM_NIGHT
+        if DeviceCapability.ALARM in self._device.capabilities:
+            self._attr_supported_features |= AlarmControlPanelEntityFeature.TRIGGER
+
+    def load_state(self):
+        self._attr_changed_by = self._get_changed_by()
+        self._attr_code_format = self._get_code_format()
+        self._attr_state = self._get_state()
+
+    def _get_changed_by(self) -> str | None:
+        """Last change triggered by."""
+        return self.get_str_attr(DeviceAttribute.CODE_CHANGED)
+
+    def _get_code_format(self) -> CodeFormat | None:
+        """Regex for code format or None if no code is required."""
+        code_length = self.code_length
+        if code_length is not None:
+            return CodeFormat.NUMBER
+        return None
+
+    def _get_state(self) -> str | None:
+        """Return the maximum number of codes the keypad supports."""
+        state = self.get_attr(DeviceAttribute.SECURITY_KEYPAD)
+        if state == DeviceState.ARMED_AWAY:
+            return STATE_ALARM_ARMED_AWAY
+        if state == DeviceState.ARMED_HOME:
+            return STATE_ALARM_ARMED_HOME
+        if state == DeviceState.ARMED_NIGHT:
+            return STATE_ALARM_ARMED_NIGHT
+        if state == DeviceState.DISARMED:
+            return STATE_ALARM_DISARMED
+        return None
 
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
@@ -63,24 +109,6 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
         return self.get_str_attr(DeviceAttribute.ALARM)
 
     @property
-    def changed_by(self) -> str | None:
-        """Last change triggered by."""
-        return self.get_str_attr(DeviceAttribute.CODE_CHANGED)
-
-    @property
-    def code_arm_required(self) -> bool:
-        """Whether the code is required for arm actions."""
-        return False
-
-    @property
-    def code_format(self) -> CodeFormat | None:
-        """Regex for code format or None if no code is required."""
-        code_length = self.code_length
-        if code_length is not None:
-            return CodeFormat.NUMBER
-        return None
-
-    @property
     def code_length(self) -> int | None:
         """Return the length of codes for this keypad."""
         return self.get_int_attr(DeviceAttribute.CODE_LENGTH)
@@ -88,18 +116,6 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
     @property
     def codes(self) -> dict[str, dict[str, str]] | None:
         return self.get_json_attr(DeviceAttribute.LOCK_CODES)
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return the state attributes."""
-        return {
-            HassStateAttribute.ALARM: self.alarm,
-            HassStateAttribute.CODES: self.codes,
-            HassStateAttribute.CODE_LENGTH: self.code_length,
-            HassStateAttribute.ENTRY_DELAY: self.entry_delay,
-            HassStateAttribute.EXIT_DELAY: self.exit_delay,
-            HassStateAttribute.MAX_CODES: self.max_codes,
-        }
 
     @property
     def entry_delay(self) -> int | None:
@@ -115,33 +131,6 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
     def max_codes(self) -> int | None:
         """Return the maximum number of codes the keypad supports."""
         return self.get_int_attr(DeviceAttribute.MAX_CODES)
-
-    @property
-    def state(self) -> str | None:
-        """Return the maximum number of codes the keypad supports."""
-        state = self.get_attr(DeviceAttribute.SECURITY_KEYPAD)
-        if state == DeviceState.ARMED_AWAY:
-            return STATE_ALARM_ARMED_AWAY
-        if state == DeviceState.ARMED_HOME:
-            return STATE_ALARM_ARMED_HOME
-        if state == DeviceState.ARMED_NIGHT:
-            return STATE_ALARM_ARMED_NIGHT
-        if state == DeviceState.DISARMED:
-            return STATE_ALARM_DISARMED
-        return None
-
-    @property
-    def supported_features(self) -> AlarmControlPanelEntityFeature:
-        """Return the list of supported features."""
-        features = (
-            AlarmControlPanelEntityFeature.ARM_AWAY
-            | AlarmControlPanelEntityFeature.ARM_HOME
-        )
-        if DeviceCommand.ARM_NIGHT in self._device.commands:
-            features |= AlarmControlPanelEntityFeature.ARM_NIGHT
-        if DeviceCapability.ALARM in self._device.capabilities:
-            features |= AlarmControlPanelEntityFeature.TRIGGER
-        return features
 
     async def async_alarm_disarm(self, code: str | None = None) -> None:
         """Send disarm command."""
@@ -208,3 +197,9 @@ async def async_setup_entry(
         HubitatSecurityKeypad,
         is_security_keypad,
     )
+
+
+if TYPE_CHECKING:
+    from .hub import DEVICE_TYPECHECK, HUB_TYPECHECK
+
+    test_alarm = HubitatSecurityKeypad(hub=HUB_TYPECHECK, device=DEVICE_TYPECHECK)

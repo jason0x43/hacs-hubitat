@@ -1,6 +1,6 @@
 """Support for Hubitat thermostats."""
 
-from typing import Any, Unpack
+from typing import TYPE_CHECKING, Any, Unpack
 
 from custom_components.hubitat.const import TEMP_C, TEMP_F
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
@@ -112,24 +112,26 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
             self._attr_supported_features |= ClimateEntityFeature.TURN_OFF
             self._enable_turn_on_off_backwards_compatibility = False
 
-    @property
-    def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
-        """Return this entity's associated attributes"""
-        return _device_attrs
+    def load_state(self):
+        self._attr_current_humidity = self._get_current_humidity()
+        self._attr_current_temperature = self._get_current_temperature()
+        self._attr_fan_mode = self._get_fan_mode()
+        self._attr_hvac_mode = self._get_hvac_mode()
+        self._attr_hvac_action = self._get_hvac_action()
+        self._attr_preset_mode = self._get_preset_mode()
+        self._attr_preset_modes = self._get_preset_modes()
+        self._attr_target_temperature = self._get_target_temperature()
+        self._attr_target_temperature_high = self._get_target_temperature_high()
+        self._attr_target_temperature_low = self._get_target_temperature_low()
+        self._attr_temperature_unit = self._get_temperature_unit()
 
-    @property
-    def current_humidity(self) -> int | None:
-        """Return the current humidity."""
+    def _get_current_humidity(self) -> int | None:
         return self.get_int_attr(DeviceAttribute.HUMIDITY)
 
-    @property
-    def current_temperature(self) -> float | None:
-        """Return the current temperature."""
+    def _get_current_temperature(self) -> float | None:
         return self.get_float_attr(DeviceAttribute.TEMP)
 
-    @property
-    def fan_mode(self) -> str | None:
-        """Return the fan setting."""
+    def _get_fan_mode(self) -> str | None:
         mode = self.get_str_attr(DeviceAttribute.FAN_MODE)
         if mode == ClimateFanMode.CIRCULATE or mode == ClimateFanMode.ON:
             return FAN_ON
@@ -137,8 +139,7 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
             return FAN_AUTO
         return None
 
-    @property
-    def hvac_mode(self) -> HVACMode | None:
+    def _get_hvac_mode(self) -> HVACMode | None:
         """Return hvac operation ie. heat, cool mode."""
         mode = self.get_str_attr(DeviceAttribute.THERMOSTAT_MODE)
         if mode == ClimateMode.OFF:
@@ -149,8 +150,7 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
             return HVACMode.COOL
         return HVACMode.AUTO
 
-    @property
-    def hvac_action(self) -> HVACAction | None:
+    def _get_hvac_action(self) -> HVACAction | None:
         """Return the current running hvac operation if supported."""
         opstate = self.get_str_attr(DeviceAttribute.OPERATING_STATE)
         if opstate == ClimateOpState.PENDING_HEAT or opstate == ClimateOpState.HEATING:
@@ -163,8 +163,7 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
             return HVACAction.IDLE
         return None
 
-    @property
-    def preset_mode(self) -> str | None:
+    def _get_preset_mode(self) -> str | None:
         """Return the current preset mode, e.g., home, away, temp."""
         nest_mode = self.get_str_attr(DeviceAttribute.NEST_MODE)
         presence = self.get_str_attr(DeviceAttribute.PRESENCE)
@@ -176,16 +175,14 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
             return PRESET_AWAY
         return PRESET_HOME
 
-    @property
-    def preset_modes(self) -> list[str] | None:
+    def _get_preset_modes(self) -> list[str] | None:
         """Return a list of available preset modes."""
         nest_mode = self.get_str_attr(DeviceAttribute.NEST_MODE)
         if nest_mode is not None:
             return HASS_NEST_PRESET_MODES
         return HASS_PRESET_MODES
 
-    @property
-    def target_temperature(self) -> float | None:
+    def _get_target_temperature(self) -> float | None:
         """Return the temperature we try to reach."""
         if self.hvac_mode == HVACMode.HEAT:
             return self.get_float_attr(DeviceAttribute.HEATING_SETPOINT)
@@ -193,22 +190,19 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
             return self.get_float_attr(DeviceAttribute.COOLING_SETPOINT)
         return None
 
-    @property
-    def target_temperature_high(self) -> float | None:
+    def _get_target_temperature_high(self) -> float | None:
         """Return the highbound target temperature we try to reach."""
         if self.hvac_mode == HVACMode.HEAT_COOL or self.hvac_mode == HVACMode.AUTO:
             return self.get_float_attr(DeviceAttribute.COOLING_SETPOINT)
         return None
 
-    @property
-    def target_temperature_low(self) -> float | None:
+    def _get_target_temperature_low(self) -> float | None:
         """Return the lowbound target temperature we try to reach."""
         if self.hvac_mode == HVACMode.HEAT_COOL or self.hvac_mode == HVACMode.AUTO:
             return self.get_float_attr(DeviceAttribute.HEATING_SETPOINT)
         return None
 
-    @property
-    def temperature_unit(self) -> str:
+    def _get_temperature_unit(self) -> str:
         """Return the unit of measurement used by the platform."""
         unit = self.get_str_attr(DeviceAttribute.TEMP_UNIT)
         if unit == TEMP_F:
@@ -216,6 +210,11 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         if unit == TEMP_C:
             return UnitOfTemperature.CELSIUS
         return self._hub.temperature_unit
+
+    @property
+    def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
+        """Return this entity's associated attributes"""
+        return _device_attrs
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new target fan mode."""
@@ -282,4 +281,13 @@ async def async_setup_entry(
     """Initialize thermostat devices."""
     create_and_add_entities(
         hass, entry, async_add_entities, "climate", HubitatThermostat, is_thermostat
+    )
+
+
+if TYPE_CHECKING:
+    from .hub import DEVICE_TYPECHECK, HUB_TYPECHECK
+
+    test_alarm = HubitatThermostat(
+        hub=HUB_TYPECHECK,
+        device=DEVICE_TYPECHECK,
     )

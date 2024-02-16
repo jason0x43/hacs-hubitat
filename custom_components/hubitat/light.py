@@ -3,7 +3,7 @@
 import json
 import re
 from logging import getLogger
-from typing import Any, Unpack
+from typing import TYPE_CHECKING, Any, Unpack
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -52,14 +52,17 @@ class HubitatLight(HubitatEntity, LightEntity):
         HubitatEntity.__init__(self, **kwargs)
         LightEntity.__init__(self)
         self._attr_unique_id = f"{super().unique_id}::light"
+        self._attr_supported_color_modes = self._get_supported_color_modes()
+        self._attr_supported_features = self._get_supported_features()
 
-    @property
-    def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
-        """Return this entity's associated attributes"""
-        return _device_attrs
+    def load_state(self):
+        self._attr_color_mode = self._get_color_mode()
+        self._attr_brightness = self._get_brightness()
+        self._attr_color_temp = self._get_color_temp()
+        self._attr_hs_color = self._get_hs_color()
+        self._attr_is_on = self._get_is_on()
 
-    @property
-    def color_mode(self) -> ColorMode | str | None:
+    def _get_color_mode(self) -> ColorMode | str | None:
         """Return this light's color mode."""
         he_color_mode = self.get_str_attr(DeviceAttribute.COLOR_MODE)
         if he_color_mode == HubitatColorMode.CT:
@@ -68,21 +71,14 @@ class HubitatLight(HubitatEntity, LightEntity):
             return ColorMode.HS
         return None
 
-    @property
-    def color_name(self) -> str | None:
-        """Return the name of this light's current color."""
-        return self.get_str_attr(DeviceAttribute.COLOR_NAME)
-
-    @property
-    def brightness(self) -> int | None:
+    def _get_brightness(self) -> int | None:
         """Return the level of this light."""
         level = self.get_int_attr(DeviceAttribute.LEVEL)
         if level is None:
             return None
         return int(255 * level / 100)
 
-    @property
-    def color_temp(self) -> int | None:
+    def _get_color_temp(self) -> int | None:
         """Return the CT color value in mireds."""
         mode = self.color_mode
         if mode and mode != ColorMode.COLOR_TEMP:
@@ -94,8 +90,7 @@ class HubitatLight(HubitatEntity, LightEntity):
 
         return color_util.color_temperature_kelvin_to_mired(temp)
 
-    @property
-    def hs_color(self) -> tuple[float, float] | None:
+    def _get_hs_color(self) -> tuple[float, float] | None:
         """Return the hue and saturation color value [float, float]."""
         mode = self.color_mode
         if mode and mode != ColorMode.HS:
@@ -109,13 +104,11 @@ class HubitatLight(HubitatEntity, LightEntity):
         hass_hue = 360 * hue / 100
         return (hass_hue, sat)
 
-    @property
-    def is_on(self) -> bool:
+    def _get_is_on(self) -> bool:
         """Return True if the light is on."""
         return self.get_str_attr(DeviceAttribute.SWITCH) == "on"
 
-    @property
-    def supported_color_modes(self) -> set[ColorMode] | set[str] | None:
+    def _get_supported_color_modes(self) -> set[ColorMode] | set[str] | None:
         caps = self._device.capabilities
         supported_modes = set()
 
@@ -132,8 +125,7 @@ class HubitatLight(HubitatEntity, LightEntity):
 
         return supported_modes
 
-    @property
-    def supported_features(self) -> LightEntityFeature:
+    def _get_supported_features(self) -> LightEntityFeature:
         """Return supported feature flags."""
         cmds = self._device.commands
 
@@ -141,6 +133,16 @@ class HubitatLight(HubitatEntity, LightEntity):
             return LightEntityFeature.FLASH
 
         return LightEntityFeature(0)
+
+    @property
+    def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
+        """Return this entity's associated attributes"""
+        return _device_attrs
+
+    @property
+    def color_name(self) -> str | None:
+        """Return the name of this light's current color."""
+        return self.get_str_attr(DeviceAttribute.COLOR_NAME)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the light."""
@@ -265,4 +267,13 @@ async def async_setup_entry(
     """Initialize light devices."""
     create_and_add_entities(
         hass, config_entry, async_add_entities, "light", HubitatLight, is_light
+    )
+
+
+if TYPE_CHECKING:
+    from .hub import DEVICE_TYPECHECK, HUB_TYPECHECK
+
+    test_alarm = HubitatLight(
+        hub=HUB_TYPECHECK,
+        device=DEVICE_TYPECHECK,
     )
