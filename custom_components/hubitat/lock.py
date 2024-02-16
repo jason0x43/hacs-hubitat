@@ -101,19 +101,16 @@ class HubitatLock(HubitatEntity, LockEntity):
         await self.send_command(DeviceCommand.DELETE_CODE, position)
 
     async def get_codes(self) -> ServiceResponse:
-        response = await self.send_request(DeviceCommand.GET_CODES)
-        if response:
-            codes_str = next((attr['currentValue'] for attr in response['attributes']
-                            if attr.get('name') == DeviceAttribute.LOCK_CODES), None)
-            if codes_str:
-                try:
-                    codes = loads(codes_str)
-                except JSONDecodeError:
-                    _LOGGER.error("json doc not decodable: %s", codes_str)
-                    return {HassStateAttribute.CODES: []}
-                code_list = sorted([{ATTR_POSITION: key, **value} for key, value in codes.items()],
-                    key=lambda x: int(x[ATTR_POSITION]))
-                return {HassStateAttribute.CODES: code_list}
+        codes_str = self.get_str_attr(DeviceAttribute.LOCK_CODES)
+        if codes_str:
+            try:
+                codes = loads(codes_str)
+            except JSONDecodeError:
+                _LOGGER.error("json doc not decodable: %s", codes_str)
+                return {HassStateAttribute.CODES: []}
+            code_list = sorted([{ATTR_POSITION: key, **value} for key, value in codes.items()],
+                key=lambda x: int(x[ATTR_POSITION]))
+            return {HassStateAttribute.CODES: code_list}
         return {HassStateAttribute.CODES: []}
 
     async def set_code(self, position: int, code: str, name: str | None) -> None:

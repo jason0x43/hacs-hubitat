@@ -445,12 +445,6 @@ class Hub:
         """Send a device command to Hubitat."""
         await self._hub.send_command(device_id, command, arg)
 
-    async def send_request(
-        self, device_id: str, command: str, arg: str | int | None
-    ) -> dict[str, Any]:
-        """Send a device request for data to Hubitat."""
-        return await self._hub.send_command(device_id, command, arg)
-
     async def set_host(self, host: str) -> None:
         """Set the host address that the Hubitat hub is accessible at."""
         _LOGGER.debug("Setting Hubitat host to %s", host)
