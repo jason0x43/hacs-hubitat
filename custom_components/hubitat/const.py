@@ -41,6 +41,7 @@ class EventName(StrEnum):
     HELD = "held"
     DOUBLE_TAPPED = "double_tapped"
     PUSHED = "pushed"
+    RELEASED = "released"
     CODE_NAME = "code_name"
 
 
@@ -78,6 +79,7 @@ Platform = Literal[
     "binary_sensor",
     "climate",
     "cover",
+    "event",
     "light",
     "lock",
     "select",

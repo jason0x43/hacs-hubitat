@@ -49,7 +49,6 @@ Listener = Callable[[Event], None]
 HUB_DEVICE_NAME = "Hub"
 HUB_NAME = "Hubitat Elevation"
 
-
 # Hubitat attributes that should be emitted as HA events
 _TRIGGER_ATTRS = tuple([v.attr for v in TRIGGER_CAPABILITIES.values()])
 # A mapping from Hubitat attribute names to the attribute names that should be
