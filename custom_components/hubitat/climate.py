@@ -108,6 +108,10 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         self._attr_precision = PRECISION_TENTHS
         self._attr_unique_id = f"{super().unique_id}::climate"
 
+        if hasattr(ClimateEntityFeature, "TURN_OFF"):
+            self._attr_supported_features |= ClimateEntityFeature.TURN_OFF
+            self._enable_turn_on_off_backwards_compatibility = False
+
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
@@ -259,6 +263,10 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
                     await self.send_command(DeviceCommand.SET_COOLING_SETPOINT, temp)
                 elif self.hvac_mode == HVACMode.HEAT:
                     await self.send_command(DeviceCommand.SET_HEATING_SETPOINT, temp)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Turn off the thermostat."""
+        await self.send_command("off")
 
 
 def is_thermostat(device: Device, overrides: dict[str, str] | None = None) -> bool:
