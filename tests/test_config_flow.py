@@ -1,5 +1,5 @@
 from asyncio import Future
-from typing import Awaitable
+from collections.abc import Awaitable
 from unittest.mock import patch
 
 import pytest
@@ -22,19 +22,18 @@ async def test_validate_input(HubitatHub) -> None:
     from custom_components.hubitat import config_flow
 
     with pytest.raises(KeyError):
-        await config_flow._validate_input({})
+        _ = await config_flow._validate_input({})
     with pytest.raises(KeyError):
-        await config_flow._validate_input({"host": "host"})
+        _ = await config_flow._validate_input({"host": "host"})
     with pytest.raises(KeyError):
-        await config_flow._validate_input({"host": "host", "app_id": "app_id"})
-    await config_flow._validate_input(
+        _ = await config_flow._validate_input({"host": "host", "app_id": "app_id"})
+    _ = await config_flow._validate_input(
         {
             "host": "host",
             "app_id": "app_id",
             "access_token": "token",
             "server_port": 0,
             "server_url": None,
-            "use_server_url": False,
         }
     )
     assert check_called

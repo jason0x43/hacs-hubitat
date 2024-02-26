@@ -15,7 +15,7 @@ from .const import DOMAIN
 from .hub import Hub
 from .hubitatmaker import Device, DeviceAttribute, Event
 from .types import Removable, UpdateableEntity
-from .util import get_hub_device_id
+from .util import get_device_identifiers, get_hub_device_id
 
 _LOGGER = getLogger(__name__)
 
@@ -198,12 +198,8 @@ class HubitatEventEmitter(HubitatBase):
 
 def get_device_info(hub: Hub, device: Device) -> device_registry.DeviceInfo:
     """Return the device info."""
-    dev_identifier = device.id
-    if hub.id != device.id:
-        dev_identifier = f"{hub.id}:{device.id}"
-
     info: device_registry.DeviceInfo = {
-        "identifiers": {(DOMAIN, dev_identifier)},
+        "identifiers": get_device_identifiers(hub.id, device.id)
     }
 
     # if this entity's device isn't the hub, link it to the hub

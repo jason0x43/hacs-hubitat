@@ -21,7 +21,8 @@
                     "server_url": "URL do servidor de eventos (opcional)",
                     "server_ssl_cert": "Certificado SSL do servidor de eventos (opcional)",
                     "server_ssl_key": "Chave privada SSL do servidor de eventos (opcional)",
-                    "temperature_unit": "Unidades de temperatura (opcional)"
+                    "temperature_unit": "Unidades de temperatura (opcional)",
+                    "sync_areas": "Sincronizar cômodos"
                 },
                 "description": "Coloque o endereço IP ou o nome do host do hub Hubitat, junto com o ID do aplicativo de sua instância da API Maker. Opcionalmente, forneça um número de porta para o servidor de eventos da integração escutar, as unidades usadas para sensores de temperatura (F por padrão) e/ou a URL para a qual o Hubitat deve enviar eventos.",
                 "title": "Conecte-se ao seu hub Hubitat"
@@ -62,14 +63,14 @@
                 "devices": "Interruptores que deveriam ser luzes"
               },
               "description": "Os seguintes dispositivos foram classificados automaticamente como interruptores. Selecione qualquer um que deve ser luzes em vez disso.",
-              "title": "Interruptores -> Luzes"
+              "title": "Interruptores → Luzes"
             },
             "override_switches": {
               "data": {
                 "devices": "Luzes que deveriam ser interruptores"
               },
               "description": "Os seguintes dispositivos foram automaticamente classificados como luzes. Selecione qualquer um que deva ser interruptor.",
-              "title": "Luzes -> Interruptores"
+              "title": "Luzes → Interruptores"
             },
             "remove_devices": {
                 "data": {
@@ -88,7 +89,8 @@
                     "server_url": "URL do servidor de eventos (opcional)",
                     "server_ssl_cert": "Certificado SSL do servidor de eventos (opcional)",
                     "server_ssl_key": "Chave privada SSL do servidor de eventos (opcional)",
-                    "temperature_unit": "Unidades de temperatura (opcional)"
+                    "temperature_unit": "Unidades de temperatura (opcional)",
+                    "sync_areas": "Sincronizar cômodos"
                 },
                 "description": "Configure as opções para Hubitat. Observe que alterar o ID do aplicativo Maker API fará com que a integração redescubra seus dispositivos.",
                 "title": "Opções do Hubitat"

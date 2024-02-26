@@ -17,7 +17,7 @@ from homeassistant.const import (
     UnitOfTemperature,
 )
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import device_registry
+from homeassistant.helpers import area_registry, device_registry
 from homeassistant.helpers.device_registry import DeviceEntry
 
 try:
@@ -41,6 +41,7 @@ from .const import (
     H_CONF_SERVER_SSL_CERT,
     H_CONF_SERVER_SSL_KEY,
     H_CONF_SERVER_URL,
+    H_CONF_SYNC_AREAS,
     PLATFORMS,
     TEMP_F,
     TRIGGER_CAPABILITIES,
@@ -51,7 +52,7 @@ from .hubitatmaker import (
     Hub as HubitatHub,
 )
 from .types import Removable, UpdateableEntity
-from .util import get_hub_device_id, get_hub_short_id
+from .util import get_device_identifiers, get_hub_device_id, get_hub_short_id
 
 _LOGGER = getLogger(__name__)
 
@@ -351,8 +352,6 @@ class Hub:
         hub = Hub(hass, entry, index, hubitat_hub, device)
         hass.data[DOMAIN][entry.entry_id] = hub
 
-        _LOGGER.debug(f"Set {entry.entry_id} on hass.data")
-
         # Add a listener for every device exported by the hub. The listener
         # will re-export the Hubitat event as a hubitat_event in HA if it
         # matches a trigger condition.
@@ -369,6 +368,12 @@ class Hub:
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
         _LOGGER.debug("Registered platforms")
+
+        should_update_rooms = entry.options.get(
+            H_CONF_SYNC_AREAS, entry.data.get(H_CONF_SYNC_AREAS)
+        )
+        if should_update_rooms:
+            _update_device_rooms(hub, hass)
 
         # Create an entity for the Hubitat hub with basic hub information
         hass.states.async_set(
@@ -616,7 +621,7 @@ def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:
         else:
             _LOGGER.warning(f"Device identifier in unknown format: {id_set}")
 
-        # Update any devices with 3-part identifiers to use 2-part identifiers in
+    # Update any devices with 3-part identifiers to use 2-part identifiers in
     # the new format
     for id in new_devs:
         new_dev = new_devs[id]
@@ -654,11 +659,48 @@ def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:
             )
 
 
-# hub_typecheck: Hub
-# """A hub instance that will only exist during development."""
-#
-# device_typecheck: Device
-# """A device instance that will only exist during development."""
+def _update_device_rooms(hub: Hub, hass: HomeAssistant) -> None:
+    """Update the area ID of devices in Home Assistant to match the room from
+    Hubitat
+    """
+
+    _LOGGER.debug("Synchronizing device rooms...")
+
+    dreg = device_registry.async_get(hass)
+    all_devices = [dreg.devices[id] for id in dreg.devices]
+    hubitat_devices: list[DeviceEntry] = []
+    for dev in all_devices:
+        ids = list(dev.identifiers)
+        if len(ids) != 1:
+            continue
+        id_set = ids[0]
+        if id_set[0] == DOMAIN and dev.name != HUB_NAME:
+            hubitat_devices.append(dev)
+
+    areg = area_registry.async_get(hass)
+
+    for device_id in hub.devices:
+        # if the device area from Hubitat is defined and differs from
+        # Home Assistant, update the device area ID
+        device = hub.devices[device_id]
+        identifiers = get_device_identifiers(hub.id, device.id)
+        hass_device = dreg.async_get_device(identifiers)
+
+        if not hass_device:
+            _LOGGER.debug(
+                "Skipping room check for %s because no HA device", device.name
+            )
+            continue
+
+        if device.room:
+            area = areg.async_get_or_create(device.room)
+            if hass_device.area_id != area.id:
+                _ = dreg.async_update_device(hass_device.id, area_id=area.id)
+                _LOGGER.debug("Updated location of %s to %s", device.name, area.id)
+        elif hass_device.area_id:
+            _ = dreg.async_clear_area_id(hass_device.id)
+            _LOGGER.debug("Cleared location of %s", device.name)
+
 
 if TYPE_CHECKING:
     test_hass = HomeAssistant("")

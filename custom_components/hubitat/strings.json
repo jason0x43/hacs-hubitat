@@ -1,94 +1,96 @@
 {
-  "config": {
-    "title": "Hubitat",
-    "step": {
-      "user": {
-        "title": "Connect to your Hubitat hub",
-        "description": "Provide the IP address or hostname of your Hubitat hub, along with the app ID of its Maker API instance. Optionally, provide a port number for the integration's event server to listen on, the units used for temperature sensors (F by default), and/or the URL that Hubitat should POST events to.",
-        "data": {
-          "host": "Hub address",
-          "app_id": "Maker API app ID",
-          "access_token": "Maker API access token",
-          "server_port": "Event server port (optional)",
-          "server_url": "Event server URL (optional)",
-          "temperature_unit": "Temperature units (optional)"
-        }
-      }
-    },
-    "error": {
-      "cannot_connect": "Failed to connect, please try again",
-      "invalid_access_token": "Access token is invalid",
-      "invalid_event_url": "Invalid event URL",
-      "invalid_hub_config": "Invalid hub config",
-      "request_error": "Error communicating with the hub",
-      "unknown": "Unexpected error"
-    },
-    "abort": {
-      "already_configured": "Hub is already configured"
-    }
-  },
-  "device_automation": {
-    "trigger_subtype": {
-      "1": "1",
-      "2": "2",
-      "3": "3",
-      "4": "4",
-      "5": "5",
-      "6": "6",
-      "7": "7",
-      "8": "8"
-    },
-    "trigger_type": {
-      "double_tapped": "Button {subtype} double-tapped",
-      "held": "Button {subtype} held",
-      "pushed": "Button {subtype} pushed",
-      "code_name": "Unlocked with code \"{subtype}\""
-    }
-  },
-  "options": {
-    "error": {
-      "cannot_connect": "Failed to connect, please try again",
-      "invalid_access_token": "Access token is invalid",
-      "invalid_event_url": "Invalid event URL",
-      "invalid_hub_config": "Invalid hub config",
-      "request_error": "Error communicating with the hub",
-      "unknown": "Unexpected error"
-    },
-    "step": {
-      "override_lights": {
-        "data": {
-          "devices": "Switches that should be lights"
-        },
-        "description": "The following devices were automatically classified as switches. Select any that should be lights instead.",
-        "title": "Switches -> Lights"
-      },
-      "override_switches": {
-        "data": {
-          "devices": "Lights that should be switches"
-        },
-        "description": "The following devices were automatically classified as lights. Select any that should be switches instead.",
-        "title": "Lights -> Switches"
-      },
-      "remove_devices": {
-        "data": {
-          "devices": "Devices to remove"
-        },
-        "description": "Select any devices managed by this integration that you'd like to remove. Typically, this would be any devices that are no longer being shared by Hubitat.",
-        "title": "Remove devices"
-      },
-      "user": {
-        "data": {
-          "host": "Hub address",
-          "app_id": "Maker API app ID",
-          "access_token": "Maker API access token",
-          "remove_devices": "Remove devices",
-          "server_port": "Event server port (optional)",
-          "server_url": "Event server URL (optional)",
-          "temperature_unit": "Temperature units (optional)"
-        },
-        "description": "Configure options for Hubitat. Note that changing the Maker API app ID will cause the integration to rediscover your devices.",
-        "title": "Hubitat options"
-      }
-    }
-  }
+	"config": {
+		"title": "Hubitat",
+		"step": {
+			"user": {
+				"title": "Connect to your Hubitat hub",
+				"description": "Provide the IP address or hostname of your Hubitat hub, along with the app ID of its Maker API instance. Optionally, provide a port number for the integration's event server to listen on, the units used for temperature sensors (F by default), and/or the URL that Hubitat should POST events to.",
+				"data": {
+					"host": "Hub address",
+					"app_id": "Maker API app ID",
+					"access_token": "Maker API access token",
+					"server_port": "Event server port (optional)",
+					"server_url": "Event server URL (optional)",
+					"temperature_unit": "Temperature units (optional)",
+					"sync_areas": "Synchronize rooms"
+				}
+			}
+		},
+		"error": {
+			"cannot_connect": "Failed to connect, please try again",
+			"invalid_access_token": "Access token is invalid",
+			"invalid_event_url": "Invalid event URL",
+			"invalid_hub_config": "Invalid hub config",
+			"request_error": "Error communicating with the hub",
+			"unknown": "Unexpected error"
+		},
+		"abort": {
+			"already_configured": "Hub is already configured"
+		}
+	},
+	"device_automation": {
+		"trigger_subtype": {
+			"1": "1",
+			"2": "2",
+			"3": "3",
+			"4": "4",
+			"5": "5",
+			"6": "6",
+			"7": "7",
+			"8": "8"
+		},
+		"trigger_type": {
+			"double_tapped": "Button {subtype} double-tapped",
+			"held": "Button {subtype} held",
+			"pushed": "Button {subtype} pushed",
+			"code_name": "Unlocked with code \"{subtype}\""
+		}
+	},
+	"options": {
+		"error": {
+			"cannot_connect": "Failed to connect, please try again",
+			"invalid_access_token": "Access token is invalid",
+			"invalid_event_url": "Invalid event URL",
+			"invalid_hub_config": "Invalid hub config",
+			"request_error": "Error communicating with the hub",
+			"unknown": "Unexpected error"
+		},
+		"step": {
+			"override_lights": {
+				"data": {
+					"devices": "Switches that should be lights"
+				},
+				"description": "The following devices were automatically classified as switches. Select any that should be lights instead.",
+				"title": "Switches → Lights"
+			},
+			"override_switches": {
+				"data": {
+					"devices": "Lights that should be switches"
+				},
+				"description": "The following devices were automatically classified as lights. Select any that should be switches instead.",
+				"title": "Lights → Switches"
+			},
+			"remove_devices": {
+				"data": {
+					"devices": "Devices to remove"
+				},
+				"description": "Select any devices managed by this integration that you'd like to remove. Typically, this would be any devices that are no longer being shared by Hubitat.",
+				"title": "Remove devices"
+			},
+			"user": {
+				"data": {
+					"host": "Hub address",
+					"app_id": "Maker API app ID",
+					"access_token": "Maker API access token",
+					"remove_devices": "Remove devices",
+					"server_port": "Event server port (optional)",
+					"server_url": "Event server URL (optional)",
+					"temperature_unit": "Temperature units (optional)",
+					"sync_areas": "Synchronize rooms"
+				},
+				"description": "Configure options for Hubitat. Note that changing the Maker API app ID will cause the integration to rediscover your devices.",
+				"title": "Hubitat options"
+			}
+		}
+	}
 }

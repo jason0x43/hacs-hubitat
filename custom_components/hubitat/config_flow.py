@@ -1,8 +1,9 @@
 """Config flow for Hubitat integration."""
 
 import logging
+from collections.abc import Awaitable
 from copy import deepcopy
-from typing import Any, Awaitable, Callable, cast
+from typing import Any, Callable, TypedDict, override
 
 import voluptuous as vol
 from voluptuous.schema_builder import Schema
@@ -12,6 +13,7 @@ from homeassistant.config_entries import (
     CONN_CLASS_LOCAL_PUSH,
     ConfigEntry,
     ConfigFlow,
+    ConfigFlowResult,
     OptionsFlow,
     OptionsFlowWithConfigEntry,
 )
@@ -19,14 +21,6 @@ from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_TEMPERATURE_U
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry
 from homeassistant.helpers.device_registry import DeviceEntry
-
-try:
-    from homeassistant.config_entries import ConfigFlowResult  # type: ignore
-except Exception:
-    from homeassistant.config_entries import (
-        FlowResult as ConfigFlowResult,  # type: ignore
-    )
-
 
 from .const import (
     DOMAIN,
@@ -38,6 +32,7 @@ from .const import (
     H_CONF_SERVER_SSL_CERT,
     H_CONF_SERVER_SSL_KEY,
     H_CONF_SERVER_URL,
+    H_CONF_SYNC_AREAS,
     TEMP_C,
     TEMP_F,
     ConfigStep,
@@ -66,9 +61,8 @@ CONFIG_SCHEMA = vol.Schema(
         vol.Optional(H_CONF_SERVER_PORT): int,
         vol.Optional(H_CONF_SERVER_SSL_CERT): str,
         vol.Optional(H_CONF_SERVER_SSL_KEY): str,
-        vol.Optional(
-            CONF_TEMPERATURE_UNIT, default=cast(vol.Undefined, TEMP_F)
-        ): vol.In([TEMP_F, TEMP_C]),
+        vol.Optional(CONF_TEMPERATURE_UNIT, default=TEMP_F): vol.In([TEMP_F, TEMP_C]),
+        vol.Optional(H_CONF_SYNC_AREAS, default=False): bool,
     }
 )
 
@@ -76,19 +70,21 @@ CONFIG_SCHEMA = vol.Schema(
 class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
     """Handle a config flow for Hubitat."""
 
-    VERSION = 1
-    CONNECTION_CLASS = CONN_CLASS_LOCAL_PUSH
+    VERSION: int = 1
+    CONNECTION_CLASS: str = CONN_CLASS_LOCAL_PUSH
 
     hub: HubitatHub | None = None
-    device_schema: Schema
+    device_schema: Schema | None = None
 
     @staticmethod
     @callback
+    @override
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
         return HubitatOptionsFlow(config_entry)
 
     # TODO: remove the 'type: ignore' when were not falling back on
     # FlowResult
+    @override
     async def async_step_user(  # type: ignore
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
@@ -101,7 +97,7 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
                 entry_data = deepcopy(user_input)
                 self.hub = info["hub"]
 
-                placeholders: dict[str, str] = {}
+                placeholders: dict[str, Any] = {}
                 for key in user_input:
                     if user_input[key] is not None and key in placeholders:
                         placeholders[key] = user_input[key]
@@ -149,14 +145,14 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
 
     hub: HubitatHub | None = None
     overrides: dict[str, str] = {}
-    should_remove_devices = False
+    should_remove_devices: bool = False
 
     def __init__(self, config_entry: ConfigEntry):
         """Initialize an options flow."""
         super().__init__(config_entry)
 
     async def async_step_init(
-        self, user_input: dict[str, str] | None = None
+        self, _user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle integration options."""
         return await self.async_step_user()
@@ -180,6 +176,7 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
                     H_CONF_SERVER_URL: user_input.get(H_CONF_SERVER_URL),
                     H_CONF_SERVER_SSL_CERT: user_input.get(H_CONF_SERVER_SSL_CERT),
                     H_CONF_SERVER_SSL_KEY: user_input.get(H_CONF_SERVER_SSL_KEY),
+                    H_CONF_SYNC_AREAS: user_input.get(H_CONF_SYNC_AREAS),
                 }
 
                 info = await _validate_input(check_input)
@@ -195,6 +192,7 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
                     H_CONF_SERVER_SSL_KEY
                 )
                 self.options[CONF_TEMPERATURE_UNIT] = user_input[CONF_TEMPERATURE_UNIT]
+                self.options[H_CONF_SYNC_AREAS] = user_input.get(H_CONF_SYNC_AREAS)
 
                 _LOGGER.debug("Moving to device removal step")
                 return await self.async_step_remove_devices()
@@ -273,15 +271,20 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
                     ): str,
                     vol.Optional(
                         CONF_TEMPERATURE_UNIT,
-                        default=cast(
-                            vol.Undefined,
-                            entry.options.get(
-                                CONF_TEMPERATURE_UNIT,
-                                entry.data.get(CONF_TEMPERATURE_UNIT),
-                            ),
+                        default=entry.options.get(
+                            CONF_TEMPERATURE_UNIT,
+                            entry.data.get(CONF_TEMPERATURE_UNIT),
                         )
                         or TEMP_F,
                     ): vol.In([TEMP_F, TEMP_C]),
+                    vol.Optional(
+                        H_CONF_SYNC_AREAS,
+                        default=entry.options.get(
+                            H_CONF_SYNC_AREAS,
+                            entry.data.get(H_CONF_SYNC_AREAS),
+                        )
+                        or False,
+                    ): bool,
                 }
             ),
             errors=form_errors,
@@ -309,14 +312,13 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
 
         device_schema = vol.Schema(
             {
-                vol.Optional(
-                    H_CONF_DEVICES, default=cast(vol.Undefined, [])
-                ): cv.multi_select(device_map),
+                vol.Optional(H_CONF_DEVICES, default=[]): cv.multi_select(device_map),
             }
         )
 
         if user_input is not None:
-            ids = [id for id in user_input[H_CONF_DEVICES]]
+            conf_devs: list[str] = user_input[H_CONF_DEVICES]
+            ids = [id for id in conf_devs]
             _remove_devices(self.hass, ids)
             return await self.async_step_override_lights()
 
@@ -385,7 +387,9 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
         # update will be triggered if devices are added or removed
         self.options[H_CONF_DEVICE_LIST] = sorted([id for id in devices])
 
-        existing_overrides = self.options.get(H_CONF_DEVICE_TYPE_OVERRIDES)
+        existing_overrides: dict[str, str] | None = self.options.get(
+            H_CONF_DEVICE_TYPE_OVERRIDES
+        )
         default_value = []
 
         possible_overrides = {
@@ -401,9 +405,9 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
 
         device_schema = vol.Schema(
             {
-                vol.Optional(
-                    H_CONF_DEVICES, default=cast(vol.Undefined, default_value)
-                ): cv.multi_select(possible_overrides)
+                vol.Optional(H_CONF_DEVICES, default=default_value): cv.multi_select(
+                    possible_overrides
+                )
             }
         )
 
@@ -454,7 +458,12 @@ def _remove_devices(hass: HomeAssistant, device_ids: list[str]) -> None:
         dreg.async_remove_device(id)
 
 
-async def _validate_input(user_input: dict[str, Any]) -> dict[str, Any]:
+class ValidatedInput(TypedDict):
+    label: str
+    hub: HubitatHub
+
+
+async def _validate_input(user_input: dict[str, Any]) -> ValidatedInput:
     """Validate that the user input can create a working connection."""
 
     # data has the keys from CONFIG_SCHEMA with values provided by the user.

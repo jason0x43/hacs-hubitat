@@ -56,3 +56,12 @@ def to_display_name(identifier: str) -> str:
         return " ".join(parts).capitalize()
     except Exception:
         return identifier
+
+
+def get_device_identifiers(hub_id: str, device_id: str) -> set[tuple[str, str]]:
+    """Return the device identifiers."""
+    dev_identifier = device_id
+    if hub_id != device_id:
+        dev_identifier = f"{hub_id}:{device_id}"
+
+    return {(DOMAIN, dev_identifier)}
