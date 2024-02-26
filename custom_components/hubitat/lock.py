@@ -1,13 +1,11 @@
-from json import JSONDecodeError, loads
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Unpack, cast
+from typing import TYPE_CHECKING, Any, Unpack
 
 from homeassistant.components.lock import LockEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, ServiceResponse
-from homeassistant.util.json import JsonValueType
+from homeassistant.core import HomeAssistant
 
-from .const import ATTR_POSITION, HassStateAttribute
+from .const import HassStateAttribute
 from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
 from .hubitatmaker import (
@@ -98,24 +96,6 @@ class HubitatLock(HubitatEntity, LockEntity):
 
     async def clear_code(self, position: int) -> None:
         await self.send_command(DeviceCommand.DELETE_CODE, position)
-
-    async def get_codes(self) -> ServiceResponse:
-        codes_str = self.get_str_attr(DeviceAttribute.LOCK_CODES)
-        if codes_str:
-            try:
-                codes = loads(codes_str)
-            except JSONDecodeError:
-                _LOGGER.error("json doc not decodable: %s", codes_str)
-                return {HassStateAttribute.CODES: []}
-            code_list = cast(
-                JsonValueType,
-                sorted(
-                    [{ATTR_POSITION: key, **value} for key, value in codes.items()],
-                    key=lambda x: int(x[ATTR_POSITION]),
-                ),
-            )
-            return {HassStateAttribute.CODES: code_list}
-        return {HassStateAttribute.CODES: []}
 
     async def set_code(self, position: int, code: str, name: str | None) -> None:
         arg = f"{position},{code}"

@@ -1,12 +1,20 @@
+import json
 from logging import getLogger
 from typing import cast
 
 import voluptuous as vol
 
+from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_COMMAND, ATTR_ENTITY_ID
-from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
+from homeassistant.core import (
+    HomeAssistant,
+    ServiceCall,
+    ServiceResponse,
+    SupportsResponse,
+)
 from homeassistant.helpers import config_validation as cv
+from homeassistant.util.json import JsonValueType
 
 from .alarm_control_panel import HubitatSecurityKeypad
 from .const import (
@@ -19,6 +27,7 @@ from .const import (
     ATTR_NAME,
     ATTR_POSITION,
     DOMAIN,
+    HassStateAttribute,
     ServiceName,
 )
 from .device import HubitatEntity
@@ -30,9 +39,7 @@ _LOGGER = getLogger(__name__)
 CLEAR_CODE_SCHEMA = vol.Schema(
     {vol.Required(ATTR_ENTITY_ID): cv.entity_id, vol.Required(ATTR_POSITION): int}
 )
-GET_CODES_SCHEMA = vol.Schema(
-    {vol.Required(ATTR_ENTITY_ID): cv.entity_id}
-)
+GET_CODES_SCHEMA = vol.Schema({vol.Required(ATTR_ENTITY_ID): cv.entity_id})
 SEND_COMMAND_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
@@ -81,8 +88,23 @@ def async_register_services(
         await entity.clear_code(pos)
 
     async def get_codes(service: ServiceCall) -> ServiceResponse:
-        entity = cast(HubitatLock | HubitatSecurityKeypad, get_entity(service))
-        return await entity.get_codes()
+        entity = get_entity(service)
+        codes_str = entity.get_str_attr(DeviceAttribute.LOCK_CODES)
+        code_list = []
+        if codes_str:
+            try:
+                codes = json.loads(codes_str)
+            except json.JSONDecodeError:
+                _LOGGER.error("json doc not decodable: %s", codes_str)
+                return {HassStateAttribute.CODES: []}
+            code_list = cast(
+                JsonValueType,
+                sorted(
+                    [{ATTR_POSITION: key, **value} for key, value in codes.items()],
+                    key=lambda x: int(x[ATTR_POSITION]),
+                ),
+            )
+        return {HassStateAttribute.CODES: code_list}
 
     async def send_command(service: ServiceCall) -> None:
         entity = get_entity(service)
@@ -151,8 +173,11 @@ def async_register_services(
         DOMAIN, ServiceName.CLEAR_CODE, clear_code, schema=CLEAR_CODE_SCHEMA
     )
     hass.services.async_register(
-        DOMAIN, ServiceName.GET_CODES, get_codes, schema=GET_CODES_SCHEMA,
-        supports_response=SupportsResponse.ONLY
+        DOMAIN,
+        ServiceName.GET_CODES,
+        get_codes,
+        schema=GET_CODES_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
     )
     hass.services.async_register(
         DOMAIN, ServiceName.SEND_COMMAND, send_command, schema=SEND_COMMAND_SCHEMA
