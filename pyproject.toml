@@ -2,32 +2,31 @@
 name = "hubitat"
 version = "0.9.22"
 description = "A Hubitat integration for Home Assistant"
-authors = [
-    {name = "Jason Cheatham", email = "jason@jasoncheatham.com"},
-]
+authors = [{ name = "Jason Cheatham", email = "jason@jasoncheatham.com" }]
 dependencies = []
 requires-python = ">=3.11,<3.13"
-license = {text = "MIT"}
+license = { text = "MIT" }
 
 [project.urls]
 homepage = "https://github.com/jason0x43/hacs-hubitat"
 
 [project.optional-dependencies]
-[tool.pdm.scripts]
-init = {shell = "pdm install && pre-commit install"}
-test = {shell = "pyright custom_components/hubitat && pytest tests"}
-pub = {shell = "python scripts/publish.py"}
+
+[tool.rye.scripts]
+test-lint = "pyright custom_components/hubitat"
+test-test = "pytest tests"
+test = { chain = ["test-lint", "test-test"] }
+pub = "python scripts/publish.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 filterwarnings = [
     "ignore::DeprecationWarning:pkg_resources",
-    "ignore:Inheritance class HomeAssistantApplication:DeprecationWarning"
+    "ignore:Inheritance class HomeAssistantApplication:DeprecationWarning",
 ]
 
-[tool.pdm.dev-dependencies]
-dev = [
-    "black>=21.12b0",
+[tool.rye]
+dev-dependencies = [
     "ruff",
     "pre-commit<3.0.0,>=2.4.0",
     "homeassistant==2023.12.4",
@@ -35,13 +34,6 @@ dev = [
     "setuptools>=62.2.0",
     "tomlkit>=0.12.3",
 ]
-
-[tool.black]
-line-length = 88
-
-[build-system]
-requires = ["pdm-pep517"]
-build-backend = "pdm.pep517.api"
 
 [tool.pyright]
 include = ["custom_components/hubitat"]
@@ -58,10 +50,10 @@ reportUnusedFunction = true
 reportUnusedImport = true
 reportUnusedVariable = true
 
-[tool.ruff]
+[tool.ruff.lint]
 select = ["E", "W", "F", "PYI", "I"]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 combine-as-imports = true
 order-by-type = true
 force-wrap-aliases = true

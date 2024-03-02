@@ -1,6 +1,7 @@
 .vim/
 .venv/
 *.pyc
+*.egg-info
 __pypackages__
 .pdm.toml
 .pdm-python
