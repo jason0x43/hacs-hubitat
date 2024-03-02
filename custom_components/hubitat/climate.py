@@ -109,7 +109,7 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         self._attr_unique_id = f"{super().unique_id}::climate"
 
         if hasattr(ClimateEntityFeature, "TURN_OFF"):
-            self._attr_supported_features |= ClimateEntityFeature.TURN_OFF
+            self._attr_supported_features |= getattr(ClimateEntityFeature, "TURN_OFF")
             self._enable_turn_on_off_backwards_compatibility = False
 
     def load_state(self):
