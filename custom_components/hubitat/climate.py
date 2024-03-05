@@ -27,11 +27,11 @@ from homeassistant.const import (
     UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
 from .hubitatmaker import Device, DeviceCapability, DeviceCommand
-from .types import EntityAdder
 
 
 class ClimateMode(StrEnum):
@@ -276,7 +276,7 @@ def is_thermostat(device: Device, overrides: dict[str, str] | None = None) -> bo
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
-    async_add_entities: EntityAdder,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize thermostat devices."""
     create_and_add_entities(

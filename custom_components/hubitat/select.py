@@ -4,10 +4,10 @@ from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .device import HubitatEntity, HubitatEntityArgs
 from .hub import get_hub
-from .types import EntityAdder
 
 
 class HubitatSelect(HubitatEntity, SelectEntity):
@@ -60,7 +60,7 @@ class HubitatModeSelect(HubitatSelect):
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
-    async_add_entities: EntityAdder,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize selectors devices."""
 

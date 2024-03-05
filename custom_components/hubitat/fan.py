@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Unpack
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
@@ -18,7 +19,6 @@ from .hubitatmaker import (
     DeviceCommand,
     DeviceState,
 )
-from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
@@ -162,7 +162,7 @@ def is_fan(device: Device, overrides: dict[str, str] | None = None) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Initialize fan devices."""
     create_and_add_entities(hass, entry, async_add_entities, "fan", HubitatFan, is_fan)

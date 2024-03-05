@@ -32,13 +32,13 @@ from homeassistant.const import (
     UnitOfVolumetricFlux,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
 from .hub import get_hub
 from .hubitatmaker import DeviceAttribute
 from .hubitatmaker.types import Device
-from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
@@ -708,7 +708,7 @@ def is_update_sensor(device: Device, overrides: dict[str, str] | None = None) ->
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
-    async_add_entities: EntityAdder,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize sensor devices."""
 
@@ -762,7 +762,7 @@ async def async_setup_entry(
 
 
 def add_hub_entities(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: EntityAdder
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Add entities for hub services."""
 

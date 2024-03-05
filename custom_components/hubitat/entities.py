@@ -6,11 +6,11 @@ from custom_components.hubitat.util import get_device_overrides
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .device import HubitatEntity, HubitatEventEmitter
 from .hub import get_hub
 from .hubitatmaker import Device
-from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
@@ -20,7 +20,7 @@ E = TypeVar("E", bound=HubitatEntity)
 def create_and_add_entities(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
-    async_add_entities: EntityAdder,
+    async_add_entities: AddEntitiesCallback,
     platform: Platform,
     EntityClass: Type[E],
     is_type: Callable[[Device, dict[str, str] | None], bool],
@@ -46,8 +46,6 @@ def create_and_add_entities(
             entity.load_state()
         _LOGGER.debug(f"Added {EntityClass.__name__} entities: {entities}")
 
-    _LOGGER.debug(f"Removing overridden {platform} entities...")
-
     # Devices that have this entity type when not overridden
     original_devices_with_entity = [
         devices[id] for id in devices if is_type(devices[id], None)
@@ -59,12 +57,15 @@ def create_and_add_entities(
         for d in original_devices_with_entity
         if d not in devices_with_entity
     ]
-    ereg = entity_registry.async_get(hass)
-    entity_ids = {ereg.entities[id].unique_id: id for id in ereg.entities}
-    for unique_id in entity_ids:
-        if unique_id in entity_unique_ids_to_remove:
-            ereg.async_remove(entity_ids[unique_id])
-            _LOGGER.debug(f"Removed overridden entity {unique_id}")
+
+    if len(entity_unique_ids_to_remove) > 0:
+        _LOGGER.debug(f"Removing overridden {platform} entities...")
+        ereg = entity_registry.async_get(hass)
+        entity_ids = {ereg.entities[id].unique_id: id for id in ereg.entities}
+        for unique_id in entity_ids:
+            if unique_id in entity_unique_ids_to_remove:
+                ereg.async_remove(entity_ids[unique_id])
+                _LOGGER.debug(f"Removed overridden entity {unique_id}")
 
     return entities
 

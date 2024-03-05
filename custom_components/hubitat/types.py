@@ -1,9 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Iterable, Protocol
-
-from homeassistant.helpers.entity import Entity
-
-EntityAdder = Callable[[Iterable[Entity]], None]
+from typing import Protocol
 
 
 class UpdateableEntity(ABC):

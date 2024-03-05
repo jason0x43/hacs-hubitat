@@ -13,6 +13,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, ICON_ALARM, ServiceName
 from .device import HubitatEntity, HubitatEntityArgs
@@ -20,7 +21,6 @@ from .entities import create_and_add_entities, create_and_add_event_emitters
 from .fan import is_fan
 from .hubitatmaker import Device, DeviceCapability, DeviceCommand
 from .light import is_light
-from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
@@ -147,7 +147,7 @@ def is_button_controller(device: Device) -> bool:
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
-    async_add_entities: EntityAdder,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize switch devices."""
 

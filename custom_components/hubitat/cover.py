@@ -9,6 +9,7 @@ from homeassistant.components.cover import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
@@ -19,7 +20,6 @@ from .hubitatmaker import (
     DeviceCommand,
     DeviceState,
 )
-from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
@@ -184,7 +184,7 @@ _COVER_CAPS: tuple[tuple[DeviceCapability, Type[HubitatCover]], ...] = (
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
-    async_add_entities: EntityAdder,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize cover devices."""
     for cap in _COVER_CAPS:

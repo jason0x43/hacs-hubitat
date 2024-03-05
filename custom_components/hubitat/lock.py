@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Unpack
 from homeassistant.components.lock import LockEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import HassStateAttribute
 from .device import HubitatEntity, HubitatEntityArgs
@@ -15,7 +16,6 @@ from .hubitatmaker import (
     DeviceCommand,
     DeviceState,
 )
-from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
@@ -115,7 +115,7 @@ def is_lock(device: Device, overrides: dict[str, str] | None = None) -> bool:
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
-    async_add_entities: EntityAdder,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize lock devices."""
     create_and_add_entities(

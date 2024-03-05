@@ -17,6 +17,7 @@ from homeassistant.components.light import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import color as color_util
 
 from .cover import is_cover
@@ -29,7 +30,6 @@ from .hubitatmaker import (
     DeviceCommand,
     HubitatColorMode,
 )
-from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
@@ -262,7 +262,7 @@ def is_definitely_light(
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
-    async_add_entities: EntityAdder,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize light devices."""
     create_and_add_entities(

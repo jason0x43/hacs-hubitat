@@ -9,12 +9,12 @@ from homeassistant.components.event import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import EventName
 from .device import HubitatEntity, HubitatEntityArgs
 from .hub import get_hub
 from .hubitatmaker import DeviceAttribute, Event
-from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
@@ -67,7 +67,7 @@ class HubitatButtonEventEntity(HubitatEntity, EventEntity):
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
-    async_add_entities: EntityAdder,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize hubitat button events entities."""
     hub = get_hub(hass, config_entry.entry_id)

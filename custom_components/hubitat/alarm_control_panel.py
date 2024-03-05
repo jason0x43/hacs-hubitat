@@ -16,6 +16,7 @@ from homeassistant.const import (
     STATE_ALARM_DISARMED,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import HassStateAttribute
 from .device import HubitatEntity, HubitatEntityArgs
@@ -27,7 +28,6 @@ from .hubitatmaker.const import (
     DeviceState,
 )
 from .hubitatmaker.types import Device
-from .types import EntityAdder
 
 _LOGGER = getLogger(__name__)
 
@@ -186,7 +186,7 @@ def is_security_keypad(device: Device, overrides: dict[str, str] | None = None) 
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
-    async_add_entities: EntityAdder,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize security keypad devices."""
     create_and_add_entities(
