@@ -752,7 +752,7 @@ async def async_setup_entry(
                         device_class=None,
                     )
                 )
-                _LOGGER.debug(f"Adding unknown entity for {device.id}:{attr}")
+                _LOGGER.debug(f"Adding generic sensor for {device.id}:{attr}")
 
     if len(unknown_entities) > 0:
         hub.add_entities(unknown_entities)

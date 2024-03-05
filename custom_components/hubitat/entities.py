@@ -44,7 +44,6 @@ def create_and_add_entities(
         async_add_entities(entities)
         for entity in entities:
             entity.load_state()
-        _LOGGER.debug(f"Added {EntityClass.__name__} entities: {entities}")
 
     # Devices that have this entity type when not overridden
     original_devices_with_entity = [
@@ -53,7 +52,7 @@ def create_and_add_entities(
 
     # Remove any existing entities that were overridden
     entity_unique_ids_to_remove = [
-        EntityClass(hub=hub, device=d).unique_id
+        EntityClass(hub=hub, device=d, temp=True).unique_id
         for d in original_devices_with_entity
         if d not in devices_with_entity
     ]
@@ -65,7 +64,7 @@ def create_and_add_entities(
         for unique_id in entity_ids:
             if unique_id in entity_unique_ids_to_remove:
                 ereg.async_remove(entity_ids[unique_id])
-                _LOGGER.debug(f"Removed overridden entity {unique_id}")
+                _LOGGER.debug(f"Removed overridden entity {entity_ids[unique_id]}")
 
     return entities
 

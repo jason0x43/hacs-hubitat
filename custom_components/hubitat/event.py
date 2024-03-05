@@ -90,4 +90,3 @@ async def async_setup_entry(
     if len(event_entities) > 0:
         hub.add_entities(event_entities)
         async_add_entities(event_entities)
-        _LOGGER.debug(f"Added button event entities: {event_entities}")

@@ -100,9 +100,21 @@ class HubitatEntity(HubitatBase, Entity, UpdateableEntity):
     """An entity related to a Hubitat device."""
 
     def __init__(
-        self, device_class: str | None = None, **kwargs: Unpack[HubitatEntityArgs]
+        self,
+        device_class: str | None = None,
+        temp=False,
+        **kwargs: Unpack[HubitatEntityArgs],
     ):
-        """Initialize an entity."""
+        """
+        Initialize an entity.
+
+        Parameters
+        ----------
+        device_class : str | None
+            The device class for this entity; default is None.
+        temp : bool
+            If true, this is a temporary entity; default is False
+        """
         HubitatBase.__init__(self, **kwargs)
         UpdateableEntity.__init__(self)
 
@@ -111,14 +123,24 @@ class HubitatEntity(HubitatBase, Entity, UpdateableEntity):
         self._attr_device_class = device_class
         self._attr_should_poll = False
         self._attr_device_info = get_device_info(self._hub, self._device)
-        self._hub.add_device_listener(self._device.id, self.handle_event)
+        if not temp:
+            self._hub.add_device_listener(self._device.id, self.handle_event)
+            _LOGGER.debug(
+                "Added device listener for %s (%s)", self._device.id, self.__class__
+            )
 
     def __del__(self):
         self._hub.remove_device_listener(self._device.id, self.handle_event)
+        _LOGGER.debug(
+            "Removed device listener for %s (%s)", self._device.id, self.__class__
+        )
 
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         return None
+
+    async def async_added_to_hass(self) -> None:
+        _LOGGER.debug("Added %s with hass=%s", self, self.hass)
 
     async def async_update(self) -> None:
         """Fetch new data for this device."""
@@ -137,6 +159,7 @@ class HubitatEntity(HubitatBase, Entity, UpdateableEntity):
         If this entity is enabled, reload the entity state from the underlying
         device and tell HA that the state has updated.
         """
+        _LOGGER.debug(f"handling event for {self} ({self.name}, {self.__class__})")
         if self.enabled:
             self.load_state()
             self.async_schedule_update_ha_state()

@@ -481,7 +481,10 @@ class Hub:
         """Handle events received from the Hubitat hub."""
         if self._device_listeners[event.device_id]:
             for listener in self._device_listeners[event.device_id]:
-                listener(event)
+                try:
+                    listener(event)
+                except Exception as e:
+                    _LOGGER.warn(f"Error handling event {event}: {e}")
         if event.attribute in _TRIGGER_ATTRS:
             evt: dict[str, Any] = dict(event)
             evt[ATTR_ATTRIBUTE] = _TRIGGER_ATTR_MAP[event.attribute]
