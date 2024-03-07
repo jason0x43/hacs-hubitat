@@ -1,6 +1,6 @@
 {
   "$schema": "../../manifest-schema.json",
-  "version": "0.9.22",
+  "version": "0.9.24",
   "domain": "hubitat",
   "name": "Hubitat",
   "config_flow": true,
