@@ -54,6 +54,7 @@ class HubitatLight(HubitatEntity, LightEntity):
         self._attr_unique_id = f"{super().unique_id}::light"
         self._attr_supported_color_modes = self._get_supported_color_modes()
         self._attr_supported_features = self._get_supported_features()
+        self.load_state()
 
     def load_state(self):
         self._attr_color_mode = self._get_color_mode()

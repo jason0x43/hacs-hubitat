@@ -42,6 +42,7 @@ class HubitatLock(HubitatEntity, LockEntity):
             HassStateAttribute.LAST_CODE_NAME: self.last_code_name,
             HassStateAttribute.MAX_CODES: self.max_codes,
         }
+        self.load_state()
 
     def load_state(self):
         self._attr_code_format = self._get_code_format()

@@ -32,6 +32,7 @@ class HubitatSelect(HubitatEntity, SelectEntity):
         # published integration has been using ::sensor:: for a while now;
         # migrate it at some point
         self._attr_unique_id = f"{super().unique_id}::sensor::{attribute}"
+        self.load_state()
 
     def load_state(self):
         self._attr_current_option = self._get_current_option()

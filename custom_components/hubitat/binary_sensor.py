@@ -58,6 +58,7 @@ class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):
         self._active_state = active_state
         self._attr_unique_id = f"{super().unique_id}::binary_sensor::{self._attribute}"
         self._attr_name = f"{super().name} {self._attribute}".title()
+        self.load_state()
 
     def load_state(self):
         self._attr_is_on = self.get_str_attr(self._attribute) == self._active_state

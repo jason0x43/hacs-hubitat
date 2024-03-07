@@ -42,8 +42,6 @@ def create_and_add_entities(
     if len(entities) > 0:
         hub.add_entities(entities)
         async_add_entities(entities)
-        for entity in entities:
-            entity.load_state()
 
     # Devices that have this entity type when not overridden
     original_devices_with_entity = [

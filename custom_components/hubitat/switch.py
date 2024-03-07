@@ -55,6 +55,8 @@ class HubitatSwitch(HubitatEntity, SwitchEntity):
         if type != SwitchType.SWITCH:
             self._attr_unique_id += f"::{type}"
 
+        self.load_state()
+
     def load_state(self):
         self._attr_is_on = self._get_is_on()
 

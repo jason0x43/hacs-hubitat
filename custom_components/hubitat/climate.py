@@ -112,6 +112,8 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
             self._attr_supported_features |= getattr(ClimateEntityFeature, "TURN_OFF")
             self._enable_turn_on_off_backwards_compatibility = False
 
+        self.load_state()
+
     def load_state(self):
         self._attr_current_humidity = self._get_current_humidity()
         self._attr_current_temperature = self._get_current_temperature()

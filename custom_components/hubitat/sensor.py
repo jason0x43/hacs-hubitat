@@ -79,6 +79,7 @@ class HubitatSensor(HubitatEntity, SensorEntity):
         self._attr_entity_registry_enabled_default = (
             enabled_default if enabled_default is not None else True
         )
+        self.load_state()
 
     def load_state(self):
         self._attr_native_value = self._get_native_value()

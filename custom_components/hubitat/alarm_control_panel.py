@@ -60,6 +60,7 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
             HassStateAttribute.EXIT_DELAY: self.exit_delay,
             HassStateAttribute.MAX_CODES: self.max_codes,
         }
+
         self._attr_supported_features = (
             AlarmControlPanelEntityFeature.ARM_AWAY
             | AlarmControlPanelEntityFeature.ARM_HOME
@@ -68,6 +69,8 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
             self._attr_supported_features |= AlarmControlPanelEntityFeature.ARM_NIGHT
         if DeviceCapability.ALARM in self._device.capabilities:
             self._attr_supported_features |= AlarmControlPanelEntityFeature.TRIGGER
+
+        self.load_state()
 
     def load_state(self):
         self._attr_changed_by = self._get_changed_by()

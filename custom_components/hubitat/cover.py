@@ -51,6 +51,8 @@ class HubitatCover(HubitatEntity, CoverEntity):
             DeviceAttribute.POSITION,
         )
 
+        self.load_state()
+
     def load_state(self):
         self._attr_current_cover_position = self._get_current_cover_position()
         self._attr_is_closed = self._get_is_closed()

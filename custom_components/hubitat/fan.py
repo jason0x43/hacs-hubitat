@@ -39,6 +39,7 @@ class HubitatFan(HubitatEntity, FanEntity):
         FanEntity.__init__(self)
         self._attr_supported_features = FanEntityFeature.SET_SPEED
         self._attr_unique_id = f"{super().unique_id}::fan"
+        self.load_state()
 
     def load_state(self):
         """Load the state of the fan."""
