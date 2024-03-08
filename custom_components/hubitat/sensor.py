@@ -58,6 +58,8 @@ class HubitatSensor(HubitatEntity, SensorEntity):
         device_class: SensorDeviceClass | None = None,
         state_class: SensorStateClass | None = None,
         enabled_default: bool | None = None,
+        # TODO: load options from device
+        options: list[str] | None = None,
         **kwargs: Unpack[HubitatEntityArgs],
     ):
         """Initialize a battery sensor."""
@@ -79,6 +81,10 @@ class HubitatSensor(HubitatEntity, SensorEntity):
         self._attr_entity_registry_enabled_default = (
             enabled_default if enabled_default is not None else True
         )
+
+        if options is not None:
+            self._attr_options = options
+
         self.load_state()
 
     def load_state(self):
@@ -289,6 +295,8 @@ class HubitatCarbonDioxide(HubitatSensor):
         )
 
 
+# This attribute isn't from the Hubitat spec, but appears to be an air quality
+# enumeration. See https://github.com/jason0x43/hacs-hubitat/issues/117
 class HubitatCarbonDioxideLevel(HubitatSensor):
     """A CarbonDioxideLevel sensor."""
 
@@ -296,26 +304,13 @@ class HubitatCarbonDioxideLevel(HubitatSensor):
         """Initialize a CarbonDioxideLevel sensor."""
         super().__init__(
             attribute=DeviceAttribute.CARBON_DIOXIDE_LEVEL,
-            device_class=SensorDeviceClass.CO2,
-            state_class=SensorStateClass.MEASUREMENT,
+            device_class=SensorDeviceClass.ENUM,
+            options=["Good", "Mediocre", "Harmful", "Risk"],
             **kwargs,
         )
 
 
-class HubitatCarbonMonoxide(HubitatSensor):
-    """A CarbonMonoxide sensor."""
-
-    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
-        """Initialize a CarbonMonoxide sensor."""
-        super().__init__(
-            attribute=DeviceAttribute.CARBON_MONOXIDE,
-            unit=CONCENTRATION_PARTS_PER_MILLION,
-            device_class=SensorDeviceClass.CO,
-            state_class=SensorStateClass.MEASUREMENT,
-            **kwargs,
-        )
-
-
+# TODO: is this a valid attribute?
 class HubitatCarbonMonoxideLevel(HubitatSensor):
     """A CarbonMonoxideLevel sensor."""
 
@@ -323,6 +318,7 @@ class HubitatCarbonMonoxideLevel(HubitatSensor):
         """Initialize a CarbonMonoxideLevel sensor."""
         super().__init__(
             attribute=DeviceAttribute.CARBON_MONOXIDE_LEVEL,
+            unit=CONCENTRATION_PARTS_PER_MILLION,
             device_class=SensorDeviceClass.CO,
             state_class=SensorStateClass.MEASUREMENT,
             **kwargs,
@@ -668,7 +664,6 @@ _SENSOR_ATTRS: tuple[tuple[DeviceAttribute, Type[HubitatSensor]], ...] = (
     (DeviceAttribute.BATTERY, HubitatBatterySensor),
     (DeviceAttribute.CARBON_DIOXIDE, HubitatCarbonDioxide),
     (DeviceAttribute.CARBON_DIOXIDE_LEVEL, HubitatCarbonDioxideLevel),
-    (DeviceAttribute.CARBON_MONOXIDE, HubitatCarbonMonoxide),
     (DeviceAttribute.CARBON_MONOXIDE_LEVEL, HubitatCarbonMonoxideLevel),
     (DeviceAttribute.CUMULATIVE_CUBIC_METER, HubitatWaterCumulativeM3Sensor),
     (DeviceAttribute.CUMULATIVE_LITER, HubitatWaterCumulativeLiterSensor),

@@ -81,18 +81,6 @@ class HubitatAccelerationSensor(HubitatBinarySensor):
         )
 
 
-class HubitatCo2Sensor(HubitatBinarySensor):
-    """A carbon dioxide sensor."""
-
-    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
-        super().__init__(
-            attribute=DeviceAttribute.CARBON_DIOXIDE,
-            active_state="detected",
-            device_class=BinarySensorDeviceClass.GAS,
-            **kwargs,
-        )
-
-
 class HubitatCoSensor(HubitatBinarySensor):
     """A carbon monoxide sensor."""
 
@@ -254,7 +242,6 @@ class HubitatValveSensor(HubitatBinarySensor):
 # Presence is handled specially in async_setup_entry()
 _SENSOR_ATTRS: tuple[tuple[DeviceAttribute, Type[HubitatBinarySensor]], ...] = (
     (DeviceAttribute.ACCELERATION, HubitatAccelerationSensor),
-    (DeviceAttribute.CARBON_DIOXIDE, HubitatCo2Sensor),
     (DeviceAttribute.CARBON_MONOXIDE, HubitatCoSensor),
     (DeviceAttribute.CONTACT, HubitatContactSensor),
     (DeviceAttribute.HEAT_ALARM, HubitatHeatSensor),
