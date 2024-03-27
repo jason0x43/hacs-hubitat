@@ -168,6 +168,7 @@ class DeviceAttribute(StrEnum):
     STATUS = "status"
     STEPS = "steps"
     SUPPORTED_FAN_MODES = "supportedThermostatFanModes"
+    SUPPORTED_FAN_SPEEDS = "supportedFanSpeeds"
     SUPPORTED_MODES = "supportedThermostatModes"
     SWITCH = "switch"
     TAMPER = "tamper"

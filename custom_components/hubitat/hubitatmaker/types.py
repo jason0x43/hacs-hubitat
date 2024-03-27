@@ -55,7 +55,14 @@ class Attribute:
         return str(val)
 
     @property
-    def json_value(self) -> dict[str, Any] | None:
+    def list_value(self) -> list[Any] | None:
+        val = self.str_value
+        if val is None:
+            return None
+        return cast(list[Any], loads(val))
+
+    @property
+    def dict_value(self) -> dict[str, Any] | None:
         val = self.str_value
         if val is None:
             return None

@@ -118,7 +118,7 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
 
     @property
     def codes(self) -> dict[str, dict[str, str]] | None:
-        return self.get_json_attr(DeviceAttribute.LOCK_CODES)
+        return self.get_dict_attr(DeviceAttribute.LOCK_CODES)
 
     @property
     def entry_delay(self) -> int | None:

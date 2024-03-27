@@ -8,6 +8,7 @@ from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util.percentage import ordered_list_item_to_percentage
 
 from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
@@ -62,17 +63,12 @@ class HubitatFan(HubitatEntity, FanEntity):
         if speed is None or speed == "off":
             _LOGGER.debug("  returning None")
             return None
-        if speed == "auto":
+        if speed == "auto" or speed == "on":
             _LOGGER.debug("  returning 100")
             return 100
-        idx = self.speeds.index(speed)
-        _LOGGER.debug(
-            "  index is %d, step is %f, pct is %f",
-            idx,
-            self.percentage_step,
-            round(self.percentage_step * (idx + 1)),
-        )
-        return round(self.percentage_step * (idx + 1))
+        pct = ordered_list_item_to_percentage(self.speeds, speed)
+        _LOGGER.debug("  pct is %f", pct)
+        return pct
 
     def _get_preset_mode(self) -> str | None:
         """Return the current preset mode"""
@@ -99,13 +95,20 @@ class HubitatFan(HubitatEntity, FanEntity):
     @property
     def speeds(self) -> list[str]:
         """Return the list of speeds for this fan."""
-        return [s for s in self.speeds_and_modes if s not in ["auto", "on", "off"]]
+        speeds = [s for s in self.speeds_and_modes if s not in ["auto", "on", "off"]]
+        return speeds
 
     @property
     def speeds_and_modes(self) -> list[str]:
-        """Return the list of speeds and modes for this fan."""
+        """Return the list of speeds and modes for this fan.
+
+        Home Assistant speeds are values that map directly to percentage speeds
+        (e.g., low/medium/high or one/two/three). Hubitat also includes
+        on/off/auto in its speed list.
+        """
         return (
-            self._device.attributes[DeviceAttribute.SPEED].values or DEFAULT_FAN_SPEEDS
+            self.get_list_attr(DeviceAttribute.SUPPORTED_FAN_SPEEDS)
+            or DEFAULT_FAN_SPEEDS
         )
 
     async def async_turn_on(

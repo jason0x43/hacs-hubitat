@@ -68,25 +68,31 @@ class HubitatBase(Removable):
 
     @callback
     def get_float_attr(self, attr: DeviceAttribute) -> float | None:
-        """Get the current value of an attribute."""
+        """Get the current value of an attribute as a float."""
         if attr in self._device.attributes:
             return self._device.attributes[attr].float_value
 
     @callback
     def get_int_attr(self, attr: DeviceAttribute) -> int | None:
-        """Get the current value of an attribute."""
+        """Get the current value of an attribute as an int."""
         if attr in self._device.attributes:
             return self._device.attributes[attr].int_value
 
     @callback
-    def get_json_attr(self, attr: DeviceAttribute) -> dict[str, Any] | None:
-        """Get the current value of an attribute."""
+    def get_list_attr(self, attr: DeviceAttribute) -> list[Any] | None:
+        """Get the current value of an attribute as a list."""
         if attr in self._device.attributes:
-            return self._device.attributes[attr].json_value
+            return self._device.attributes[attr].list_value
+
+    @callback
+    def get_dict_attr(self, attr: DeviceAttribute) -> dict[str, Any] | None:
+        """Get the current value of an attribute as a dict."""
+        if attr in self._device.attributes:
+            return self._device.attributes[attr].dict_value
 
     @callback
     def get_str_attr(self, attr: DeviceAttribute) -> str | None:
-        """Get the current value of an attribute."""
+        """Get the current value of an attribute as a string."""
         if attr in self._device.attributes:
             return self._device.attributes[attr].str_value
 
