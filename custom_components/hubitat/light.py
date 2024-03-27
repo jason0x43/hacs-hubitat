@@ -64,13 +64,30 @@ class HubitatLight(HubitatEntity, LightEntity):
         self._attr_is_on = self._get_is_on()
 
     def _get_color_mode(self) -> ColorMode | str | None:
-        """Return this light's color mode."""
+        """Return this light's color mode.
+
+        Hubitat directly reports CT and RGB color modes. Otherwise we can infer
+        that a light supports brightness if it has the SwitchLevel capability.
+        It must at the very least support on/off to be a light.
+        """
         he_color_mode = self.get_str_attr(DeviceAttribute.COLOR_MODE)
+
         if he_color_mode == HubitatColorMode.CT:
             return ColorMode.COLOR_TEMP
+
         if he_color_mode == HubitatColorMode.RGB:
             return ColorMode.HS
-        return None
+
+        if DeviceCapability.COLOR_CONTROL in self._device.capabilities:
+            return ColorMode.HS
+
+        if DeviceCapability.COLOR_TEMP in self._device.capabilities:
+            return ColorMode.COLOR_TEMP
+
+        if DeviceCapability.SWITCH_LEVEL in self._device.capabilities:
+            return ColorMode.BRIGHTNESS
+
+        return ColorMode.ONOFF
 
     def _get_brightness(self) -> int | None:
         """Return the level of this light."""
