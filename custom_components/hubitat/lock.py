@@ -36,17 +36,17 @@ class HubitatLock(HubitatEntity, LockEntity):
         HubitatEntity.__init__(self, **kwargs)
         LockEntity.__init__(self)
         self._attr_unique_id = f"{super().unique_id}::lock"
+        self.load_state()
+
+    def load_state(self):
+        self._attr_code_format = self._get_code_format()
+        self._attr_is_locked = self._get_is_locked()
         self._attr_extra_state_attributes = {
             HassStateAttribute.CODES: self.codes,
             HassStateAttribute.CODE_LENGTH: self.code_length,
             HassStateAttribute.LAST_CODE_NAME: self.last_code_name,
             HassStateAttribute.MAX_CODES: self.max_codes,
         }
-        self.load_state()
-
-    def load_state(self):
-        self._attr_code_format = self._get_code_format()
-        self._attr_is_locked = self._get_is_locked()
 
     def _get_code_format(self) -> str | None:
         """Regex for code format or None if no code is required."""
@@ -66,7 +66,7 @@ class HubitatLock(HubitatEntity, LockEntity):
     @property
     def codes(self) -> str | dict[str, dict[str, str]] | None:
         try:
-            codes = self.get_json_attr(DeviceAttribute.LOCK_CODES)
+            codes = self.get_dict_attr(DeviceAttribute.LOCK_CODES)
             if codes:
                 for id in codes:
                     del codes[id]["code"]
