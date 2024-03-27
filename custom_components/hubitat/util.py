@@ -1,3 +1,4 @@
+import re
 from hashlib import sha256
 
 from homeassistant.config_entries import ConfigEntry
@@ -41,3 +42,17 @@ def get_hubitat_device_id(device: DeviceEntry) -> str:
                 return id_set[1].split(":")[1]
             return id_set[1]
     raise DeviceError(f"No Hubitat entry for device {device.id}")
+
+
+def to_display_name(identifier: str) -> str:
+    try:
+        if "_" in identifier:
+            parts = identifier.split("_")
+        else:
+            matches = re.finditer(
+                ".+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)", identifier
+            )
+            parts = [m.group(0) for m in matches]
+        return " ".join(parts).capitalize()
+    except Exception:
+        return identifier

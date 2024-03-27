@@ -5,6 +5,7 @@ from datetime import date, datetime
 from logging import getLogger
 from typing import TYPE_CHECKING, Type, Unpack
 
+from custom_components.hubitat.util import to_display_name
 from homeassistant.components.sensor import (
     Decimal,
     SensorDeviceClass,
@@ -744,6 +745,7 @@ async def async_setup_entry(
                         hub=hub,
                         device=device,
                         attribute=attr,
+                        attribute_name=to_display_name(attr),
                         enabled_default=False,
                         device_class=None,
                     )
