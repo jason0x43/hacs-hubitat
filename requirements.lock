@@ -8,3 +8,9 @@
 #   with-sources: false
 
 -e file:.
+nodeenv==1.8.0
+    # via pyright
+pyright==1.1.359
+    # via hubitat
+setuptools==69.5.1
+    # via nodeenv

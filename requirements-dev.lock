@@ -112,6 +112,7 @@ multidict==6.0.5
     # via yarl
 nodeenv==1.8.0
     # via pre-commit
+    # via pyright
 orjson==3.9.15
     # via homeassistant
 packaging==23.2
@@ -143,6 +144,8 @@ pyopenssl==24.0.0
     # via homeassistant
 pyric==0.1.6.3
     # via bluetooth-auto-recovery
+pyright==1.1.359
+    # via hubitat
 pytest==8.0.2
     # via pytest-asyncio
 pytest-asyncio==0.23.5

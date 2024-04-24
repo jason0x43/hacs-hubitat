@@ -60,15 +60,29 @@ class HubitatFan(HubitatEntity, FanEntity):
         """Return the current speed as a percentage."""
         speed = self.get_str_attr(DeviceAttribute.SPEED)
         _LOGGER.debug("hubitat speed: %s", speed)
+
         if speed is None or speed == "off":
-            _LOGGER.debug("  returning None")
+            _LOGGER.debug("returning None")
             return None
+
         if speed == "auto" or speed == "on":
-            _LOGGER.debug("  returning 100")
+            _LOGGER.debug("returning 100")
             return 100
-        pct = ordered_list_item_to_percentage(self.speeds, speed)
-        _LOGGER.debug("  pct is %f", pct)
-        return pct
+
+        try:
+            pct = ordered_list_item_to_percentage(self.speeds, speed)
+            _LOGGER.debug(f"returning {pct}%")
+            return pct
+        except Exception as e:
+            _LOGGER.warn(f"Error getting speed pct from reported speeds: {e}")
+
+            try:
+                pct = ordered_list_item_to_percentage(DEFAULT_FAN_SPEEDS, speed)
+                _LOGGER.debug(f"returning {pct}%")
+                return pct
+            except Exception as ex:
+                _LOGGER.warn(f"Error getting speed pct from default speeds: {ex}")
+                return None
 
     def _get_preset_mode(self) -> str | None:
         """Return the current preset mode"""

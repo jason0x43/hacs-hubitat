@@ -3,7 +3,9 @@ name = "hubitat"
 version = "0.9.26"
 description = "A Hubitat integration for Home Assistant"
 authors = [{ name = "Jason Cheatham", email = "jason@jasoncheatham.com" }]
-dependencies = []
+dependencies = [
+    "pyright>=1.1.359",
+]
 requires-python = ">=3.11,<3.13"
 license = { text = "MIT" }
 
