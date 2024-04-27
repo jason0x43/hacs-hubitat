@@ -1,6 +1,6 @@
 [project]
 name = "hubitat"
-version = "0.9.27"
+version = "0.9.28"
 description = "A Hubitat integration for Home Assistant"
 authors = [{ name = "Jason Cheatham", email = "jason@jasoncheatham.com" }]
 dependencies = [
