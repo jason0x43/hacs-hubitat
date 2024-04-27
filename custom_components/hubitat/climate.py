@@ -1,10 +1,10 @@
 """Support for Hubitat thermostats."""
 
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Unpack
 
 from custom_components.hubitat.const import TEMP_C, TEMP_F
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
-from homeassistant.backports.enum import StrEnum
 from homeassistant.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,

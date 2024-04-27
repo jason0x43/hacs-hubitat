@@ -1,8 +1,8 @@
 """Constants for the Hubitat integration."""
+from enum import StrEnum
 from typing import Literal, get_args
 
 import homeassistant.components.select as _  # noqa: F401
-from homeassistant.backports.enum import StrEnum
 
 from .hubitatmaker import DeviceAttribute, DeviceCapability
 
