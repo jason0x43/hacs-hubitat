@@ -34,10 +34,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     hub = Hub(hass, config_entry, len(hass.data[DOMAIN]) + 1)
 
+    hass.data[DOMAIN][config_entry.entry_id] = hub
+
     if not await hub.async_setup():
         return False
-
-    hass.data[DOMAIN][config_entry.entry_id] = hub
 
     hub.async_update_device_registry()
 
