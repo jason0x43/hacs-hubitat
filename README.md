@@ -51,6 +51,7 @@ Home Assistant platforms, while the sub-bullets are specific device classes.
   - voltage
   - pressure
 - switch
+- valve
 
 ## Installation
 

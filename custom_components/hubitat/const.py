@@ -80,12 +80,13 @@ Platform = Literal[
     "climate",
     "cover",
     "event",
+    "fan",
     "light",
     "lock",
     "select",
     "sensor",
     "switch",
-    "fan",
+    "valve",
 ]
 
 PLATFORMS: tuple[Platform, ...] = get_args(Platform)
