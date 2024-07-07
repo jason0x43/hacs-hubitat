@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import json
-from subprocess import getoutput, check_call
+from subprocess import check_call, getoutput
 from typing import cast
 
 import tomlkit
@@ -31,8 +31,12 @@ def update_manifest(new_version: str):
 
 latest = getoutput("git describe --tags --abbrev=0")
 version = latest[1:]
-[major, minor, patch] = [int(x) for x in version.split(".")]
-new_version = f"{major}.{minor}.{patch + 1}"
+[major, minor, patch] = version.split(".")
+if '-pre' in patch:
+    patch = int(patch.split('-')[0])
+else:
+    patch = int(patch) + 1
+new_version = f"{major}.{minor}.{patch}"
 
 if input(f"Publish version {new_version} [y/N]? ") != "y":
     print("Aborting")
