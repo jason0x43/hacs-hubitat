@@ -8,7 +8,7 @@ from typing_extensions import override
 
 from homeassistant.core import callback
 from homeassistant.helpers import device_registry
-from homeassistant.helpers.entity import DeviceInfo, Entity
+from homeassistant.helpers.entity import Entity
 
 from .const import DOMAIN
 from .hub import Hub
@@ -190,13 +190,13 @@ class HubitatEventEmitter(HubitatBase):
         return f"<HubitatEventEmitter {self.device_name}>"
 
 
-def get_device_info(hub: Hub, device: Device) -> DeviceInfo:
+def get_device_info(hub: Hub, device: Device) -> device_registry.DeviceInfo:
     """Return the device info."""
     dev_identifier = device.id
     if hub.id != device.id:
         dev_identifier = f"{hub.id}:{device.id}"
 
-    info: DeviceInfo = {
+    info: device_registry.DeviceInfo = {
         "identifiers": {(DOMAIN, dev_identifier)},
     }
 
