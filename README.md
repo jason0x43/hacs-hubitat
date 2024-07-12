@@ -154,6 +154,17 @@ in the integration.** There are two ways to reload the device list:
 Once the integration has loaded the new device list, any new devices added to
 the Maker API instance should show up in Home Assistant.
 
+### Removing devices
+
+To remove a device, first remove or disable it in the Maker API instance in
+Hubitat. Then open the Hubitat integration settings in Home Assistant and go
+through the config flow. One of the steps in the flow is "Remove devices" --
+this will allow you to remove any devices added by the integration.
+
+Note that removing a device through the config flow in Home Assistant but not
+removing it in the Maker API in Hubitat will cause the device to be re-added the
+next time the integration loads (usually when you restart Home Assistant).
+
 ## Services
 
 This integration adds several service calls to Home Assistant.
