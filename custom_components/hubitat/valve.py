@@ -39,6 +39,7 @@ class HubitatValve(HubitatEntity, ValveEntity):
             else ValveDeviceClass.WATER
         )
         self._attr_unique_id = f"{super().unique_id}::valve"
+        self._attr_reports_position = False
         self._attr_supported_features = (
             ValveEntityFeature.OPEN
             | ValveEntityFeature.CLOSE
