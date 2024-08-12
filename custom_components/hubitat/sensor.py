@@ -2,16 +2,17 @@
 
 import re
 from datetime import date, datetime
+from decimal import Decimal
 from logging import getLogger
 from typing import TYPE_CHECKING, Type, Unpack
 
 from custom_components.hubitat.util import to_display_name
 from homeassistant.components.sensor import (
-    Decimal,
-    SensorDeviceClass,
     SensorEntity,
+)
+from homeassistant.components.sensor.const import (
+    SensorDeviceClass,
     SensorStateClass,
-    StateType,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -34,6 +35,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import StateType
 
 from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
