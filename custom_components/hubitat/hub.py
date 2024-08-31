@@ -572,7 +572,9 @@ def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:
         dev_ids = list(new_dev.identifiers)
         id_set = dev_ids[0]
         if len(id_set) == 3:
-            new_ids = {(id_set[0], f"{id_set[1]}:{id_set[2]}")}
+            new_ids = {
+                (cast(tuple[str, str, str], id_set)[0], f"{id_set[1]}:{id_set[2]}")
+            }
             dreg.async_update_device(new_dev.id, new_identifiers=new_ids)
             _LOGGER.info(
                 f"Updated identifiers of device {new_dev.identifiers} to {new_ids}"
