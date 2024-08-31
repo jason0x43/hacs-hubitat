@@ -287,12 +287,12 @@ class Hub:
                 "attributes": [
                     {
                         "name": "mode",
-                        "currentValue": None,
+                        "currentValue": self.mode,
                         "dataType": "ENUM",
                     },
                     {
                         "name": "hsm_status",
-                        "currentValue": None,
+                        "currentValue": self.hsm_status,
                         "dataType": "ENUM",
                     },
                 ],
