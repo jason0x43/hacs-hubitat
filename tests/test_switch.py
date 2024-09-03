@@ -15,9 +15,13 @@ async def test_setup_entry(create_emitters, create_entities) -> None:
     create_emitters.return_value = None
 
     from custom_components.hubitat.switch import (
+        HubitatAlarm,
         HubitatPowerMeterSwitch,
         HubitatSwitch,
         async_setup_entry,
+        is_alarm,
+        is_simple_switch,
+        is_smart_switch,
     )
 
     mock_hass = Mock(spec=["async_register"])
@@ -33,7 +37,12 @@ async def test_setup_entry(create_emitters, create_entities) -> None:
     assert create_entities.call_count == 3, "expected 3 calls to create entities"
 
     call1 = call(
-        mock_hass, mock_config_entry, mock_add_entities, "switch", HubitatSwitch
+        mock_hass,
+        mock_config_entry,
+        mock_add_entities,
+        "switch",
+        HubitatSwitch,
+        is_simple_switch,
     )
     call2 = call(
         mock_hass,
@@ -41,14 +50,17 @@ async def test_setup_entry(create_emitters, create_entities) -> None:
         mock_add_entities,
         "switch",
         HubitatPowerMeterSwitch,
+        is_smart_switch,
     )
     call3 = call(
         mock_hass,
         mock_config_entry,
         mock_add_entities,
         "switch",
-        HubitatPowerMeterSwitch,
+        HubitatAlarm,
+        is_alarm,
     )
-    assert create_entities.has_calls([call1, call2, call3])
+
+    create_entities.assert_has_calls([call1, call2, call3])
 
     assert create_emitters.call_count == 1, "expected 1 call to create emitters"

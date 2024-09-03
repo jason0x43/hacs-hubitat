@@ -12,7 +12,7 @@
 -e file:.
 nodeenv==1.8.0
     # via pyright
-pyright==1.1.359
+pyright==1.1.378
     # via hubitat
 setuptools==69.5.1
     # via nodeenv

@@ -146,6 +146,14 @@ def is_button_controller(device: Device) -> bool:
     )
 
 
+def is_simple_switch(device: Device, overrides: dict[str, str] | None = None) -> bool:
+    return is_switch(device, overrides) and not is_energy_meter(device, overrides)
+
+
+def is_smart_switch(device: Device, overrides: dict[str, str] | None = None) -> bool:
+    return is_switch(device, overrides) and is_energy_meter(device, overrides)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -153,24 +161,14 @@ async def async_setup_entry(
 ) -> None:
     """Initialize switch devices."""
 
-    def _is_simple_switch(
-        device: Device, overrides: dict[str, str] | None = None
-    ) -> bool:
-        return is_switch(device, overrides) and not is_energy_meter(device, overrides)
-
     create_and_add_entities(
         hass,
         config_entry,
         async_add_entities,
         "switch",
         HubitatSwitch,
-        _is_simple_switch,
+        is_simple_switch,
     )
-
-    def _is_smart_switch(
-        device: Device, overrides: dict[str, str] | None = None
-    ) -> bool:
-        return is_switch(device, overrides) and is_energy_meter(device, overrides)
 
     create_and_add_entities(
         hass,
@@ -178,7 +176,7 @@ async def async_setup_entry(
         async_add_entities,
         "switch",
         HubitatPowerMeterSwitch,
-        _is_smart_switch,
+        is_smart_switch,
     )
 
     create_and_add_event_emitters(hass, config_entry, is_button_controller)

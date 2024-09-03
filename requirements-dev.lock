@@ -200,7 +200,7 @@ pyrfc3339==1.1
     # via acme
 pyric==0.1.6.3
     # via bluetooth-auto-recovery
-pyright==1.1.359
+pyright==1.1.378
     # via hubitat
 pytest==8.0.2
     # via pytest-asyncio

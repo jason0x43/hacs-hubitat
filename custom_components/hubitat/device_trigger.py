@@ -1,4 +1,5 @@
 """Provide automation triggers for certain types of Hubitat device."""
+
 import logging
 from itertools import chain
 from json import loads
@@ -7,15 +8,21 @@ from typing import Any, Callable, cast
 import voluptuous as vol
 
 from custom_components.hubitat.util import get_hubitat_device_id
-from homeassistant.components.automation import (
-    TriggerActionType,
-    TriggerInfo,
-)
 from homeassistant.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
 )
-from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
+from homeassistant.const import (
+    CONF_DEVICE_ID,
+    CONF_DOMAIN,
+    CONF_EVENT_DATA,
+    CONF_PLATFORM,
+    CONF_TYPE,
+)
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.trigger import (
+    TriggerActionType,
+    TriggerInfo,
+)
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
@@ -166,9 +173,9 @@ async def async_attach_trigger(
 
     trigger = event.TRIGGER_SCHEMA(
         {
-            event.CONF_PLATFORM: "event",
+            CONF_PLATFORM: "event",
             event.CONF_EVENT_TYPE: H_CONF_HUBITAT_EVENT,
-            event.CONF_EVENT_DATA: event_data,
+            CONF_EVENT_DATA: event_data,
         }
     )
 

@@ -7,9 +7,6 @@ from custom_components.hubitat.const import TEMP_C, TEMP_F
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 from homeassistant.components.climate import (
     ClimateEntity,
-    ClimateEntityFeature,
-    HVACAction,
-    HVACMode,
 )
 from homeassistant.components.climate.const import (
     ATTR_TARGET_TEMP_HIGH,
@@ -19,6 +16,9 @@ from homeassistant.components.climate.const import (
     PRESET_AWAY,
     PRESET_ECO,
     PRESET_HOME,
+    ClimateEntityFeature,
+    HVACAction,
+    HVACMode,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
