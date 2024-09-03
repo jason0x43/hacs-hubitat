@@ -1,4 +1,5 @@
 """Config flow for Hubitat integration."""
+
 import logging
 from copy import deepcopy
 from typing import Any, Awaitable, Callable, cast
@@ -11,7 +12,6 @@ from homeassistant.config_entries import (
     CONN_CLASS_LOCAL_PUSH,
     ConfigEntry,
     ConfigFlow,
-    ConfigFlowResult,
     OptionsFlow,
 )
 from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_TEMPERATURE_UNIT
@@ -19,6 +19,14 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import device_registry
 from homeassistant.helpers.device_registry import DeviceEntry
+
+try:
+    from homeassistant.config_entries import ConfigFlowResult  # type: ignore
+except Exception:
+    from homeassistant.config_entries import (
+        FlowResult as ConfigFlowResult,  # type: ignore
+    )
+
 
 from .const import (
     DOMAIN,
@@ -79,7 +87,9 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
         return HubitatOptionsFlow(config_entry)
 
-    async def async_step_user(
+    # TODO: remove the 'type: ignore' when were not falling back on
+    # FlowResult
+    async def async_step_user(  # type: ignore
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the user step."""
