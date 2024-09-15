@@ -45,6 +45,18 @@ from .hubitatmaker.types import Device
 
 _LOGGER = getLogger(__name__)
 
+PRESSURE_UNITS: dict[str, UnitOfPressure] = {
+    "pa": UnitOfPressure.PA,
+    "hpa": UnitOfPressure.HPA,
+    "kpa": UnitOfPressure.KPA,
+    "bar": UnitOfPressure.BAR,
+    "cbar": UnitOfPressure.CBAR,
+    "mbar": UnitOfPressure.MBAR,
+    "mmhg": UnitOfPressure.MMHG,
+    "inhg": UnitOfPressure.INHG,
+    "psi": UnitOfPressure.PSI,
+}
+
 
 class HubitatSensor(HubitatEntity, SensorEntity):
     """A generic Hubitat sensor."""
@@ -75,7 +87,6 @@ class HubitatSensor(HubitatEntity, SensorEntity):
             else attribute.replace("_", " ")
         )
 
-        self.default_unit = unit
         self._attribute = attribute
         self._attr_name = f"{super(HubitatEntity, self).name} {attr_name}".title()
         self._attr_native_unit_of_measurement = unit
@@ -102,27 +113,6 @@ class HubitatSensor(HubitatEntity, SensorEntity):
     def _get_native_value(self) -> StateType | date | datetime | Decimal:
         """Return this sensor's current value."""
         return self.get_attr(self._attribute)
-
-    def _get_native_unit_of_measurement(self) -> str | None:
-        """Return this sensor's current value."""
-        unit = self.default_unit
-        units = {
-            "pa": UnitOfPressure.PA,
-            "hpa": UnitOfPressure.HPA,
-            "kpa": UnitOfPressure.KPA,
-            "bar": UnitOfPressure.BAR,
-            "cbar": UnitOfPressure.CBAR,
-            "mbar": UnitOfPressure.MBAR,
-            "mmhg": UnitOfPressure.MMHG,
-            "inhg": UnitOfPressure.INHG,
-            "psi": UnitOfPressure.PSI,
-        }
-        attr_unit = self.get_attr_unit(self._attribute)
-        if attr_unit is not None:
-            lower_unit = attr_unit.lower()
-            if lower_unit in units:
-                return units[lower_unit]
-        return unit
 
 
 class HubitatBatterySensor(HubitatSensor):
@@ -304,6 +294,21 @@ class HubitatPressureSensor(HubitatSensor):
             state_class=SensorStateClass.MEASUREMENT,
             **kwargs,
         )
+
+    def load_state(self):
+        super().load_state()
+        self._attr_native_unit_of_measurement = self._get_native_unit_of_measurement()
+
+    def _get_native_unit_of_measurement(self) -> str | None:
+        """Return this sensor's current value."""
+        attr_unit = self.get_attr_unit(self._attribute)
+        if attr_unit is not None:
+            lower_unit = attr_unit.lower()
+            if lower_unit in PRESSURE_UNITS:
+                _LOGGER.debug(f"Using Hubitat unit {attr_unit} for {self.unique_id}")
+                return PRESSURE_UNITS[lower_unit]
+        _LOGGER.debug(f"Using default unit mbar for {self.unique_id}")
+        return UnitOfPressure.MBAR
 
 
 class HubitatCarbonDioxide(HubitatSensor):
