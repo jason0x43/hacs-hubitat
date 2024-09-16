@@ -3,7 +3,7 @@
 import json
 import re
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Unpack
+from typing import TYPE_CHECKING, Any, Unpack, cast
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -94,7 +94,7 @@ class HubitatLight(HubitatEntity, LightEntity):
         level = self.get_int_attr(DeviceAttribute.LEVEL)
         if level is None:
             return None
-        return int(255 * level / 100)
+        return round(255 * level / 100)
 
     def _get_color_temp(self) -> int | None:
         """Return the CT color value in mireds."""
@@ -147,10 +147,13 @@ class HubitatLight(HubitatEntity, LightEntity):
         """Return supported feature flags."""
         cmds = self._device.commands
 
-        if DeviceCommand.FLASH in cmds:
-            return LightEntityFeature.FLASH
+        # All lights support the Switch capability, which supports transition
+        features = LightEntityFeature.TRANSITION
 
-        return LightEntityFeature(0)
+        if DeviceCommand.FLASH in cmds:
+            features |= LightEntityFeature.FLASH
+
+        return features
 
     @property
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
@@ -170,14 +173,14 @@ class HubitatLight(HubitatEntity, LightEntity):
         caps = self._device.capabilities
 
         if ATTR_BRIGHTNESS in kwargs and DeviceCapability.SWITCH_LEVEL in caps:
-            props["level"] = int(100 * kwargs[ATTR_BRIGHTNESS] / 255)
+            props["level"] = round(100 * kwargs[ATTR_BRIGHTNESS] / 255)
 
         if ATTR_TRANSITION in kwargs:
             props["time"] = kwargs[ATTR_TRANSITION]
 
         if ATTR_HS_COLOR in kwargs and DeviceCapability.COLOR_CONTROL in caps:
             # Hubitat hue is from 0 - 100
-            props["hue"] = int(100 * kwargs[ATTR_HS_COLOR][0] / 360)
+            props["hue"] = round(100 * kwargs[ATTR_HS_COLOR][0] / 360)
             props["sat"] = kwargs[ATTR_HS_COLOR][1]
 
         if ATTR_COLOR_TEMP in kwargs and DeviceCapability.COLOR_TEMP in caps:
@@ -186,46 +189,66 @@ class HubitatLight(HubitatEntity, LightEntity):
 
         _LOGGER.debug(f"Light {self.name} turn-on props: {props}")
 
-        if "level" in props:
-            if "time" in props:
+        if "time" in props:
+            if "hue" in props:
+                arg = {
+                    "hue": props["hue"],
+                    "saturation": props["sat"],
+                }
+                if "level" in props:
+                    arg["level"] = props["level"]
+                await self.send_command(DeviceCommand.SET_COLOR, json.dumps(arg))
+            elif "temp" in props:
+                level: int | None = None
+                if "level" in props:
+                    level = cast(int, props["level"])
+                else:
+                    brightness = self._get_brightness()
+                    if brightness is not None:
+                        level = round(100 * brightness / 255)
+
+                if level is not None:
+                    await self.send_command(
+                        DeviceCommand.SET_COLOR_TEMP,
+                        props["temp"],
+                        level,
+                        props["time"],
+                    )
+                else:
+                    await self.send_command(
+                        DeviceCommand.SET_COLOR_TEMP,
+                        props["temp"],
+                    )
+            elif "level" in props:
                 await self.send_command(
                     DeviceCommand.SET_LEVEL, props["level"], props["time"]
                 )
-                del props["time"]
-            elif "hue" in props:
-                arg = json.dumps(
-                    {
-                        "hue": props["hue"],
-                        "saturation": props["sat"],
-                        "level": props["level"],
-                    }
-                )
-                await self.send_command(DeviceCommand.SET_COLOR, arg)
-                del props["hue"]
-                del props["sat"]
             else:
-                await self.send_command(DeviceCommand.SET_LEVEL, props["level"])
-
-            del props["level"]
-        else:
-            await self.send_command(DeviceCommand.ON)
-
-        if "hue" in props:
-            data = {
+                await self.send_command(DeviceCommand.ON)
+        elif "hue" in props:
+            arg = {
                 "hue": props["hue"],
                 "saturation": props["sat"],
             }
-            level = self.get_int_attr(DeviceAttribute.LEVEL)
-            if isinstance(level, int):
-                data["level"] = level
-
-            arg = json.dumps(data)
-            await self.send_command(DeviceCommand.SET_COLOR, arg)
-            del props["hue"]
-            del props["sat"]
-
-        if "temp" in props:
-            await self.send_command(DeviceCommand.SET_COLOR_TEMP, props["temp"])
+            if "level" in props:
+                arg["level"] = props["level"]
+            await self.send_command(DeviceCommand.SET_COLOR, json.dumps(arg))
+        elif "temp" in props:
+            if "level" in props:
+                await self.send_command(
+                    DeviceCommand.SET_COLOR_TEMP,
+                    props["temp"],
+                    props["level"],
+                )
+            else:
+                await self.send_command(
+                    DeviceCommand.SET_COLOR_TEMP,
+                    props["temp"],
+                )
+        elif "level" in props:
+            await self.send_command(DeviceCommand.SET_LEVEL, props["level"])
+        else:
+            await self.send_command(DeviceCommand.ON)
 
         if ATTR_FLASH in kwargs and LightEntityFeature.FLASH in self.supported_features:
             await self.send_command(DeviceCommand.FLASH)
@@ -233,7 +256,11 @@ class HubitatLight(HubitatEntity, LightEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the light."""
         _LOGGER.debug(f"Turning off {self.name}")
-        await self.send_command("off")
+        if ATTR_TRANSITION in kwargs:
+            time = kwargs[ATTR_TRANSITION]
+            await self.send_command(DeviceCommand.SET_LEVEL, 0, time)
+        else:
+            await self.send_command(DeviceCommand.OFF)
 
 
 LIGHT_CAPABILITIES = (DeviceCapability.COLOR_TEMP, DeviceCapability.COLOR_CONTROL)
