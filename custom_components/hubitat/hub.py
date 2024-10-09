@@ -29,6 +29,8 @@ from .const import (
     H_CONF_SERVER_SSL_CERT,
     H_CONF_SERVER_SSL_KEY,
     H_CONF_SERVER_URL,
+    H_CONF_SERVER_INTERFACE,
+    H_CONF_UPDATE_HE_URL,
     PLATFORMS,
     TEMP_F,
     TRIGGER_CAPABILITIES,
@@ -124,11 +126,21 @@ class Hub:
     def port(self) -> int | None:
         """The port used for the Hubitat event receiver."""
         return self._hub.port
+    
+    @property
+    def address(self) -> str | None:
+        """The interface address used for the Hubitat event receiver."""
+        return self._hub.address
 
     @property
     def event_url(self) -> str | None:
         """The event URL that Hubitat should POST events to."""
         return self._hub.event_url
+
+    @property
+    def update_he_url(self) -> bool | None:
+        """True if HA should update the POST event URL on the Hubitat hub."""
+        return self._hub.update_he_url
 
     @property
     def ssl_context(self) -> SSLContext | None:
@@ -235,6 +247,8 @@ class Hub:
         entry = self.config_entry
         url = entry.options.get(H_CONF_SERVER_URL, entry.data.get(H_CONF_SERVER_URL))
         port = entry.options.get(H_CONF_SERVER_PORT, entry.data.get(H_CONF_SERVER_PORT))
+        address = entry.options.get(H_CONF_SERVER_INTERFACE, entry.data.get(H_CONF_SERVER_INTERFACE))
+        update_he_url = entry.options.get(H_CONF_UPDATE_HE_URL, entry.data.get(H_CONF_UPDATE_HE_URL))
 
         # Previous versions of the integration may have saved a value of "" for
         # server_url with the assumption that a use_server_url flag would control
@@ -263,6 +277,8 @@ class Hub:
             self.token,
             port=port,
             event_url=url,
+            update_he_url=update_he_url,
+            address=address,
             ssl_context=ssl_context,
         )
 
@@ -402,8 +418,11 @@ class Hub:
         if url == "":
             url = None
         if url != hub.event_url:
-            await hub.set_event_url(url)
-            _LOGGER.debug("Set event server URL to %s", url)
+            if (config_entry.options.get(H_CONF_UPDATE_HE_URL, config_entry.data.get(H_CONF_UPDATE_HE_URL))):
+                await hub.set_event_url(url)
+                _LOGGER.debug("Set event server URL to %s", url)
+            else:
+                _LOGGER.debug("Ignoring event server URL difference")
 
         ssl_cert = config_entry.options.get(
             H_CONF_SERVER_SSL_CERT,

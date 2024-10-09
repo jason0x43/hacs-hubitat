@@ -50,7 +50,9 @@ class Hub:
         app_id: str,
         access_token: str,
         port: int | None = None,
+        address: str | None = None,
         event_url: str | None = None,
+        update_he_url: bool | None = True,
         ssl_context: SSLContext | None = None,
     ):
         """Initialize a Hubitat hub interface.
@@ -65,9 +67,14 @@ class Hub:
           The access token for the Maker API instance
         port:
           The port to listen on for events (optional). Defaults to a random open port.
+        address:
+          The address to listen on for events (optional). Defaults to the IP of the
+          interface used to talk to the Hubitat hub.
         event_url:
           The URL that Hubitat should send events to (optional). Defaults the server's
           actual address and port.
+        update_he_url:
+          Controls whether the event URL should be updated on the Hubitat hub. Defaults to True.
         ssl_context:
           The SSLContext the event listener server will use. Passing in a SSLContext
           object will make the event listener server HTTPS only.
@@ -83,7 +90,9 @@ class Hub:
         self._hsm_supported = None
 
         self.event_url = _get_event_url(port, event_url)
+        self.update_he_url = update_he_url
         self.port = _get_event_port(port, event_url)
+        self.address = _get_event_address(address, host)
         self.app_id = app_id
         self.token = access_token
         self.mac = ""
@@ -236,8 +245,11 @@ class Hub:
         if not event_url:
             event_url = self._server.url
         url = quote(str(event_url), safe="")
-        _LOGGER.info("Setting event update URL to %s", url)
-        await self._api_request(f"postURL/{url}")
+        if self.update_he_url:
+            _LOGGER.info("Setting event update URL to %s", url)
+            await self._api_request(f"postURL/{url}")
+        else:
+            _LOGGER.info("Not updating event URL on Hubitat Hub")
 
     async def set_hsm(self, hsm_mode: str) -> None:
         """Update the hub's HSM status.
@@ -470,20 +482,13 @@ class Hub:
 
     async def _start_server(self) -> None:
         """Start an event listener server."""
-        # First, figure out what address to listen on. Open a connection to
-        # the Hubitat hub and see what address it used. This assumes this
-        # machine and the Hubitat hub are on the same network.
-        with _open_socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.connect((self.host, 80))
-            address = s.getsockname()[0]
-
         self._server = server.create_server(
-            self._process_event, address, self.port or 0, self.ssl_context
+            self._process_event, self.address, self.port or 0, self.ssl_context
         )
         self._server.start()
         _LOGGER.debug(
             "Listening on %s:%d with SSL %s",
-            address,
+            self.address,
             self._server.port,
             "disabled" if self.ssl_context is None else "enabled",
         )
@@ -510,6 +515,19 @@ def _get_event_port(port: int | None, event_url: str | None) -> int | None:
         return u.port
     return None
 
+def _get_event_address(address: str | None, host: str | None) -> str | None:
+    """Given an optional address and Hubitat host, return the event address.
+    If no address is provided, open a socket to the Hubitat hub and see what
+    address is used. This would assume this machine and the Hubitat hub are
+    on the same network.
+    """
+    if address is not None:
+        return address
+    if host is not None:
+        with _open_socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect((urlparse(host).hostname, 80))
+            return s.getsockname()[0]
+    return None
 
 def _get_event_url(port: int | None, event_url: str | None) -> str | None:
     """Given an optional port and event URL, return a complete event URL"""
