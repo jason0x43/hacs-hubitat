@@ -11,12 +11,6 @@ from homeassistant.components.alarm_control_panel.const import (
     CodeFormat,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    STATE_ALARM_ARMED_AWAY,
-    STATE_ALARM_ARMED_HOME,
-    STATE_ALARM_ARMED_NIGHT,
-    STATE_ALARM_DISARMED,
-)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -30,6 +24,29 @@ from .hubitatmaker.const import (
     DeviceState,
 )
 from .hubitatmaker.types import Device
+
+try:
+    from homeassistant.components.alarm_control_panel.const import (
+        AlarmControlPanelState,  # type: ignore
+    )
+except Exception:
+    # TODO: Remove this code by 2025.11
+
+    from enum import StrEnum
+
+    from homeassistant.const import (
+        STATE_ALARM_ARMED_AWAY,  # type: ignore
+        STATE_ALARM_ARMED_HOME,  # type: ignore
+        STATE_ALARM_ARMED_NIGHT,  # type: ignore
+        STATE_ALARM_DISARMED,  # type: ignore
+    )
+
+    class AlarmControlPanelState(StrEnum):
+        ARMED_AWAY = STATE_ALARM_ARMED_AWAY
+        ARMED_HOME = STATE_ALARM_ARMED_HOME
+        ARMED_NIGHT = STATE_ALARM_ARMED_NIGHT
+        DISARMED = STATE_ALARM_DISARMED
+
 
 _LOGGER = getLogger(__name__)
 
@@ -94,13 +111,13 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
         """Return the maximum number of codes the keypad supports."""
         state = self.get_attr(DeviceAttribute.SECURITY_KEYPAD)
         if state == DeviceState.ARMED_AWAY:
-            return STATE_ALARM_ARMED_AWAY
+            return AlarmControlPanelState.ARMED_AWAY
         if state == DeviceState.ARMED_HOME:
-            return STATE_ALARM_ARMED_HOME
+            return AlarmControlPanelState.ARMED_HOME
         if state == DeviceState.ARMED_NIGHT:
-            return STATE_ALARM_ARMED_NIGHT
+            return AlarmControlPanelState.ARMED_NIGHT
         if state == DeviceState.DISARMED:
-            return STATE_ALARM_DISARMED
+            return AlarmControlPanelState.DISARMED
         return None
 
     @property
