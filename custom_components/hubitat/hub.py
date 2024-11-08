@@ -250,7 +250,7 @@ class Hub:
         ssl_key = entry.options.get(
             H_CONF_SERVER_SSL_KEY, entry.data.get(H_CONF_SERVER_SSL_KEY)
         )
-        ssl_context = _create_ssl_context(ssl_cert, ssl_key)
+        ssl_context = await self.hass.async_add_executor_job(_create_ssl_context, ssl_cert, ssl_key)
 
         _LOGGER.debug(
             "Initializing Hubitat hub with event server on port %s with SSL %s",
@@ -413,7 +413,7 @@ class Hub:
             H_CONF_SERVER_SSL_KEY,
             config_entry.data.get(H_CONF_SERVER_SSL_KEY),
         )
-        ssl_context = _create_ssl_context(ssl_cert, ssl_key)
+        ssl_context = await self.hass.async_add_executor_job(_create_ssl_context, ssl_cert, ssl_key)
         await hub.set_ssl_context(ssl_context)
         _LOGGER.debug(
             "Set event server SSL cert to %s and SSL key to %s", ssl_cert, ssl_key
