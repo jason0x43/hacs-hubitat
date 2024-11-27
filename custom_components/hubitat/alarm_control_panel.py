@@ -94,7 +94,12 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
     def load_state(self):
         self._attr_changed_by = self._get_changed_by()
         self._attr_code_format = self._get_code_format()
-        self._attr_state = self._get_state()
+        self._attr_alarm_state = self._get_alarm_state() # type: ignore
+
+        # TODO: remove this code by 2025.11; state will be handled by
+        # _attr_alarm_state
+        # see https://github.com/home-assistant/architecture/discussions/1140
+        self._attr_state = self._get_alarm_state()
 
     def _get_changed_by(self) -> str | None:
         """Last change triggered by."""
@@ -107,7 +112,7 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
             return CodeFormat.NUMBER
         return None
 
-    def _get_state(self) -> str | None:
+    def _get_alarm_state(self) -> AlarmControlPanelState | None:
         """Return the maximum number of codes the keypad supports."""
         state = self.get_attr(DeviceAttribute.SECURITY_KEYPAD)
         if state == DeviceState.ARMED_AWAY:
