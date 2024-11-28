@@ -108,6 +108,9 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         self._attr_precision = PRECISION_TENTHS
         self._attr_unique_id = f"{super().unique_id}::climate"
 
+        # Support a lower minimum temperature than the HA default
+        self._attr_min_temp = 4.4
+
         if hasattr(ClimateEntityFeature, "TURN_OFF"):
             self._attr_supported_features |= getattr(ClimateEntityFeature, "TURN_OFF")
             self._enable_turn_on_off_backwards_compatibility = False
