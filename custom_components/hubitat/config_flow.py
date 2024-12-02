@@ -127,8 +127,8 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
             except vol.Invalid:
                 _LOGGER.exception("Invalid event URL")
                 errors["base"] = "invalid_event_url"
-            except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Unexpected exception")
+            except Exception as e:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception: %s", e)
                 errors["base"] = "unknown"
 
         if len(errors) == 0:
