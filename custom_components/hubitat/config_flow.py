@@ -38,6 +38,8 @@ from .const import (
     H_CONF_SERVER_SSL_CERT,
     H_CONF_SERVER_SSL_KEY,
     H_CONF_SERVER_URL,
+    H_CONF_SERVER_INTERFACE,
+    H_CONF_UPDATE_HE_URL,
     TEMP_C,
     TEMP_F,
     ConfigStep,
@@ -66,6 +68,8 @@ CONFIG_SCHEMA = vol.Schema(
         vol.Optional(H_CONF_SERVER_PORT): int,
         vol.Optional(H_CONF_SERVER_SSL_CERT): str,
         vol.Optional(H_CONF_SERVER_SSL_KEY): str,
+        vol.Optional(H_CONF_SERVER_INTERFACE): str,
+        vol.Optional(H_CONF_UPDATE_HE_URL): bool,
         vol.Optional(
             CONF_TEMPERATURE_UNIT, default=cast(vol.Undefined, TEMP_F)
         ): vol.In([TEMP_F, TEMP_C]),
@@ -180,6 +184,8 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
                     H_CONF_SERVER_URL: user_input.get(H_CONF_SERVER_URL),
                     H_CONF_SERVER_SSL_CERT: user_input.get(H_CONF_SERVER_SSL_CERT),
                     H_CONF_SERVER_SSL_KEY: user_input.get(H_CONF_SERVER_SSL_KEY),
+                    H_CONF_SERVER_INTERFACE: user_input.get(H_CONF_SERVER_INTERFACE),
+                    H_CONF_UPDATE_HE_URL: user_input.get(H_CONF_UPDATE_HE_URL),
                 }
 
                 info = await _validate_input(check_input)
@@ -194,6 +200,8 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
                 self.options[H_CONF_SERVER_SSL_KEY] = user_input.get(
                     H_CONF_SERVER_SSL_KEY
                 )
+                self.options[H_CONF_SERVER_INTERFACE] = user_input.get(H_CONF_SERVER_INTERFACE)
+                self.options[H_CONF_UPDATE_HE_URL] = user_input.get(H_CONF_UPDATE_HE_URL)
                 self.options[CONF_TEMPERATURE_UNIT] = user_input[CONF_TEMPERATURE_UNIT]
 
                 _LOGGER.debug("Moving to device removal step")
@@ -271,6 +279,25 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
                             or ""
                         },
                     ): str,
+                    vol.Optional(
+                        H_CONF_SERVER_INTERFACE,
+                        description={
+                            "suggested_value": entry.options.get(
+                                H_CONF_SERVER_INTERFACE,
+                                entry.data.get(H_CONF_SERVER_INTERFACE),
+                            )
+                            or ""
+                        },
+                    ): str,
+                    vol.Optional(
+                        H_CONF_UPDATE_HE_URL,
+                        description={
+                            "suggested_value": entry.options.get(
+                                H_CONF_UPDATE_HE_URL,
+                                entry.data.get(H_CONF_UPDATE_HE_URL),
+                            )
+                        },
+                    ): bool,
                     vol.Optional(
                         CONF_TEMPERATURE_UNIT,
                         default=cast(
@@ -462,12 +489,14 @@ async def _validate_input(user_input: dict[str, Any]) -> dict[str, Any]:
     app_id: str = user_input[H_CONF_APP_ID]
     token: str = user_input[CONF_ACCESS_TOKEN]
     port: int | None = user_input.get(H_CONF_SERVER_PORT)
+    address: str | None = user_input.get(H_CONF_SERVER_INTERFACE)
     event_url: str | None = user_input.get(H_CONF_SERVER_URL)
+    update_he_url: bool = user_input.get(H_CONF_UPDATE_HE_URL)
 
     if event_url:
         event_url = cv.url(event_url)
 
-    hub = HubitatHub(host, app_id, token, port=port, event_url=event_url)
+    hub = HubitatHub(host, app_id, token, port=port, address=address, event_url=event_url, update_he_url=update_he_url)
     await hub.check_config()
 
     return {"label": f"Hubitat ({get_hub_short_id(hub)})", "hub": hub}
