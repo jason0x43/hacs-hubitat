@@ -14,11 +14,11 @@ homepage = "https://github.com/jason0x43/hacs-hubitat"
 
 [project.optional-dependencies]
 
-[tool.rye.scripts]
-test-lint = "pyright custom_components/hubitat"
-test-test = "pytest tests"
-test = { chain = ["test-lint", "test-test"] }
-pub = "python scripts/publish.py"
+#[tool.uv.scripts]
+#test-lint = "pyright custom_components/hubitat"
+#test-test = "pytest tests"
+#test = { chain = ["test-lint", "test-test"] }
+#pub = "python scripts/publish.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -27,7 +27,7 @@ filterwarnings = [
     "ignore:Inheritance class HomeAssistantApplication:DeprecationWarning",
 ]
 
-[tool.rye]
+[tool.uv]
 dev-dependencies = [
     "ruff",
     "pre-commit<3.0.0,>=2.4.0",
@@ -41,6 +41,8 @@ dev-dependencies = [
 include = ["custom_components/hubitat"]
 exclude = ["**/__pycache__"]
 extraPaths = ["__pypackages__/3.9/lib"]
+venvPath = "."
+venv = ".venv"
 stubPath = "."
 reportDuplicateImport = true
 reportMissingImports = true
