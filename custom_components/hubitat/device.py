@@ -1,5 +1,6 @@
 """Classes for managing Hubitat devices."""
 
+from abc import ABC
 from datetime import datetime
 from logging import getLogger
 from typing import Any, TypedDict, Unpack
@@ -24,8 +25,8 @@ class HubitatBase(Removable):
 
     def __init__(self, hub: Hub, device: Device) -> None:
         """Initialize a device."""
-        self._hub = hub
-        self._device = device
+        self._hub: Hub = hub
+        self._device: Device = device
 
     @property
     def device_id(self) -> str:
@@ -102,13 +103,13 @@ class HubitatEntityArgs(TypedDict):
     device: Device
 
 
-class HubitatEntity(HubitatBase, Entity, UpdateableEntity):
+class HubitatEntity(HubitatBase, Entity, UpdateableEntity, ABC):
     """An entity related to a Hubitat device."""
 
     def __init__(
         self,
         device_class: str | None = None,
-        temp=False,
+        temp: bool = False,
         **kwargs: Unpack[HubitatEntityArgs],
     ):
         """
@@ -124,11 +125,13 @@ class HubitatEntity(HubitatBase, Entity, UpdateableEntity):
         HubitatBase.__init__(self, **kwargs)
         UpdateableEntity.__init__(self)
 
-        self._attr_name = self._device.label
-        self._attr_unique_id = get_hub_device_id(self._hub, self._device)
-        self._attr_device_class = device_class
-        self._attr_should_poll = False
-        self._attr_device_info = get_device_info(self._hub, self._device)
+        self._attr_name: str | None = self._device.label
+        self._attr_unique_id: str | None = get_hub_device_id(self._hub, self._device)
+        self._attr_device_class: str | None = device_class
+        self._attr_should_poll: bool = False
+        self._attr_device_info: device_registry.DeviceInfo | None = get_device_info(
+            self._hub, self._device
+        )
         if not temp:
             self._hub.add_device_listener(self._device.id, self.handle_event)
             _LOGGER.debug(
@@ -142,9 +145,11 @@ class HubitatEntity(HubitatBase, Entity, UpdateableEntity):
         )
 
     @property
+    @override
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         return None
 
+    @override
     async def async_added_to_hass(self) -> None:
         _LOGGER.debug("Added %s with hass=%s", self, self.hass)
 
@@ -152,13 +157,13 @@ class HubitatEntity(HubitatBase, Entity, UpdateableEntity):
         """Fetch new data for this device."""
         await self._hub.refresh_device(self.device_id)
 
-    async def send_command(self, command: str, *args: int | str | None) -> None:
+    async def send_command(self, command: str, *args: float | str | None) -> None:
         """Send a command to this device."""
         arg = ",".join([str(a) for a in args]) if args else None
         await self._hub.send_command(self.device_id, command, arg)
         _LOGGER.debug("sent %s to %s", command, self.device_id)
 
-    def handle_event(self, event: Event) -> None:
+    def handle_event(self, _event: Event) -> None:
         """
         Handle a device event.
 
@@ -180,11 +185,12 @@ class HubitatEventEmitter(HubitatBase):
         # automatically do that as it does for entities.
         entry = self._hub.config_entry
         dreg = device_registry.async_get(self._hub.hass)
-        dreg.async_get_or_create(
+        _ = dreg.async_get_or_create(
             config_entry_id=entry.entry_id, **get_device_info(self._hub, self._device)
         )
         _LOGGER.debug("Created device for %s", self)
 
+    @override
     def __repr__(self) -> str:
         """Return the representation."""
         return f"<HubitatEventEmitter {self.device_name}>"

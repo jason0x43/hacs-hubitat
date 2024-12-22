@@ -1,7 +1,7 @@
 """Support for Hubitat thermostats."""
 
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any, Unpack
+from typing import TYPE_CHECKING, Any, Unpack, cast, override
 
 from custom_components.hubitat.const import TEMP_C, TEMP_F
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
@@ -91,44 +91,49 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         HubitatEntity.__init__(self, **kwargs)
         ClimateEntity.__init__(self)
 
-        self._attr_hvac_modes = [
+        self._attr_hvac_modes: list[HVACMode] = [
             HVACMode.AUTO,
             HVACMode.HEAT,
             HVACMode.HEAT_COOL,
             HVACMode.COOL,
             HVACMode.OFF,
         ]
-        self._attr_fan_modes = HASS_FAN_MODES
-        self._attr_supported_features = (
+        self._attr_fan_modes: list[str] | None = HASS_FAN_MODES
+        self._attr_supported_features: ClimateEntityFeature = (  # pyright: ignore[reportIncompatibleVariableOverride]
             ClimateEntityFeature.TARGET_TEMPERATURE
             | ClimateEntityFeature.PRESET_MODE
             | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
             | ClimateEntityFeature.FAN_MODE
         )
-        self._attr_precision = PRECISION_TENTHS
-        self._attr_unique_id = f"{super().unique_id}::climate"
+        self._attr_precision: float = PRECISION_TENTHS
+        self._attr_unique_id: str | None = f"{super().unique_id}::climate"
 
         # Support a lower minimum temperature than the HA default
-        self._attr_min_temp = 4.4
+        self._attr_min_temp: float = 4.4
 
         if hasattr(ClimateEntityFeature, "TURN_OFF"):
             self._attr_supported_features |= getattr(ClimateEntityFeature, "TURN_OFF")
-            self._enable_turn_on_off_backwards_compatibility = False
+            self._enable_turn_on_off_backwards_compatibility: bool = False
 
         self.load_state()
 
+    @override
     def load_state(self):
-        self._attr_current_humidity = self._get_current_humidity()
-        self._attr_current_temperature = self._get_current_temperature()
-        self._attr_fan_mode = self._get_fan_mode()
-        self._attr_hvac_mode = self._get_hvac_mode()
-        self._attr_hvac_action = self._get_hvac_action()
-        self._attr_preset_mode = self._get_preset_mode()
-        self._attr_preset_modes = self._get_preset_modes()
-        self._attr_target_temperature = self._get_target_temperature()
-        self._attr_target_temperature_high = self._get_target_temperature_high()
-        self._attr_target_temperature_low = self._get_target_temperature_low()
-        self._attr_temperature_unit = self._get_temperature_unit()
+        self._attr_current_humidity: int | None = self._get_current_humidity()
+        self._attr_current_temperature: float | None = self._get_current_temperature()
+        self._attr_fan_mode: str | None = self._get_fan_mode()
+        self._attr_hvac_mode: HVACMode | None = self._get_hvac_mode()
+        self._attr_hvac_action: HVACAction | None = self._get_hvac_action()
+        self._attr_preset_mode: str | None = self._get_preset_mode()
+        self._attr_preset_modes: list[str] | None = self._get_preset_modes()
+        self._attr_target_temperature: float | None = self._get_target_temperature()
+        self._attr_target_temperature_high: float | None = (
+            self._get_target_temperature_high()
+        )
+        self._attr_target_temperature_low: float | None = (
+            self._get_target_temperature_low()
+        )
+        self._attr_temperature_unit: str = self._get_temperature_unit()
 
     def _get_current_humidity(self) -> int | None:
         return self.get_int_attr(DeviceAttribute.HUMIDITY)
@@ -217,10 +222,12 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         return self._hub.temperature_unit
 
     @property
+    @override
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return _device_attrs
 
+    @override
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new target fan mode."""
         if fan_mode == FAN_ON:
@@ -228,6 +235,7 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         elif fan_mode == FAN_AUTO:
             await self.send_command(DeviceCommand.FAN_AUTO)
 
+    @override
     async def async_set_hvac_mode(self, hvac_mode: str) -> None:
         """Set new target hvac mode."""
         if hvac_mode == HVACMode.COOL:
@@ -239,6 +247,7 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         elif hvac_mode == HVACMode.OFF:
             await self.send_command(DeviceCommand.OFF)
 
+    @override
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
         if preset_mode == PRESET_AWAY:
@@ -251,29 +260,31 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
             await self.send_command(DeviceCommand.AWAY)
             await self.send_command(DeviceCommand.ECO)
 
-    async def async_set_temperature(self, **kwargs: Any) -> None:
+    @override
+    async def async_set_temperature(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
         """Set new target temperature."""
         if self.hvac_mode == HVACMode.HEAT_COOL or self.hvac_mode == HVACMode.AUTO:
-            temp_low = kwargs.get(ATTR_TARGET_TEMP_LOW)
-            temp_high = kwargs.get(ATTR_TARGET_TEMP_HIGH)
+            temp_low = cast(float | None, kwargs.get(ATTR_TARGET_TEMP_LOW))
+            temp_high = cast(float | None, kwargs.get(ATTR_TARGET_TEMP_HIGH))
             if temp_low is not None:
                 await self.send_command(DeviceCommand.SET_HEATING_SETPOINT, temp_low)
             if temp_high is not None:
                 await self.send_command(DeviceCommand.SET_COOLING_SETPOINT, temp_high)
         else:
-            temp = kwargs.get(ATTR_TEMPERATURE)
+            temp = cast(float | None, kwargs.get(ATTR_TEMPERATURE))
             if temp is not None:
                 if self.hvac_mode == HVACMode.COOL:
                     await self.send_command(DeviceCommand.SET_COOLING_SETPOINT, temp)
                 elif self.hvac_mode == HVACMode.HEAT:
                     await self.send_command(DeviceCommand.SET_HEATING_SETPOINT, temp)
 
-    async def async_turn_off(self, **kwargs: Any) -> None:
+    @override
+    async def async_turn_off(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
         """Turn off the thermostat."""
         await self.send_command("off")
 
 
-def is_thermostat(device: Device, overrides: dict[str, str] | None = None) -> bool:
+def is_thermostat(device: Device, _overrides: dict[str, str] | None = None) -> bool:
     """Return True if device looks like a thermostat."""
     return DeviceCapability.THERMOSTAT in device.capabilities
 
@@ -284,7 +295,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize thermostat devices."""
-    create_and_add_entities(
+    _ = create_and_add_entities(
         hass, entry, async_add_entities, "climate", HubitatThermostat, is_thermostat
     )
 

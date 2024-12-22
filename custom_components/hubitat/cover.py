@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Type, Unpack
+from typing import TYPE_CHECKING, Any, Unpack, cast, override
 
 from homeassistant.components.cover import (
     ATTR_POSITION as HA_ATTR_POSITION,
@@ -24,7 +24,7 @@ from .hubitatmaker import (
 _LOGGER = getLogger(__name__)
 
 
-class HubitatCover(HubitatEntity, CoverEntity):
+class HubitatCover(HubitatEntity, CoverEntity):  # pyright: ignore[reportIncompatibleVariableOverride]
     """Representation of a Hubitat cover."""
 
     _attribute: DeviceAttribute
@@ -42,10 +42,10 @@ class HubitatCover(HubitatEntity, CoverEntity):
         CoverEntity.__init__(self)
 
         self._attribute = attribute
-        self._attr_supported_features = features
-        self._attr_unique_id = f"{super().unique_id}::cover::{attribute}"
-        self._attr_name = f"{super().name} {self._attribute}".title()
-        self._device_attrs = (
+        self._attr_supported_features: CoverEntityFeature | None = features  # pyright: ignore[reportIncompatibleVariableOverride]
+        self._attr_unique_id: str | None = f"{super().unique_id}::cover::{attribute}"
+        self._attr_name: str | None = f"{super().name} {self._attribute}".title()
+        self._device_attrs: tuple[DeviceAttribute, ...] = (
             self._attribute,
             DeviceAttribute.LEVEL,
             DeviceAttribute.POSITION,
@@ -53,11 +53,14 @@ class HubitatCover(HubitatEntity, CoverEntity):
 
         self.load_state()
 
+    @override
     def load_state(self):
-        self._attr_current_cover_position = self._get_current_cover_position()
-        self._attr_is_closed = self._get_is_closed()
-        self._attr_is_closing = self._get_is_closing()
-        self._attr_is_opening = self._get_is_opening()
+        self._attr_current_cover_position: int | None = (
+            self._get_current_cover_position()
+        )
+        self._attr_is_closed: bool | None = self._get_is_closed()
+        self._attr_is_closing: bool | None = self._get_is_closing()
+        self._attr_is_opening: bool | None = self._get_is_opening()
 
     def _get_current_cover_position(self) -> int | None:
         pos = self.get_int_attr(DeviceAttribute.POSITION)
@@ -77,23 +80,27 @@ class HubitatCover(HubitatEntity, CoverEntity):
         return self.get_attr(self._attribute) == DeviceState.OPENING
 
     @property
+    @override
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return self._device_attrs
 
-    async def async_close_cover(self, **kwargs: Any) -> None:
+    @override
+    async def async_close_cover(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
         """Close the cover."""
         _LOGGER.debug("Closing %s", self.name)
         await self.send_command(DeviceCommand.CLOSE)
 
-    async def async_open_cover(self, **kwargs: Any) -> None:
+    @override
+    async def async_open_cover(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
         """Open the cover."""
         _LOGGER.debug("Opening %s", self.name)
         await self.send_command(DeviceCommand.OPEN)
 
-    async def async_set_cover_position(self, **kwargs: Any) -> None:
+    @override
+    async def async_set_cover_position(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
         """Move the cover to a specific position."""
-        pos = kwargs[HA_ATTR_POSITION]
+        pos = cast(str, kwargs[HA_ATTR_POSITION])
         _LOGGER.debug("Setting cover position to %s", pos)
         await self.send_command(DeviceCommand.SET_POSITION, pos)
 
@@ -175,7 +182,7 @@ class HubitatWindowControl(HubitatCover):
         )
 
 
-_COVER_CAPS: tuple[tuple[DeviceCapability, Type[HubitatCover]], ...] = (
+_COVER_CAPS: tuple[tuple[DeviceCapability, type[HubitatCover]], ...] = (
     (DeviceCapability.DOOR_CONTROL, HubitatGarageDoorControl),
     (DeviceCapability.GARAGE_DOOR_CONTROL, HubitatGarageDoorControl),
     (DeviceCapability.WINDOW_BLIND, HubitatWindowBlind),
@@ -191,15 +198,15 @@ async def async_setup_entry(
     """Initialize cover devices."""
     for cap in _COVER_CAPS:
 
-        def is_cover(device: Device, overrides: dict[str, str] | None = None) -> bool:
+        def is_cover(device: Device, _overrides: dict[str, str] | None = None) -> bool:
             return _is_cover_type(device, cap[0])
 
-        create_and_add_entities(
+        _ = create_and_add_entities(
             hass, entry, async_add_entities, "cover", cap[1], is_cover
         )
 
 
-def is_cover(dev: Device, overrides: dict[str, str] | None = None) -> bool:
+def is_cover(dev: Device, _overrides: dict[str, str] | None = None) -> bool:
     return (
         DeviceCapability.WINDOW_SHADE in dev.capabilities
         or DeviceCapability.WINDOW_BLIND in dev.capabilities

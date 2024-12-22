@@ -1,7 +1,7 @@
 """Support for Hubitat security keypads."""
 
 from logging import getLogger
-from typing import TYPE_CHECKING, Unpack
+from typing import TYPE_CHECKING, Any, Unpack, cast, override
 
 from homeassistant.components.alarm_control_panel import (
     AlarmControlPanelEntity,
@@ -13,6 +13,7 @@ from homeassistant.components.alarm_control_panel.const import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import StateType
 
 from .const import HassStateAttribute
 from .device import HubitatEntity, HubitatEntityArgs
@@ -27,7 +28,7 @@ from .hubitatmaker.types import Device
 
 try:
     from homeassistant.components.alarm_control_panel.const import (
-        AlarmControlPanelState,  # type: ignore
+        AlarmControlPanelState,  # pyright: ignore[reportAssignmentType]
     )
 except Exception:
     # TODO: Remove this code by 2025.11
@@ -35,17 +36,17 @@ except Exception:
     from enum import StrEnum
 
     from homeassistant.const import (
-        STATE_ALARM_ARMED_AWAY,  # type: ignore
-        STATE_ALARM_ARMED_HOME,  # type: ignore
-        STATE_ALARM_ARMED_NIGHT,  # type: ignore
-        STATE_ALARM_DISARMED,  # type: ignore
+        STATE_ALARM_ARMED_AWAY,  # pyright: ignore[reportAttributeAccessIssue,reportUnknownVariableType]
+        STATE_ALARM_ARMED_HOME,  # pyright: ignore[reportAttributeAccessIssue,reportUnknownVariableType]
+        STATE_ALARM_ARMED_NIGHT,  # pyright: ignore[reportAttributeAccessIssue,reportUnknownVariableType]
+        STATE_ALARM_DISARMED,  # pyright: ignore[reportAttributeAccessIssue,reportUnknownVariableType]
     )
 
     class AlarmControlPanelState(StrEnum):
-        ARMED_AWAY = STATE_ALARM_ARMED_AWAY
-        ARMED_HOME = STATE_ALARM_ARMED_HOME
-        ARMED_NIGHT = STATE_ALARM_ARMED_NIGHT
-        DISARMED = STATE_ALARM_DISARMED
+        ARMED_AWAY = cast(str, STATE_ALARM_ARMED_AWAY)
+        ARMED_HOME = cast(str, STATE_ALARM_ARMED_HOME)
+        ARMED_NIGHT = cast(str, STATE_ALARM_ARMED_NIGHT)
+        DISARMED = cast(str, STATE_ALARM_DISARMED)
 
 
 _LOGGER = getLogger(__name__)
@@ -69,9 +70,9 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
         """Initialize a Hubitat security keypad."""
         HubitatEntity.__init__(self, **kwargs)
         AlarmControlPanelEntity.__init__(self)
-        self._attr_unique_id = f"{super().unique_id}::alarm_control_panel"
-        self._attr_code_arm_required = False
-        self._attr_extra_state_attributes = {
+        self._attr_unique_id: str | None = f"{super().unique_id}::alarm_control_panel"
+        self._attr_code_arm_required: bool = False
+        self._attr_extra_state_attributes: dict[str, Any] = {
             HassStateAttribute.ALARM: self.alarm,
             HassStateAttribute.CODES: self.codes,
             HassStateAttribute.CODE_LENGTH: self.code_length,
@@ -80,7 +81,7 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
             HassStateAttribute.MAX_CODES: self.max_codes,
         }
 
-        self._attr_supported_features = (
+        self._attr_supported_features: AlarmControlPanelEntityFeature = (  # pyright: ignore[reportIncompatibleVariableOverride]
             AlarmControlPanelEntityFeature.ARM_AWAY
             | AlarmControlPanelEntityFeature.ARM_HOME
         )
@@ -91,15 +92,16 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
 
         self.load_state()
 
+    @override
     def load_state(self):
-        self._attr_changed_by = self._get_changed_by()
-        self._attr_code_format = self._get_code_format()
-        self._attr_alarm_state = self._get_alarm_state() # type: ignore
+        self._attr_changed_by: str | None = self._get_changed_by()
+        self._attr_code_format: CodeFormat | None = self._get_code_format()
+        self._attr_alarm_state: AlarmControlPanelState | None = self._get_alarm_state()  # pyright: ignore[reportIncompatibleVariableOverride]
 
         # TODO: remove this code by 2025.11; state will be handled by
         # _attr_alarm_state
         # see https://github.com/home-assistant/architecture/discussions/1140
-        self._attr_state = self._get_alarm_state()
+        self._attr_state: StateType = self._get_alarm_state()
 
     def _get_changed_by(self) -> str | None:
         """Last change triggered by."""
@@ -126,6 +128,7 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
         return None
 
     @property
+    @override
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return _device_attrs
@@ -159,21 +162,25 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
         """Return the maximum number of codes the keypad supports."""
         return self.get_int_attr(DeviceAttribute.MAX_CODES)
 
+    @override
     async def async_alarm_disarm(self, code: str | None = None) -> None:
         """Send disarm command."""
         _LOGGER.debug("Disarming %s", self.name)
         await self.send_command(DeviceCommand.DISARM)
 
+    @override
     async def async_alarm_arm_away(self, code: str | None = None) -> None:
         """Send arm away command."""
         _LOGGER.debug("Setting armed to 'Away' for %s", self.name)
         await self.send_command(DeviceCommand.ARM_AWAY)
 
+    @override
     async def async_alarm_arm_home(self, code: str | None = None) -> None:
         """Send arm home command."""
         _LOGGER.debug("Setting armed to 'Home' for %s", self.name)
         await self.send_command(DeviceCommand.ARM_HOME)
 
+    @override
     async def async_alarm_trigger(self, code: str | None = None) -> None:
         """Send alarm trigger command."""
         _LOGGER.debug("Triggering alarm %s", self.name)
@@ -205,7 +212,9 @@ class HubitatSecurityKeypad(HubitatEntity, AlarmControlPanelEntity):
         await self.send_command(DeviceCommand.SET_CODE_LENGTH, length)
 
 
-def is_security_keypad(device: Device, overrides: dict[str, str] | None = None) -> bool:
+def is_security_keypad(
+    device: Device, _overrides: dict[str, str] | None = None
+) -> bool:
     """Return True if device looks like a security keypad."""
     return DeviceCapability.SECURITY_KEYPAD in device.capabilities
 
@@ -216,7 +225,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize security keypad devices."""
-    create_and_add_entities(
+    _ = create_and_add_entities(
         hass,
         entry,
         async_add_entities,

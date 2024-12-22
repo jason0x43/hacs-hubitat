@@ -1,8 +1,10 @@
 import os
 import ssl
+from collections.abc import Mapping
 from logging import getLogger
 from ssl import SSLContext
-from typing import TYPE_CHECKING, Any, Callable, Mapping, TypeVar, cast
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
 
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 from homeassistant.config_entries import ConfigEntry
@@ -14,9 +16,19 @@ from homeassistant.const import (
     CONF_TEMPERATURE_UNIT,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant
 from homeassistant.helpers import device_registry
 from homeassistant.helpers.device_registry import DeviceEntry
+
+try:
+    from homeassistant.helpers.discovery_flow import (
+        DiscoveryKey,  # pyright: ignore[reportAssignmentType]
+    )
+except Exception:
+
+    class DiscoveryKey:
+        pass
+
 
 from .const import (
     ATTR_ATTRIBUTE,
@@ -61,7 +73,26 @@ M = TypeVar("M", bound=Removable)
 class Hub:
     """Representation of a Hubitat hub."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, index: int):
+    hass: HomeAssistant
+    config_entry: ConfigEntry
+    token: str
+    unsub_config_listener: CALLBACK_TYPE
+    device: Device
+
+    _temperature_unit: str
+    _hub_entity_id: str
+    _hub_device_listeners: list[Listener]
+    _device_listeners: dict[str, list[Listener]]
+    _hub: HubitatHub
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry,
+        index: int,
+        hub: HubitatHub,
+        device: Device,
+    ):
         """Initialize a Hubitat manager."""
         if CONF_HOST not in entry.data:
             raise ValueError("Missing host in config entry")
@@ -89,6 +120,10 @@ class Hub:
             self._hub_entity_id = f"hubitat.hub_{index}"
 
         self.unsub_config_listener = entry.add_update_listener(_update_entry)
+        self._hub_device_listeners = []
+        self._device_listeners = {}
+        self._hub = hub
+        self.device = device
 
     @property
     def app_id(self) -> str:
@@ -206,12 +241,14 @@ class Hub:
     async def set_mode(self, mode: str) -> None:
         """Set the hub mode"""
         _LOGGER.debug("Setting hub mode to %s", mode)
-        return await self._hub.set_mode(mode)
+        if self._hub:
+            await self._hub.set_mode(mode)
 
     async def set_hsm(self, mode: str) -> None:
         """Set the hub HSM"""
         _LOGGER.debug("Setting hub HSM to %s", mode)
-        return await self._hub.set_hsm(mode)
+        if self._hub:
+            await self._hub.set_hsm(mode)
 
     def set_temperature_unit(self, temp_unit: str) -> None:
         """Set the hub's temperature units."""
@@ -220,7 +257,8 @@ class Hub:
 
     def stop(self) -> None:
         """Stop the hub."""
-        self._hub.stop()
+        if self._hub:
+            self._hub.stop()
         self._device_listeners = {}
         self._hub_device_listeners = []
 
@@ -230,9 +268,17 @@ class Hub:
             await emitter.async_will_remove_from_hass()
         self.unsub_config_listener()
 
-    async def async_setup(self) -> bool:
+    @staticmethod
+    async def create(hass: HomeAssistant, entry: ConfigEntry, index: int) -> "Hub":
         """Initialize this hub instance."""
-        entry = self.config_entry
+
+        if CONF_HOST not in entry.data:
+            raise ValueError("Missing host in config entry")
+        if H_CONF_APP_ID not in entry.data:
+            raise ValueError("Missing app ID in config entry")
+        if CONF_ACCESS_TOKEN not in entry.data:
+            raise ValueError("Missing access token in config entry")
+
         url = entry.options.get(H_CONF_SERVER_URL, entry.data.get(H_CONF_SERVER_URL))
         port = entry.options.get(H_CONF_SERVER_PORT, entry.data.get(H_CONF_SERVER_PORT))
 
@@ -250,36 +296,37 @@ class Hub:
         ssl_key = entry.options.get(
             H_CONF_SERVER_SSL_KEY, entry.data.get(H_CONF_SERVER_SSL_KEY)
         )
-        ssl_context = await self.hass.async_add_executor_job(_create_ssl_context, ssl_cert, ssl_key)
+        ssl_context = await hass.async_add_executor_job(
+            _create_ssl_context, ssl_cert, ssl_key
+        )
+
+        host = cast(
+            str,
+            entry.options.get(CONF_HOST, entry.data.get(CONF_HOST)),
+        )
+        app_id = cast(str, entry.data.get(H_CONF_APP_ID))
+        token = cast(str, entry.data.get(CONF_ACCESS_TOKEN))
 
         _LOGGER.debug(
             "Initializing Hubitat hub with event server on port %s with SSL %s",
             port,
             "disabled" if ssl_context is None else "enabled",
         )
-        self._hub = HubitatHub(
-            self.host,
-            self.app_id,
-            self.token,
+        hubitat_hub = HubitatHub(
+            host,
+            app_id,
+            token,
             port=port,
             event_url=url,
             ssl_context=ssl_context,
         )
-
-        await self._hub.start()
-
-        self._hub_device_listeners: list[Listener] = []
-        self._device_listeners: dict[str, list[Listener]] = {}
-
-        hub = self._hub
-        hass = self.hass
-        config_entry = self.config_entry
+        await hubitat_hub.start()
 
         # setup proxy Device representing the hub that can be used for linked
         # entities
-        self.device = Device(
+        device = Device(
             {
-                "id": self.id,
+                "id": get_hub_short_id(hubitat_hub),
                 "name": HUB_DEVICE_NAME,
                 "label": HUB_DEVICE_NAME,
                 "model": "Cx",
@@ -287,12 +334,12 @@ class Hub:
                 "attributes": [
                     {
                         "name": "mode",
-                        "currentValue": self.mode,
+                        "currentValue": hubitat_hub.mode,
                         "dataType": "ENUM",
                     },
                     {
                         "name": "hsm_status",
-                        "currentValue": self.hsm_status,
+                        "currentValue": hubitat_hub.hsm_status,
                         "dataType": "ENUM",
                     },
                 ],
@@ -301,68 +348,70 @@ class Hub:
             }
         )
 
+        hub = Hub(hass, entry, index, hubitat_hub, device)
+        hass.data[DOMAIN][entry.entry_id] = hub
+
+        _LOGGER.debug(f"Set {entry.entry_id} on hass.data")
+
         # Add a listener for every device exported by the hub. The listener
         # will re-export the Hubitat event as a hubitat_event in HA if it
         # matches a trigger condition.
-        for device_id in hub.devices:
-            hub.add_device_listener(device_id, self.handle_event)
+        for device_id in hubitat_hub.devices:
+            hubitat_hub.add_device_listener(device_id, hub.handle_event)
 
         # Update device identifiers to include the Maker API instance ID to
         # ensure that devices coming from separate hubs (or Maker API installs)
         # are handled properly.
-        _update_device_ids(self.id, self.hass)
+        if hub.id:
+            _update_device_ids(hub.id, hass)
 
         # Initialize entities
-        await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
         _LOGGER.debug("Registered platforms")
 
         # Create an entity for the Hubitat hub with basic hub information
         hass.states.async_set(
-            self.entity_id,
+            hub.entity_id,
             "connected",
             {
-                CONF_ID: f"{hub.host}::{hub.app_id}",
-                CONF_HOST: hub.host,
+                CONF_ID: f"{hubitat_hub.host}::{hubitat_hub.app_id}",
+                CONF_HOST: hubitat_hub.host,
                 ATTR_HIDDEN: True,
-                CONF_TEMPERATURE_UNIT: self.temperature_unit,
+                CONF_TEMPERATURE_UNIT: hub.temperature_unit,
             },
         )
 
-        if self.mode_supported:
+        if hub.mode_supported:
 
             def handle_mode_event(event: Event):
-                self.device.update_attr(
-                    DeviceAttribute.MODE, cast(str, event.value), None
-                )
-                for listener in self._hub_device_listeners:
+                device.update_attr(DeviceAttribute.MODE, cast(str, event.value), None)
+                for listener in hub._hub_device_listeners:
                     listener(event)
 
-            self._hub.add_mode_listener(handle_mode_event)
-            if self.mode:
-                self.device.update_attr(DeviceAttribute.MODE, self.mode, None)
+            hub._hub.add_mode_listener(handle_mode_event)
+            if hub.mode:
+                hub.device.update_attr(DeviceAttribute.MODE, hub.mode, None)
 
-        if self.hsm_supported:
+        if hub.hsm_supported:
 
             def handle_hsm_status_event(event: Event):
-                self.device.update_attr(
+                device.update_attr(
                     DeviceAttribute.HSM_STATUS, cast(str, event.value), None
                 )
-                for listener in self._hub_device_listeners:
+                for listener in hub._hub_device_listeners:
                     listener(event)
 
-            self._hub.add_hsm_listener(handle_hsm_status_event)
-            if self.hsm_status:
-                self.device.update_attr(
-                    DeviceAttribute.HSM_STATUS, self.hsm_status, None
-                )
+            hub._hub.add_hsm_listener(handle_hsm_status_event)
+            if hub.hsm_status:
+                hub.device.update_attr(DeviceAttribute.HSM_STATUS, hub.hsm_status, None)
 
-        return True
+        return hub
 
     def async_update_device_registry(self) -> None:
         """Add a device for this hub to the device registry."""
         dreg = device_registry.async_get(self.hass)
-        dreg.async_get_or_create(
+        _ = dreg.async_get_or_create(
             config_entry_id=self.config_entry.entry_id,
             connections={(device_registry.CONNECTION_NETWORK_MAC, self._hub.mac)},
             identifiers={(DOMAIN, self.id)},
@@ -413,7 +462,9 @@ class Hub:
             H_CONF_SERVER_SSL_KEY,
             config_entry.data.get(H_CONF_SERVER_SSL_KEY),
         )
-        ssl_context = await self.hass.async_add_executor_job(_create_ssl_context, ssl_cert, ssl_key)
+        ssl_context = await hass.async_add_executor_job(
+            _create_ssl_context, ssl_cert, ssl_key
+        )
         await hub.set_ssl_context(ssl_context)
         _LOGGER.debug(
             "Set event server SSL cert to %s and SSL key to %s", ssl_cert, ssl_key
@@ -449,7 +500,7 @@ class Hub:
         self, device_id: str, command: str, arg: str | int | None
     ) -> None:
         """Send a device command to Hubitat."""
-        await self._hub.send_command(device_id, command, arg)
+        _ = await self._hub.send_command(device_id, command, arg)
 
     async def set_host(self, host: str) -> None:
         """Set the host address that the Hubitat hub is accessible at."""
@@ -464,9 +515,9 @@ class Hub:
     async def set_ssl_context(self, ssl_context: SSLContext | None) -> None:
         """Set the SSLContext that the event listener server will use."""
         if ssl_context is None:
-            _LOGGER.warn("Disabling SSL for event listener server")
+            _LOGGER.warning("Disabling SSL for event listener server")
         else:
-            _LOGGER.warn("Enabling SSL for event listener server")
+            _LOGGER.warning("Enabling SSL for event listener server")
         await self._hub.set_ssl_context(ssl_context)
 
     async def set_event_url(self, url: str | None) -> None:
@@ -481,7 +532,7 @@ class Hub:
                 try:
                     listener(event)
                 except Exception as e:
-                    _LOGGER.warn(f"Error handling event {event}: {e}")
+                    _LOGGER.warning(f"Error handling event {event}: {e}")
         if event.attribute in _TRIGGER_ATTRS:
             evt: dict[str, Any] = dict(event)
             evt[ATTR_ATTRIBUTE] = _TRIGGER_ATTR_MAP[event.attribute]
@@ -492,12 +543,12 @@ class Hub:
 
 
 async def _update_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
-    await hass.config_entries.async_reload(config_entry.entry_id)
+    _ = await hass.config_entries.async_reload(config_entry.entry_id)
 
 
 def get_hub(hass: HomeAssistant, config_entry_id: str) -> Hub:
     """Get the Hub device associated with a given config entry."""
-    return hass.data[DOMAIN][config_entry_id]
+    return cast(Hub, hass.data[DOMAIN][config_entry_id])
 
 
 def _create_ssl_context(ssl_cert: str | None, ssl_key: str | None) -> SSLContext | None:
@@ -550,20 +601,20 @@ def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:
                     _LOGGER.info(f"Removed dummy device {dev.identifiers}")
                 else:
                     try:
-                        int(dev_id)
+                        _ = int(dev_id)
                         new_devs[dev_id] = dev
                     except ValueError:
-                        _LOGGER.warn(f"Device ID in unknown format: {id_set[1]}")
+                        _LOGGER.warning(f"Device ID in unknown format: {id_set[1]}")
             else:
                 try:
                     # old device identifiers will use the bare Hubitat device
                     # ID as the second value in the tuple
-                    int(id_set[1])
+                    _ = int(id_set[1])
                     old_devs[id_set[1]] = dev
                 except ValueError:
-                    _LOGGER.warn(f"Device ID in unknown format: {id_set[1]}")
+                    _LOGGER.warning(f"Device ID in unknown format: {id_set[1]}")
         else:
-            _LOGGER.warn(f"Device identifier in unknown format: {id_set}")
+            _LOGGER.warning(f"Device identifier in unknown format: {id_set}")
 
         # Update any devices with 3-part identifiers to use 2-part identifiers in
     # the new format
@@ -575,7 +626,7 @@ def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:
             new_ids = {
                 (cast(tuple[str, str, str], id_set)[0], f"{id_set[1]}:{id_set[2]}")
             }
-            dreg.async_update_device(new_dev.id, new_identifiers=new_ids)
+            _ = dreg.async_update_device(new_dev.id, new_identifiers=new_ids)
             _LOGGER.info(
                 f"Updated identifiers of device {new_dev.identifiers} to {new_ids}"
             )
@@ -588,7 +639,7 @@ def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:
             dreg.async_remove_device(dev.id)
             _LOGGER.info(
                 f"Removed device {dev.identifiers} in favor of "
-                f"{new_devs[id].identifiers}"
+                + f"{new_devs[id].identifiers}"
             )
         else:
             # No new device exists with the same Hubitat device ID as this old
@@ -597,20 +648,23 @@ def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:
             dev_ids = list(dev.identifiers)
             id_set = dev_ids[0]
             new_ids = {(id_set[0], f"{hub_id}:{id_set[1]}")}
-            dreg.async_update_device(dev.id, new_identifiers=new_ids)
+            _ = dreg.async_update_device(dev.id, new_identifiers=new_ids)
             _LOGGER.info(
                 f"Updated identifiers of device {dev.identifiers} to {new_ids}"
             )
 
 
-HUB_TYPECHECK: Hub
-"""A hub instance that will only exist during development."""
-
-DEVICE_TYPECHECK: Device
-"""A device instance that will only exist during development."""
+# hub_typecheck: Hub
+# """A hub instance that will only exist during development."""
+#
+# device_typecheck: Device
+# """A device instance that will only exist during development."""
 
 if TYPE_CHECKING:
     test_hass = HomeAssistant("")
+    test_discovery_keys: MappingProxyType[str, tuple[DiscoveryKey, ...]] = (
+        MappingProxyType({})
+    )
     test_entry = ConfigEntry(
         version=1,
         domain="Hubitat",
@@ -618,6 +672,13 @@ if TYPE_CHECKING:
         data={},
         source="",
         minor_version=0,  # type: ignore
+        discovery_keys=test_discovery_keys,  # pyright: ignore[reportArgumentType]
+        options=None,
+        unique_id=None,
     )
-    HUB_TYPECHECK = Hub(hass=test_hass, entry=test_entry, index=0)
+    hubitat_hub = HubitatHub("", "", "")
+    device = Device({})
+    HUB_TYPECHECK = Hub(
+        hass=test_hass, entry=test_entry, index=0, hub=hubitat_hub, device=device
+    )
     DEVICE_TYPECHECK = Device({})

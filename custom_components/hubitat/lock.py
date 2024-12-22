@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Unpack
+from typing import TYPE_CHECKING, Any, Unpack, override
 
 from homeassistant.components.lock import LockEntity
 from homeassistant.config_entries import ConfigEntry
@@ -35,13 +35,14 @@ class HubitatLock(HubitatEntity, LockEntity):
         """Initialize a Hubitat lock."""
         HubitatEntity.__init__(self, **kwargs)
         LockEntity.__init__(self)
-        self._attr_unique_id = f"{super().unique_id}::lock"
+        self._attr_unique_id: str | None = f"{super().unique_id}::lock"
         self.load_state()
 
+    @override
     def load_state(self):
-        self._attr_code_format = self._get_code_format()
-        self._attr_is_locked = self._get_is_locked()
-        self._attr_extra_state_attributes = {
+        self._attr_code_format: str | None = self._get_code_format()
+        self._attr_is_locked: bool | None = self._get_is_locked()
+        self._attr_extra_state_attributes: dict[str, Any] = {
             HassStateAttribute.CODES: self.codes,
             HassStateAttribute.CODE_LENGTH: self.code_length,
             HassStateAttribute.LAST_CODE_NAME: self.last_code_name,
@@ -83,15 +84,18 @@ class HubitatLock(HubitatEntity, LockEntity):
         return self.get_int_attr(DeviceAttribute.MAX_CODES)
 
     @property
+    @override
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return _device_attrs
 
-    async def async_lock(self, **kwargs: Any) -> None:
+    @override
+    async def async_lock(self, **kwargs: Any) -> None: # pyright: ignore[reportAny]
         """Lock the lock."""
         await self.send_command(DeviceCommand.LOCK)
 
-    async def async_unlock(self, **kwargs: Any) -> None:
+    @override
+    async def async_unlock(self, **kwargs: Any) -> None: # pyright: ignore[reportAny]
         """Unlock the lock."""
         await self.send_command(DeviceCommand.UNLOCK)
 
@@ -108,7 +112,7 @@ class HubitatLock(HubitatEntity, LockEntity):
         await self.send_command(DeviceCommand.SET_CODE_LENGTH, length)
 
 
-def is_lock(device: Device, overrides: dict[str, str] | None = None) -> bool:
+def is_lock(device: Device, _overrides: dict[str, str] | None = None) -> bool:
     """Return True if device looks like a lock."""
     return DeviceCapability.LOCK in device.capabilities
 
@@ -119,7 +123,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize lock devices."""
-    create_and_add_entities(
+    _ = create_and_add_entities(
         hass, entry, async_add_entities, "lock", HubitatLock, is_lock
     )
 

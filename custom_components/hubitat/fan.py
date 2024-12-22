@@ -2,7 +2,7 @@
 
 from logging import getLogger
 from math import modf
-from typing import TYPE_CHECKING, Any, Unpack
+from typing import TYPE_CHECKING, Any, Unpack, override
 
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
@@ -38,7 +38,7 @@ class HubitatFan(HubitatEntity, FanEntity):
         """Initialize a Hubitat fan."""
         HubitatEntity.__init__(self, **kwargs)
         FanEntity.__init__(self)
-        self._attr_supported_features = FanEntityFeature.SET_SPEED
+        self._attr_supported_features: FanEntityFeature = FanEntityFeature.SET_SPEED  # pyright: ignore[reportIncompatibleVariableOverride]
 
         # Enable TURN_ON and TURN_OFF when used with a supporting version of
         # HomeAssistant
@@ -48,16 +48,17 @@ class HubitatFan(HubitatEntity, FanEntity):
             )
             self._enable_turn_on_off_backwards_compatibility  # type: ignore
 
-        self._attr_unique_id = f"{super().unique_id}::fan"
+        self._attr_unique_id: str | None = f"{super().unique_id}::fan"
         self.load_state()
 
+    @override
     def load_state(self):
         """Load the state of the fan."""
-        self._attr_is_on = self._get_is_on()
-        self._attr_percentage = self._get_percentage()
-        self._attr_preset_mode = self._get_preset_mode()
-        self._attr_preset_modes = self._get_preset_modes()
-        self._attr_speed_count = self._get_speed_count()
+        self._attr_is_on: bool | None = self._get_is_on()
+        self._attr_percentage: int | None = self._get_percentage()
+        self._attr_preset_mode: str | None = self._get_preset_mode()
+        self._attr_preset_modes: list[str] | None = self._get_preset_modes()
+        self._attr_speed_count: int = self._get_speed_count()
 
     def _get_is_on(self) -> bool:
         """Return true if the entity is on."""
@@ -83,14 +84,14 @@ class HubitatFan(HubitatEntity, FanEntity):
             _LOGGER.debug(f"returning {pct}%")
             return pct
         except Exception as e:
-            _LOGGER.warn(f"Error getting speed pct from reported speeds: {e}")
+            _LOGGER.warning(f"Error getting speed pct from reported speeds: {e}")
 
             try:
                 pct = ordered_list_item_to_percentage(DEFAULT_FAN_SPEEDS, speed)
                 _LOGGER.debug(f"returning {pct}%")
                 return pct
             except Exception as ex:
-                _LOGGER.warn(f"Error getting speed pct from default speeds: {ex}")
+                _LOGGER.warning(f"Error getting speed pct from default speeds: {ex}")
                 return None
 
     def _get_preset_mode(self) -> str | None:
@@ -111,6 +112,7 @@ class HubitatFan(HubitatEntity, FanEntity):
         return len(self.speeds)
 
     @property
+    @override
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return _device_attrs
@@ -134,11 +136,12 @@ class HubitatFan(HubitatEntity, FanEntity):
             or DEFAULT_FAN_SPEEDS
         )
 
+    @override
     async def async_turn_on(
         self,
         percentage: int | None = None,
         preset_mode: str | None = None,
-        **kwargs: Any,
+        **kwargs: Any,  # pyright: ignore[reportAny]
     ) -> None:
         """Turn on the switch."""
         _LOGGER.debug(
@@ -156,7 +159,8 @@ class HubitatFan(HubitatEntity, FanEntity):
         else:
             await self.send_command(DeviceCommand.SET_SPEED, DeviceState.ON)
 
-    async def async_turn_off(self, **kwargs) -> None:
+    @override
+    async def async_turn_off(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
         """Turn off the switch."""
         _LOGGER.debug("Turning off %s", self.name)
         if DeviceCapability.SWITCH in self._device.capabilities:
@@ -164,6 +168,7 @@ class HubitatFan(HubitatEntity, FanEntity):
         else:
             await self.send_command(DeviceCommand.SET_SPEED, DeviceState.OFF)
 
+    @override
     async def async_set_percentage(self, percentage: int) -> None:
         """Set the speed of the fan."""
         _LOGGER.debug("setting percentage to %d", percentage)
@@ -192,7 +197,9 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Initialize fan devices."""
-    create_and_add_entities(hass, entry, async_add_entities, "fan", HubitatFan, is_fan)
+    _ = create_and_add_entities(
+        hass, entry, async_add_entities, "fan", HubitatFan, is_fan
+    )
 
 
 if TYPE_CHECKING:

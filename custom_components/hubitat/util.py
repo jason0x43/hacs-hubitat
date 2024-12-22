@@ -9,7 +9,7 @@ from .error import DeviceError
 from .hubitatmaker.types import Device
 from .types import HasToken
 
-_token_hashes = {}
+_token_hashes: dict[str, str] = {}
 
 
 def get_token_hash(token: str) -> str:

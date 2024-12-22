@@ -1,7 +1,7 @@
 """Hubitat event entities."""
 
 from logging import getLogger
-from typing import Unpack
+from typing import Unpack, override
 
 from homeassistant.components.event import (
     EventDeviceClass,
@@ -26,7 +26,7 @@ ATTR_EVENTS = {
 }
 
 
-class HubitatButtonEventEntity(HubitatEntity, EventEntity):
+class HubitatButtonEventEntity(HubitatEntity, EventEntity):  # pyright: ignore[reportIncompatibleVariableOverride]
     """Representation of an Hubitat button event"""
 
     _button_id: str
@@ -37,13 +37,17 @@ class HubitatButtonEventEntity(HubitatEntity, EventEntity):
         EventEntity.__init__(self)
 
         self._button_id = button_id
-        self._attr_unique_id = f"{super().unique_id}::button_event::{self._button_id}"
-        self._attr_name = f"{super().name} button {self._button_id}".title()
-        self._attr_event_types = self.get_event_types()
+        self._attr_unique_id: str | None = (
+            f"{super().unique_id}::button_event::{self._button_id}"
+        )
+        self._attr_name: str | None = f"{super().name} button {self._button_id}".title()
+        self._attr_event_types: list[str] = self.get_event_types()
 
+    @override
     def load_state(self):
         pass
 
+    @override
     def handle_event(self, event: Event) -> None:
         if not self.enabled:
             return
@@ -72,7 +76,7 @@ async def async_setup_entry(
     """Initialize hubitat button events entities."""
     hub = get_hub(hass, config_entry.entry_id)
 
-    event_entities = []
+    event_entities: list[HubitatButtonEventEntity] = []
     for id in hub.devices:
         device = hub.devices[id]
         if DeviceAttribute.NUM_BUTTONS not in device.attributes:

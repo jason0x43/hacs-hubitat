@@ -2,7 +2,8 @@
 
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Pattern, Type, Unpack
+from re import Pattern
+from typing import TYPE_CHECKING, Unpack, override
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -37,7 +38,7 @@ _CONTACT_INFOS: list[ContactInfo] = [
 ]
 
 
-class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):
+class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):  # pyright: ignore[reportIncompatibleVariableOverride]
     """A generic Hubitat sensor."""
 
     _active_state: str
@@ -56,14 +57,20 @@ class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):
 
         self._attribute = attribute
         self._active_state = active_state
-        self._attr_unique_id = f"{super().unique_id}::binary_sensor::{self._attribute}"
-        self._attr_name = f"{super().name} {self._attribute}".title()
+        self._attr_unique_id: str | None = (
+            f"{super().unique_id}::binary_sensor::{self._attribute}"
+        )
+        self._attr_name: str | None = f"{super().name} {self._attribute}".title()
         self.load_state()
 
+    @override
     def load_state(self):
-        self._attr_is_on = self.get_str_attr(self._attribute) == self._active_state
+        self._attr_is_on: bool | None = (
+            self.get_str_attr(self._attribute) == self._active_state
+        )
 
     @property
+    @override
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return (self._attribute,)
@@ -240,7 +247,7 @@ class HubitatValveSensor(HubitatBinarySensor):
 
 
 # Presence is handled specially in async_setup_entry()
-_SENSOR_ATTRS: tuple[tuple[DeviceAttribute, Type[HubitatBinarySensor]], ...] = (
+_SENSOR_ATTRS: tuple[tuple[DeviceAttribute, type[HubitatBinarySensor]], ...] = (
     (DeviceAttribute.ACCELERATION, HubitatAccelerationSensor),
     (DeviceAttribute.CARBON_MONOXIDE, HubitatCoSensor),
     (DeviceAttribute.CONTACT, HubitatContactSensor),
@@ -267,10 +274,10 @@ async def async_setup_entry(
 
     for attr in _SENSOR_ATTRS:
 
-        def is_sensor(device: Device, overrides: dict[str, str] | None = None) -> bool:
+        def is_sensor(device: Device, _overrides: dict[str, str] | None = None) -> bool:
             return attr[0] in device.attributes
 
-        create_and_add_entities(
+        _ = create_and_add_entities(
             hass, config_entry, async_add_entities, "binary_sensor", attr[1], is_sensor
         )
 

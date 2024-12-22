@@ -53,6 +53,7 @@ reportUnusedClass = true
 reportUnusedFunction = true
 reportUnusedImport = true
 reportUnusedVariable = true
+reportExplicitAny = false
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "PYI", "I"]

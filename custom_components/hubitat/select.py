@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Unpack
+from typing import TYPE_CHECKING, Unpack, override
 
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 from homeassistant.components.select import SelectEntity
@@ -17,23 +17,24 @@ class HubitatSelect(HubitatEntity, SelectEntity):
         self,
         *,
         attribute: DeviceAttribute,
-        options: list[str] = [],
+        options: list[str] | None = None,
         **kwargs: Unpack[HubitatEntityArgs],
     ):
         HubitatEntity.__init__(self, **kwargs)
         SelectEntity.__init__(self)
 
-        self._attr_options = options
+        self._attr_options: list[str] = options or []
         self._attribute = attribute
-        self._attr_name = f"{super().name} {self._attribute}".title()
-        self._attr_current_option = None
+        self._attr_name: str | None = f"{super().name} {self._attribute}".title()
+        self._attr_current_option: str | None = None
 
         # TODO: this should be using ::select:: instead of ::sensor::, but the
         # published integration has been using ::sensor:: for a while now;
         # migrate it at some point
-        self._attr_unique_id = f"{super().unique_id}::sensor::{attribute}"
+        self._attr_unique_id: str | None = f"{super().unique_id}::sensor::{attribute}"
         self.load_state()
 
+    @override
     def load_state(self):
         self._attr_current_option = self._get_current_option()
 
@@ -42,6 +43,7 @@ class HubitatSelect(HubitatEntity, SelectEntity):
         return self.get_str_attr(self._attribute)
 
     @property
+    @override
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return (self._attribute,)
@@ -53,6 +55,7 @@ class HubitatModeSelect(HubitatSelect):
             attribute=DeviceAttribute.MODE, options=kwargs["hub"].modes or [], **kwargs
         )
 
+    @override
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
         await self._hub.set_mode(option)

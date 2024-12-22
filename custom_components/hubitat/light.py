@@ -3,7 +3,7 @@
 import json
 import re
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Unpack, cast
+from typing import TYPE_CHECKING, Any, Unpack, cast, override
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -51,17 +51,22 @@ class HubitatLight(HubitatEntity, LightEntity):
         """Initialize a Hubitat light."""
         HubitatEntity.__init__(self, **kwargs)
         LightEntity.__init__(self)
-        self._attr_unique_id = f"{super().unique_id}::light"
-        self._attr_supported_color_modes = self._get_supported_color_modes()
-        self._attr_supported_features = self._get_supported_features()
+        self._attr_unique_id: str | None = f"{super().unique_id}::light"
+        self._attr_supported_color_modes: set[ColorMode] | set[str] | None = (
+            self._get_supported_color_modes()
+        )
+        self._attr_supported_features: LightEntityFeature = (  # pyright: ignore[reportIncompatibleVariableOverride]
+            self._get_supported_features()
+        )
         self.load_state()
 
+    @override
     def load_state(self):
-        self._attr_color_mode = self._get_color_mode()
-        self._attr_brightness = self._get_brightness()
-        self._attr_color_temp = self._get_color_temp()
-        self._attr_hs_color = self._get_hs_color()
-        self._attr_is_on = self._get_is_on()
+        self._attr_color_mode: ColorMode | str | None = self._get_color_mode()
+        self._attr_brightness: int | None = self._get_brightness()
+        self._attr_color_temp: int | None = self._get_color_temp()
+        self._attr_hs_color: tuple[float, float] | None = self._get_hs_color()
+        self._attr_is_on: bool | None = self._get_is_on()
 
     def _get_color_mode(self) -> ColorMode | str | None:
         """Return this light's color mode.
@@ -128,7 +133,7 @@ class HubitatLight(HubitatEntity, LightEntity):
 
     def _get_supported_color_modes(self) -> set[ColorMode] | set[str] | None:
         caps = self._device.capabilities
-        supported_modes = set()
+        supported_modes: set[ColorMode] = set()
 
         if DeviceCapability.COLOR_CONTROL in caps:
             supported_modes.add(ColorMode.HS)
@@ -156,6 +161,7 @@ class HubitatLight(HubitatEntity, LightEntity):
         return features
 
     @property
+    @override
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return _device_attrs
@@ -165,7 +171,8 @@ class HubitatLight(HubitatEntity, LightEntity):
         """Return the name of this light's current color."""
         return self.get_str_attr(DeviceAttribute.COLOR_NAME)
 
-    async def async_turn_on(self, **kwargs: Any) -> None:
+    @override
+    async def async_turn_on(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
         """Turn on the light."""
         _LOGGER.debug(f"Turning on {self.name} with {kwargs}")
 
@@ -173,18 +180,18 @@ class HubitatLight(HubitatEntity, LightEntity):
         caps = self._device.capabilities
 
         if ATTR_BRIGHTNESS in kwargs and DeviceCapability.SWITCH_LEVEL in caps:
-            props["level"] = round(100 * kwargs[ATTR_BRIGHTNESS] / 255)
+            props["level"] = round(100 * cast(float, kwargs[ATTR_BRIGHTNESS]) / 255)
 
         if ATTR_TRANSITION in kwargs:
             props["time"] = kwargs[ATTR_TRANSITION]
 
         if ATTR_HS_COLOR in kwargs and DeviceCapability.COLOR_CONTROL in caps:
             # Hubitat hue is from 0 - 100
-            props["hue"] = round(100 * kwargs[ATTR_HS_COLOR][0] / 360)
+            props["hue"] = round(100 * cast(float, kwargs[ATTR_HS_COLOR][0]) / 360)
             props["sat"] = kwargs[ATTR_HS_COLOR][1]
 
         if ATTR_COLOR_TEMP in kwargs and DeviceCapability.COLOR_TEMP in caps:
-            mireds = kwargs[ATTR_COLOR_TEMP]
+            mireds = cast(float, kwargs[ATTR_COLOR_TEMP])
             props["temp"] = round(color_util.color_temperature_mired_to_kelvin(mireds))
 
         _LOGGER.debug(f"Light {self.name} turn-on props: {props}")
@@ -253,11 +260,12 @@ class HubitatLight(HubitatEntity, LightEntity):
         if ATTR_FLASH in kwargs and LightEntityFeature.FLASH in self.supported_features:
             await self.send_command(DeviceCommand.FLASH)
 
-    async def async_turn_off(self, **kwargs: Any) -> None:
+    @override
+    async def async_turn_off(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
         """Turn off the light."""
         _LOGGER.debug(f"Turning off {self.name}")
         if ATTR_TRANSITION in kwargs:
-            time = kwargs[ATTR_TRANSITION]
+            time = cast(float, kwargs[ATTR_TRANSITION])
             await self.send_command(DeviceCommand.SET_LEVEL, 0, time)
         else:
             await self.send_command(DeviceCommand.OFF)
@@ -298,7 +306,7 @@ def is_light(device: Device, overrides: dict[str, str] | None = None) -> bool:
 
 
 def is_definitely_light(
-    device: Device, overrides: dict[str, str] | None = None
+    device: Device, _overrides: dict[str, str] | None = None
 ) -> bool:
     """Return True if the device has light-specific capabilities."""
     return any(cap in device.capabilities for cap in LIGHT_CAPABILITIES)
@@ -310,7 +318,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize light devices."""
-    create_and_add_entities(
+    _ = create_and_add_entities(
         hass, config_entry, async_add_entities, "light", HubitatLight, is_light
     )
 

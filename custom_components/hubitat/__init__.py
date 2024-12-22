@@ -1,8 +1,9 @@
 """The Hubitat integration."""
+
 import re
 from asyncio import gather
 from logging import getLogger
-from typing import Any
+from typing import Any, cast
 
 import voluptuous as vol
 
@@ -22,36 +23,36 @@ _LOGGER = getLogger(__name__)
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 
 
-async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
+async def async_setup(_hass: HomeAssistant, _config: dict[str, Any]) -> bool:
     """Legacy setup -- not implemented."""
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up Hubitat from a config entry."""
+
+    _LOGGER.debug(f"Setting up Hubitat for {config_entry.entry_id}")
+
     if DOMAIN not in hass.data:
         hass.data[DOMAIN] = {}
 
-    hub = Hub(hass, config_entry, len(hass.data[DOMAIN]) + 1)
-
-    hass.data[DOMAIN][config_entry.entry_id] = hub
-
-    if not await hub.async_setup():
-        return False
+    hub: Hub = await Hub.create(
+        hass, config_entry, len(cast(dict[str, Any], hass.data[DOMAIN])) + 1
+    )
 
     hub.async_update_device_registry()
 
     async_register_services(hass, config_entry)
 
-    def stop_hub(event: Event) -> None:
+    def stop_hub(_event: Event) -> None:
         hub.stop()
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_hub)
+    _ = hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_hub)
 
     # If this config entry's title uses a MAC address, rename it to use the hub
     # ID
     if re.match(r"Hubitat \(\w{2}(:\w{2}){5}\)", config_entry.title):
-        hass.config_entries.async_update_entry(
+        _ = hass.config_entries.async_update_entry(
             config_entry, title=f"Hubitat ({hub.id})"
         )
 
@@ -84,6 +85,6 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     _LOGGER.debug(f"Unloaded all components for {config_entry.entry_id}")
 
     if unload_ok:
-        hass.data[DOMAIN].pop(config_entry.entry_id)
+        cast(dict[str, Any], hass.data[DOMAIN]).pop(config_entry.entry_id)
 
     return unload_ok

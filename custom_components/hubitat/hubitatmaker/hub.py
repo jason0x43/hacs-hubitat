@@ -1,12 +1,14 @@
 """Hubitat API."""
+
 import asyncio
 import json
 import socket
+from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from logging import getLogger
 from ssl import SSLContext
 from types import MappingProxyType
-from typing import Any, Callable, Iterator, Mapping
+from typing import Any, Callable, Literal, cast, override
 from urllib.parse import ParseResult, quote, urlparse
 
 import aiohttp
@@ -15,9 +17,9 @@ from aiohttp.client_exceptions import (
     ContentTypeError,
 )
 
-from . import server
 from .const import ID_HSM_STATUS, ID_MODE, DeviceAttribute
 from .error import InvalidConfig, InvalidMode, InvalidToken, RequestError
+from .server import Server, create_server
 from .types import Device, Event, Mode
 
 Listener = Callable[[Event], None]
@@ -35,14 +37,15 @@ class Hub:
     the hub to push it state updates for devices.
     """
 
-    api_url: str
+    api_url: str | None = None
+    base_url: str | None = None
     app_id: str
-    host: str
-    scheme: str
+    host: str | None = None
+    scheme: str | None = None
     token: str
     mac: str
 
-    _server: server.Server
+    _server: Server | None = None
 
     def __init__(
         self,
@@ -78,21 +81,22 @@ class Hub:
         self._devices: dict[str, Device] = {}
         self._listeners: dict[str, list[Listener]] = {}
         self._modes: list[Mode] = []
-        self._mode_supported = None
+        self._mode_supported: bool | None = None
         self._hsm_status: str | None = None
-        self._hsm_supported = None
+        self._hsm_supported: bool | None = None
 
-        self.event_url = _get_event_url(port, event_url)
-        self.port = _get_event_port(port, event_url)
+        self.event_url: str | None = _get_event_url(port, event_url)
+        self.port: int | None = _get_event_port(port, event_url)
         self.app_id = app_id
         self.token = access_token
         self.mac = ""
-        self.ssl_context = ssl_context
+        self.ssl_context: SSLContext | None = ssl_context
 
         self.set_host(host)
 
         _LOGGER.info("Created hub %s", self)
 
+    @override
     def __repr__(self) -> str:
         """Return a string representation of this hub."""
         return f"<Hub host={self.host} app_id={self.app_id}>"
@@ -168,7 +172,7 @@ class Hub:
         except aiohttp.ClientError as e:
             raise ConnectionError(str(e))
 
-    async def load_devices(self, force_refresh=False) -> None:
+    async def load_devices(self, force_refresh: bool = False) -> None:
         """Load the current state of all devices."""
         if force_refresh or len(self._devices) == 0:
             devices: list[dict[str, Any]] = await self._api_request("devices")
@@ -176,7 +180,7 @@ class Hub:
 
             # load devices sequentially to avoid overloading the hub
             for dev in devices:
-                await self._load_device(dev["id"], force_refresh)
+                await self._load_device(cast(str, dev["id"]), force_refresh)
 
     async def start(self) -> None:
         """Download initial state data, and start an event server if requested.
@@ -229,10 +233,13 @@ class Hub:
         if arg:
             path += f"/{arg}"
         _LOGGER.debug("Sending command %s(%s) to %s", command, arg, device_id)
-        return await self._api_request(path)
+        return cast(dict[str, Any], await self._api_request(path))
 
     async def set_event_url(self, event_url: str | None) -> None:
         """Set the URL that Hubitat will POST device events to."""
+        if not self._server:
+            return
+
         if not event_url:
             event_url = self._server.url
         url = quote(str(event_url), safe="")
@@ -267,8 +274,10 @@ class Hub:
         host_url = urlparse(host)
         self.scheme = host_url.scheme or "http"
         self.host = host_url.netloc or host_url.path
-        self.base_url = f"{self.scheme}://{self.host}"
-        self.api_url = f"{self.base_url}/apps/api/{self.app_id}"
+
+        base_url = f"{self.scheme}://{self.host}"
+        self.base_url = base_url
+        self.api_url = f"{base_url}/apps/api/{self.app_id}"
 
     async def set_port(self, port: int) -> None:
         """Set the port that the event listener server will listen on.
@@ -309,17 +318,18 @@ class Hub:
     def _process_event(self, event: dict[str, Any]) -> None:
         """Process an event received from the hub."""
         try:
-            content = event["content"]
+            content = cast(dict[str, Any], event["content"])
             _LOGGER.debug("Received event: %s", content)
         except KeyError:
             _LOGGER.warning("Received invalid event: %s", event)
             return
 
         if content["deviceId"] is not None:
-            device_id = content["deviceId"]
-            self._update_device_attr(
-                device_id, content["name"], content["value"], content["unit"]
-            )
+            device_id = cast(str, content["deviceId"])
+            name = cast(DeviceAttribute, content["name"])
+            value = cast(int | str, content["value"])
+            unit = cast(str, content["unit"])
+            self._update_device_attr(device_id, name, value, unit)
 
             evt = Event(content)
 
@@ -327,7 +337,7 @@ class Hub:
                 for listener in self._listeners[device_id]:
                     listener(evt)
         elif content["name"] == "mode":
-            name = content["value"]
+            name = cast(str, content["value"])
             mode_set = False
             for mode in self._modes:
                 if mode.name == name:
@@ -375,11 +385,11 @@ class Hub:
         except KeyError:
             _LOGGER.warning("Tried to update unknown attribute %s", attr_name)
 
-    async def _load_device(self, device_id: str, force_refresh=False) -> None:
+    async def _load_device(self, device_id: str, force_refresh: bool = False) -> None:
         """Return full info for a specific device."""
         if force_refresh or device_id not in self._devices:
             _LOGGER.debug("Loading device %s", device_id)
-            data = await self._api_request(f"devices/{device_id}")
+            data = cast(dict[str, Any], await self._api_request(f"devices/{device_id}"))
             try:
                 if device_id in self._devices:
                     self._devices[device_id].update_state(data)
@@ -402,7 +412,9 @@ class Hub:
         _LOGGER.debug("Loaded modes")
         self._modes = [Mode(m) for m in modes]
 
-    async def _api_request(self, path: str, method="GET") -> Any:
+    async def _api_request(  # pyright: ignore[reportAny]
+        self, path: str, method: Literal["GET", "POST"] = "GET"
+    ) -> Any:
         """Make a Maker API request."""
         params = {"access_token": self.token}
 
@@ -420,7 +432,7 @@ class Hub:
                             if attempt < MAX_REQUEST_ATTEMPT_COUNT:
                                 _LOGGER.debug(
                                     "%s request to %s failed with code %d: %s."
-                                    " Retrying...",
+                                    + " Retrying...",
                                     method,
                                     path,
                                     resp.status,
@@ -440,13 +452,13 @@ class Hub:
                         # sometimes mis-reports the content type as text/html
                         # even though the data is JSON
                         text = await resp.text()
-                        data = json.loads(text)
+                        data = json.loads(text)  # pyright: ignore[reportAny]
                         if "error" in data and data["error"]:
                             raise RequestError(resp)
-                        return data
+                        return data  # pyright: ignore[reportAny]
                     except ContentTypeError as e:
                         text = await resp.text()
-                        _LOGGER.warn("Unable to parse as JSON: %s", text)
+                        _LOGGER.warning("Unable to parse as JSON: %s", text)
                         raise e
             except (
                 ClientConnectionError,
@@ -475,9 +487,9 @@ class Hub:
         # machine and the Hubitat hub are on the same network.
         with _open_socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
             s.connect((self.host, 80))
-            address = s.getsockname()[0]
+            address: str = s.getsockname()[0]
 
-        self._server = server.create_server(
+        self._server = create_server(
             self._process_event, address, self.port or 0, self.ssl_context
         )
         self._server.start()
@@ -492,9 +504,12 @@ class Hub:
 
 
 @contextmanager
-def _open_socket(*args: Any, **kwargs: Any) -> Iterator[socket.socket]:
+def _open_socket(
+    family: socket.AddressFamily | int = -1,
+    type: socket.SocketKind | int = -1,
+) -> Iterator[socket.socket]:
     """Open a socket as a context manager."""
-    s = socket.socket(*args, **kwargs)
+    s = socket.socket(family, type)
     try:
         yield s
     finally:

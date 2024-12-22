@@ -2,7 +2,7 @@
 
 import json
 from subprocess import check_call, getoutput
-from typing import cast
+from typing import Any, cast
 
 import tomlkit
 from tomlkit.container import Container
@@ -16,12 +16,12 @@ def update_pyproject(new_version: str):
     project["version"] = new_version
 
     with open("pyproject.toml", "w") as f:
-        tomlkit.dump(pyproject, f)
+        tomlkit.dump(pyproject, f)  # pyright: ignore[reportUnknownMemberType]
 
 
 def update_manifest(new_version: str):
     with open("custom_components/hubitat/manifest.json") as f:
-        manifest = json.load(f)
+        manifest: dict[str, Any] = json.load(f)
 
     manifest["version"] = new_version
 
@@ -32,8 +32,8 @@ def update_manifest(new_version: str):
 latest = getoutput("git describe --tags --abbrev=0")
 version = latest[1:]
 [major, minor, patch] = version.split(".")
-if '-pre' in patch:
-    patch = int(patch.split('-')[0])
+if "-pre" in patch:
+    patch = int(patch.split("-")[0])
 else:
     patch = int(patch) + 1
 new_version = f"{major}.{minor}.{patch}"
@@ -45,7 +45,7 @@ if input(f"Publish version {new_version} [y/N]? ") != "y":
 update_pyproject(new_version)
 update_manifest(new_version)
 
-check_call('git commit --all -m "chore: update version number"', shell=True)
-check_call(f"git tag v{new_version}", shell=True)
-check_call("git push", shell=True)
-check_call("git push --tags", shell=True)
+_ = check_call('git commit --all -m "chore: update version number"', shell=True)
+_ = check_call(f"git tag v{new_version}", shell=True)
+_ = check_call("git push", shell=True)
+_ = check_call("git push --tags", shell=True)

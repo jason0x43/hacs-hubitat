@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import Callable, Type, TypeVar
+from typing import Callable, TypeVar
 
 from custom_components.hubitat.const import Platform
 from custom_components.hubitat.util import get_device_overrides
@@ -22,7 +22,7 @@ def create_and_add_entities(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
     platform: Platform,
-    EntityClass: Type[E],
+    EntityClass: type[E],
     is_type: Callable[[Device, dict[str, str] | None], bool],
 ) -> list[E]:
     """Create entites and add them to the entity registry."""

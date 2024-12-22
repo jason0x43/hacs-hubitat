@@ -3,7 +3,7 @@
 import re
 from enum import StrEnum
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Unpack
+from typing import TYPE_CHECKING, Any, Unpack, override
 
 import voluptuous as vol
 
@@ -46,35 +46,39 @@ class HubitatSwitch(HubitatEntity, SwitchEntity):
         """Initialize a Hubitat switch."""
         HubitatEntity.__init__(self, **kwargs)
         SwitchEntity.__init__(self)
-        self._attr_device_class = (
+        self._attr_device_class: SwitchDeviceClass = (  # pyright: ignore[reportIncompatibleVariableOverride]
             SwitchDeviceClass.SWITCH
             if _NAME_TEST.search(self._device.label)
             else SwitchDeviceClass.OUTLET
         )
-        self._attr_unique_id = f"{super().unique_id}::switch"
+        self._attr_unique_id: str | None = f"{super().unique_id}::switch"
         if type != SwitchType.SWITCH:
             self._attr_unique_id += f"::{type}"
 
         self.load_state()
 
+    @override
     def load_state(self):
-        self._attr_is_on = self._get_is_on()
+        self._attr_is_on: bool | None = self._get_is_on()
 
     def _get_is_on(self) -> bool:
         """Return True if the switch is on."""
         return self.get_str_attr(DeviceAttribute.SWITCH) == "on"
 
     @property
+    @override
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return (DeviceAttribute.SWITCH, DeviceAttribute.POWER)
 
-    async def async_turn_on(self, **kwargs: Any) -> None:
+    @override
+    async def async_turn_on(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
         """Turn on the switch."""
         _LOGGER.debug(f"Turning on {self.name} with {kwargs}")
         await self.send_command(DeviceCommand.ON)
 
-    async def async_turn_off(self, **kwargs: Any) -> None:
+    @override
+    async def async_turn_off(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
         """Turn off the switch."""
         _LOGGER.debug(f"Turning off {self.name}")
         await self.send_command("off")
@@ -95,10 +99,11 @@ class HubitatAlarm(HubitatSwitch):
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         """Initialize a Hubitat alarm."""
         super().__init__(type=SwitchType.ALARM, **kwargs)
-        self._attr_name = f"{super(HubitatEntity, self).name} Alarm".title()
-        self._attr_icon = ICON_ALARM
+        self._attr_name: str | None = f"{super(HubitatEntity, self).name} Alarm".title()
+        self._attr_icon: str | None = ICON_ALARM
 
-    async def async_turn_on(self, **kwargs: Any) -> None:
+    @override
+    async def async_turn_on(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
         """Turn on the alarm."""
         _LOGGER.debug("Activating alarm %s", self.name)
         await self.send_command(DeviceCommand.BOTH)
@@ -126,12 +131,12 @@ def is_switch(device: Device, overrides: dict[str, str] | None = None) -> bool:
     )
 
 
-def is_energy_meter(device: Device, overrides: dict[str, str] | None = None) -> bool:
+def is_energy_meter(device: Device, _overrides: dict[str, str] | None = None) -> bool:
     """Return True if device can measure power."""
     return DeviceCapability.POWER_METER in device.capabilities
 
 
-def is_alarm(device: Device, overrides: dict[str, str] | None = None) -> bool:
+def is_alarm(device: Device, _overrides: dict[str, str] | None = None) -> bool:
     """Return True if the device is an alarm."""
     return DeviceCapability.ALARM in device.capabilities
 
@@ -161,7 +166,7 @@ async def async_setup_entry(
 ) -> None:
     """Initialize switch devices."""
 
-    create_and_add_entities(
+    _ = create_and_add_entities(
         hass,
         config_entry,
         async_add_entities,
@@ -170,7 +175,7 @@ async def async_setup_entry(
         is_simple_switch,
     )
 
-    create_and_add_entities(
+    _ = create_and_add_entities(
         hass,
         config_entry,
         async_add_entities,
@@ -179,7 +184,7 @@ async def async_setup_entry(
         is_smart_switch,
     )
 
-    create_and_add_event_emitters(hass, config_entry, is_button_controller)
+    _ = create_and_add_event_emitters(hass, config_entry, is_button_controller)
 
     alarms = create_and_add_entities(
         hass, config_entry, async_add_entities, "switch", HubitatAlarm, is_alarm

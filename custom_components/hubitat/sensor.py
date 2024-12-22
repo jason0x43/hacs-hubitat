@@ -4,7 +4,7 @@ import re
 from datetime import date, datetime
 from decimal import Decimal
 from logging import getLogger
-from typing import TYPE_CHECKING, Optional, Type, Unpack
+from typing import TYPE_CHECKING, Unpack, override
 
 from custom_components.hubitat.hubitatmaker.const import DeviceCapability
 from custom_components.hubitat.util import to_display_name
@@ -89,24 +89,30 @@ class HubitatSensor(HubitatEntity, SensorEntity):
         )
 
         self._attribute = attribute
-        self._attr_name = f"{super(HubitatEntity, self).name} {attr_name}".title()
-        self._attr_native_unit_of_measurement = unit
-        self._attr_device_class = device_class
-        self._attr_state_class = state_class
-        self._attr_unique_id = f"{super().unique_id}::sensor::{attribute}"
-        self._attr_entity_registry_enabled_default = (
+        self._attr_name: str | None = (
+            f"{super(HubitatEntity, self).name} {attr_name}".title()
+        )
+        self._attr_native_unit_of_measurement: str | None = unit
+        self._attr_device_class: SensorDeviceClass | None = device_class  # pyright: ignore[reportIncompatibleVariableOverride]
+        self._attr_state_class: SensorStateClass | str | None = state_class
+        self._attr_unique_id: str | None = f"{super().unique_id}::sensor::{attribute}"
+        self._attr_entity_registry_enabled_default: bool = (
             enabled_default if enabled_default is not None else True
         )
 
         if options is not None:
-            self._attr_options = options
+            self._attr_options: list[str] | None = options
 
         self.load_state()
 
+    @override
     def load_state(self):
-        self._attr_native_value = self._get_native_value()
+        self._attr_native_value: StateType | date | datetime | Decimal = (
+            self._get_native_value()
+        )
 
     @property
+    @override
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return (self._attribute,)
@@ -129,10 +135,14 @@ class HubitatBatterySensor(HubitatSensor):
             **kwargs,
         )
 
+    @override
     def load_state(self):
         super().load_state()
-        self._attr_native_value = self._get_native_value()
+        self._attr_native_value: StateType | date | datetime | Decimal = (
+            self._get_native_value()
+        )
 
+    @override
     def _get_native_value(self) -> StateType | date | datetime | Decimal:
         """Return this battery sensor's current value."""
         value = self.get_attr(self._attribute)
@@ -233,7 +243,7 @@ class HubitatTemperatureSensor(HubitatSensor):
 
     def __init__(
         self,
-        attribute=DeviceAttribute.TEMPERATURE,
+        attribute: DeviceAttribute = DeviceAttribute.TEMPERATURE,
         **kwargs: Unpack[HubitatEntityArgs],
     ):
         """Initialize a temperature sensor."""
@@ -244,9 +254,12 @@ class HubitatTemperatureSensor(HubitatSensor):
             **kwargs,
         )
 
+    @override
     def load_state(self):
         super().load_state()
-        self._attr_native_unit_of_measurement = self._get_native_unit_of_measurement()
+        self._attr_native_unit_of_measurement: str | None = (
+            self._get_native_unit_of_measurement()
+        )
 
     def _get_native_unit_of_measurement(self) -> str | None:
         unit: UnitOfTemperature = self._hub.temperature_unit
@@ -296,9 +309,12 @@ class HubitatPressureSensor(HubitatSensor):
             **kwargs,
         )
 
+    @override
     def load_state(self):
         super().load_state()
-        self._attr_native_unit_of_measurement = self._get_native_unit_of_measurement()
+        self._attr_native_unit_of_measurement: str | None = (
+            self._get_native_unit_of_measurement()
+        )
 
     def _get_native_unit_of_measurement(self) -> str | None:
         """Return this sensor's current value."""
@@ -689,7 +705,7 @@ class HubitatHubModeSensor(HubitatSensor):
 
 
 _SENSOR_ATTRS: tuple[
-    tuple[DeviceAttribute, Type[HubitatSensor], Optional[DeviceCapability]], ...
+    tuple[DeviceAttribute, type[HubitatSensor], DeviceCapability | None], ...
 ] = (
     (DeviceAttribute.AIR_QUALITY_INDEX, HubitatAirQualityIndexSensor, None),
     (DeviceAttribute.AMPERAGE, HubitatCurrentSensor, None),
@@ -729,7 +745,7 @@ _SENSOR_ATTRS: tuple[
 )
 
 
-def is_update_sensor(device: Device, overrides: dict[str, str] | None = None) -> bool:
+def is_update_sensor(_device: Device, _overrides: dict[str, str] | None = None) -> bool:
     """Every device can have an update sensor."""
     return True
 
@@ -744,21 +760,21 @@ async def async_setup_entry(
     add_hub_entities(hass, entry, async_add_entities)
 
     # Add an update sensor for every device
-    create_and_add_entities(
+    _ = create_and_add_entities(
         hass, entry, async_add_entities, "sensor", HubitatUpdateSensor, is_update_sensor
     )
 
     for attr in _SENSOR_ATTRS:
         attr_name, Sensor, capability = attr
 
-        def is_sensor(device: Device, overrides: dict[str, str] | None = None) -> bool:
+        def is_sensor(device: Device, _overrides: dict[str, str] | None = None) -> bool:
             if attr_name not in device.attributes:
                 return False
             if capability is not None and capability not in device.capabilities:
                 return False
             return True
 
-        create_and_add_entities(
+        _ = create_and_add_entities(
             hass, entry, async_add_entities, "sensor", Sensor, is_sensor
         )
 
@@ -801,7 +817,7 @@ def add_hub_entities(
 ) -> None:
     """Add entities for hub services."""
 
-    hub_entities = []
+    hub_entities: list[HubitatEntity] = []
     hub = get_hub(hass, entry.entry_id)
 
     if hub.hsm_supported:
