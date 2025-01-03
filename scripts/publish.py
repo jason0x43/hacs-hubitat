@@ -45,7 +45,7 @@ if input(f"Publish version {new_version} [y/N]? ") != "y":
 update_pyproject(new_version)
 update_manifest(new_version)
 
-_ = check_call('git commit --all -m "chore: update version number"', shell=True)
+_ = check_call('git commit --all -m "Update version number"', shell=True)
 _ = check_call(f"git tag v{new_version}", shell=True)
 _ = check_call("git push", shell=True)
 _ = check_call("git push --tags", shell=True)
