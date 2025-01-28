@@ -23,7 +23,7 @@ _LOGGER = getLogger(__name__)
 _NAME_TEST = re.compile(r"\bgas\b", re.IGNORECASE)
 
 
-class HubitatValve(HubitatEntity, ValveEntity): # pyright: ignore[reportIncompatibleVariableOverride]
+class HubitatValve(HubitatEntity, ValveEntity):  # pyright: ignore[reportIncompatibleVariableOverride]
     """Representation of a Hubitat switch."""
 
     def __init__(
@@ -33,7 +33,7 @@ class HubitatValve(HubitatEntity, ValveEntity): # pyright: ignore[reportIncompat
         """Initialize a Hubitat switch."""
         device_class: ValveDeviceClass = (
             ValveDeviceClass.GAS
-            if _NAME_TEST.search(self._device.label)
+            if _NAME_TEST.search(kwargs["device"].label)
             else ValveDeviceClass.WATER
         )
 
@@ -42,7 +42,7 @@ class HubitatValve(HubitatEntity, ValveEntity): # pyright: ignore[reportIncompat
 
         self._attr_unique_id: str | None = f"{super().unique_id}::valve"
         self._attr_reports_position: bool = False
-        self._attr_supported_features: ValveEntityFeature = ( # pyright: ignore[reportIncompatibleVariableOverride]
+        self._attr_supported_features: ValveEntityFeature = (  # pyright: ignore[reportIncompatibleVariableOverride]
             ValveEntityFeature.OPEN | ValveEntityFeature.CLOSE
         )
         self.load_state()
