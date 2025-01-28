@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Unpack, cast, override
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
-    ATTR_COLOR_TEMP,
+    ATTR_COLOR_TEMP_KELVIN,
     ATTR_FLASH,
     ATTR_HS_COLOR,
     ATTR_TRANSITION,
@@ -18,7 +18,6 @@ from homeassistant.components.light import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.util import color as color_util
 
 from .cover import is_cover
 from .device import HubitatEntity, HubitatEntityArgs
@@ -64,7 +63,7 @@ class HubitatLight(HubitatEntity, LightEntity):
     def load_state(self):
         self._attr_color_mode: ColorMode | str | None = self._get_color_mode()
         self._attr_brightness: int | None = self._get_brightness()
-        self._attr_color_temp: int | None = self._get_color_temp()
+        self._attr_color_temp_kelvin: int | None = self._get_color_temp_kelvin()
         self._attr_hs_color: tuple[float, float] | None = self._get_hs_color()
         self._attr_is_on: bool | None = self._get_is_on()
 
@@ -101,8 +100,8 @@ class HubitatLight(HubitatEntity, LightEntity):
             return None
         return round(255 * level / 100)
 
-    def _get_color_temp(self) -> int | None:
-        """Return the CT color value in mireds."""
+    def _get_color_temp_kelvin(self) -> int | None:
+        """Return the CT color value in Kelvin."""
         mode = self.color_mode
         if mode and mode != ColorMode.COLOR_TEMP:
             return None
@@ -111,7 +110,7 @@ class HubitatLight(HubitatEntity, LightEntity):
         if temp is None:
             return None
 
-        return color_util.color_temperature_kelvin_to_mired(temp)
+        return temp
 
     def _get_hs_color(self) -> tuple[float, float] | None:
         """Return the hue and saturation color value [float, float]."""
@@ -190,9 +189,8 @@ class HubitatLight(HubitatEntity, LightEntity):
             props["hue"] = round(100 * cast(float, kwargs[ATTR_HS_COLOR][0]) / 360)
             props["sat"] = kwargs[ATTR_HS_COLOR][1]
 
-        if ATTR_COLOR_TEMP in kwargs and DeviceCapability.COLOR_TEMP in caps:
-            mireds = cast(float, kwargs[ATTR_COLOR_TEMP])
-            props["temp"] = round(color_util.color_temperature_mired_to_kelvin(mireds))
+        if ATTR_COLOR_TEMP_KELVIN in kwargs and DeviceCapability.COLOR_TEMP in caps:
+            props["temp"] = kwargs[ATTR_COLOR_TEMP_KELVIN]
 
         _LOGGER.debug(f"Light {self.name} turn-on props: {props}")
 
