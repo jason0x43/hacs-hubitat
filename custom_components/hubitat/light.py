@@ -15,6 +15,16 @@ from homeassistant.components.light import (
     LightEntity,
     LightEntityFeature,
 )
+
+try:
+    from homeassistant.components.light.const import (  # pyright: ignore[reportMissingImports]
+        DEFAULT_MAX_KELVIN,  # pyright: ignore[reportUnknownVariableType]
+        DEFAULT_MIN_KELVIN,  # pyright: ignore[reportUnknownVariableType]
+    )
+except Exception:
+    DEFAULT_MIN_KELVIN = 2000  # pyright: ignore[reportConstantRedefinition]
+    DEFAULT_MAX_KELVIN = 6535  # pyright: ignore[reportConstantRedefinition]
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -57,6 +67,8 @@ class HubitatLight(HubitatEntity, LightEntity):
         self._attr_supported_features: LightEntityFeature = (  # pyright: ignore[reportIncompatibleVariableOverride]
             self._get_supported_features()
         )
+        self._attr_min_color_temp_kelvin: int | None = DEFAULT_MIN_KELVIN
+        self._attr_max_color_temp_kelvin: int | None = DEFAULT_MAX_KELVIN
         self.load_state()
 
     @override
