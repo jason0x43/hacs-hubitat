@@ -59,7 +59,7 @@ PRESSURE_UNITS: dict[str, UnitOfPressure] = {
 }
 
 
-class HubitatSensor(HubitatEntity, SensorEntity):
+class HubitatSensor(SensorEntity, HubitatEntity):
     """A generic Hubitat sensor."""
 
     _attribute: DeviceAttribute
@@ -90,10 +90,10 @@ class HubitatSensor(HubitatEntity, SensorEntity):
 
         self._attribute = attribute
         self._attr_name: str | None = (
-            f"{super(HubitatEntity, self).name} {attr_name}".title()
+            f"{super().name} {attr_name}".title()
         )
         self._attr_native_unit_of_measurement: str | None = unit
-        self._attr_device_class: SensorDeviceClass | None = device_class  # pyright: ignore[reportIncompatibleVariableOverride]
+        self._attr_device_class: SensorDeviceClass | None = device_class
         self._attr_state_class: SensorStateClass | str | None = state_class
         self._attr_unique_id: str | None = f"{super().unique_id}::sensor::{attribute}"
         self._attr_entity_registry_enabled_default: bool = (
@@ -780,7 +780,7 @@ async def async_setup_entry(
 
     # Create sensor entities for any attributes that don't correspond to known
     # sensor types
-    unknown_entities: list[HubitatEntity] = []
+    unknown_entities: list[HubitatSensor] = []
     hub = get_hub(hass, entry.entry_id)
 
     for id in hub.devices:
@@ -817,7 +817,7 @@ def add_hub_entities(
 ) -> None:
     """Add entities for hub services."""
 
-    hub_entities: list[HubitatEntity] = []
+    hub_entities: list[HubitatSensor] = []
     hub = get_hub(hass, entry.entry_id)
 
     if hub.hsm_supported:

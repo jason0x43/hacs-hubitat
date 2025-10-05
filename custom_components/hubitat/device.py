@@ -2,14 +2,15 @@
 
 from abc import ABC
 from datetime import datetime
+from functools import cached_property
 from logging import getLogger
 from typing import Any, TypedDict, Unpack
 
 from typing_extensions import override
 
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry
-from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.typing import UndefinedType
 
 from .const import DOMAIN
 from .hub import Hub
@@ -103,8 +104,9 @@ class HubitatEntityArgs(TypedDict):
     device: Device
 
 
-class HubitatEntity(HubitatBase, Entity, UpdateableEntity, ABC):
+class HubitatEntity(HubitatBase, UpdateableEntity, ABC):
     """An entity related to a Hubitat device."""
+    hass: HomeAssistant
 
     def __init__(
         self,
@@ -127,7 +129,6 @@ class HubitatEntity(HubitatBase, Entity, UpdateableEntity, ABC):
 
         self._attr_name: str | None = self._device.label
         self._attr_unique_id: str | None = get_hub_device_id(self._hub, self._device)
-        self._attr_device_class: str | None = device_class
         self._attr_should_poll: bool = False
         self._attr_device_info: device_registry.DeviceInfo | None = get_device_info(
             self._hub, self._device
@@ -149,7 +150,21 @@ class HubitatEntity(HubitatBase, Entity, UpdateableEntity, ABC):
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         return None
 
-    @override
+    def async_schedule_update_ha_state(self):
+        ...
+
+    @cached_property
+    def unique_id(self) -> str | None:
+        ...
+
+    @cached_property
+    def name(self) -> str | UndefinedType | None:
+        ...
+
+    @property
+    def enabled(self) -> bool:
+        ...
+
     async def async_added_to_hass(self) -> None:
         _LOGGER.debug("Added %s with hass=%s", self, self.hass)
 

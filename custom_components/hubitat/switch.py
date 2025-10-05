@@ -35,7 +35,7 @@ class SwitchType(StrEnum):
     ALARM = "alarm"
 
 
-class HubitatSwitch(HubitatEntity, SwitchEntity):
+class HubitatSwitch(SwitchEntity, HubitatEntity):
     """Representation of a Hubitat switch."""
 
     def __init__(
@@ -99,7 +99,7 @@ class HubitatAlarm(HubitatSwitch):
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         """Initialize a Hubitat alarm."""
         super().__init__(type=SwitchType.ALARM, **kwargs)
-        self._attr_name: str | None = f"{super(HubitatEntity, self).name} Alarm".title()
+        self._attr_name: str | None = f"{super().name} Alarm".title()
         self._attr_icon: str | None = ICON_ALARM
 
     @override

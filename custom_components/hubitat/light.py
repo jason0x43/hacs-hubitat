@@ -11,20 +11,19 @@ from homeassistant.components.light import (
     ATTR_FLASH,
     ATTR_HS_COLOR,
     ATTR_TRANSITION,
-    ColorMode,
     LightEntity,
-    LightEntityFeature,
 )
 
 try:
-    from homeassistant.components.light.const import (  # pyright: ignore[reportMissingImports]
-        DEFAULT_MAX_KELVIN,  # pyright: ignore[reportUnknownVariableType]
-        DEFAULT_MIN_KELVIN,  # pyright: ignore[reportUnknownVariableType]
+    from homeassistant.components.light.const import (
+        DEFAULT_MAX_KELVIN,
+        DEFAULT_MIN_KELVIN,
     )
 except Exception:
     DEFAULT_MIN_KELVIN = 2000  # pyright: ignore[reportConstantRedefinition]
     DEFAULT_MAX_KELVIN = 6535  # pyright: ignore[reportConstantRedefinition]
 
+from homeassistant.components.light.const import ColorMode, LightEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -53,22 +52,24 @@ _device_attrs = (
 )
 
 
-class HubitatLight(HubitatEntity, LightEntity):
+class HubitatLight(LightEntity, HubitatEntity):
     """Representation of a Hubitat light."""
+
+    _attr_unique_id: str | None
+    _attr_supported_color_modes: set[ColorMode] | set[str] | None
+    _attr_supported_features: LightEntityFeature
+    _attr_min_color_temp_kelvin: int | None
+    _attr_max_color_temp_kelvin: int | None
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         """Initialize a Hubitat light."""
         HubitatEntity.__init__(self, **kwargs)
         LightEntity.__init__(self)
-        self._attr_unique_id: str | None = f"{super().unique_id}::light"
-        self._attr_supported_color_modes: set[ColorMode] | set[str] | None = (
-            self._get_supported_color_modes()
-        )
-        self._attr_supported_features: LightEntityFeature = (  # pyright: ignore[reportIncompatibleVariableOverride]
-            self._get_supported_features()
-        )
-        self._attr_min_color_temp_kelvin: int | None = DEFAULT_MIN_KELVIN
-        self._attr_max_color_temp_kelvin: int | None = DEFAULT_MAX_KELVIN
+        self._attr_unique_id = f"{super().unique_id}::light"
+        self._attr_supported_color_modes = self._get_supported_color_modes()
+        self._attr_supported_features = self._get_supported_features()
+        self._attr_min_color_temp_kelvin = DEFAULT_MIN_KELVIN
+        self._attr_max_color_temp_kelvin = DEFAULT_MAX_KELVIN
         self.load_state()
 
     @override

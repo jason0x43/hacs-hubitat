@@ -38,7 +38,7 @@ _CONTACT_INFOS: list[ContactInfo] = [
 ]
 
 
-class HubitatBinarySensor(HubitatEntity, BinarySensorEntity):  # pyright: ignore[reportIncompatibleVariableOverride]
+class HubitatBinarySensor(BinarySensorEntity, HubitatEntity):
     """A generic Hubitat sensor."""
 
     _active_state: str

@@ -10,7 +10,7 @@ from .device import HubitatEntity, HubitatEntityArgs
 from .hub import get_hub
 
 
-class HubitatSelect(HubitatEntity, SelectEntity):
+class HubitatSelect(SelectEntity, HubitatEntity):
     _attribute: DeviceAttribute
 
     def __init__(

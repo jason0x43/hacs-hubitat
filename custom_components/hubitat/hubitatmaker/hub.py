@@ -175,7 +175,7 @@ class Hub:
     async def load_devices(self, force_refresh: bool = False) -> None:
         """Load the current state of all devices."""
         if force_refresh or len(self._devices) == 0:
-            devices: list[dict[str, Any]] = await self._api_request("devices")
+            devices = cast(list[dict[str, Any]], await self._api_request("devices"))
             _LOGGER.debug("Loaded device list")
 
             # load devices sequentially to avoid overloading the hub
@@ -251,7 +251,7 @@ class Hub:
 
         hsm_mode must be one of the HSM_* constants.
         """
-        new_mode: dict[str, str] = await self._api_request(f"hsm/{hsm_mode}")
+        new_mode = cast(dict[str, str], await self._api_request(f"hsm/{hsm_mode}"))
         self._hsm_status = new_mode["hsm"]
 
     async def set_mode(self, name: str) -> None:
@@ -265,7 +265,7 @@ class Hub:
             _LOGGER.error("Invalid mode: %s", name)
             raise InvalidMode(name)
 
-        new_modes: list[dict[str, Any]] = await self._api_request(f"modes/{id}")
+        new_modes = cast(list[dict[str, Any]], await self._api_request(f"modes/{id}"))
         self._modes = [Mode(m) for m in new_modes]
 
     def set_host(self, host: str) -> None:
@@ -402,13 +402,13 @@ class Hub:
 
     async def _load_hsm_status(self) -> None:
         """Load the current hub HSM status."""
-        hsm: dict[str, str] = await self._api_request("hsm")
+        hsm = cast(dict[str, str], await self._api_request("hsm"))
         _LOGGER.debug("Loaded hsm status")
         self._hsm_status = hsm["hsm"]
 
     async def _load_modes(self) -> None:
         """Load the current hub mode."""
-        modes: list[dict[str, Any]] = await self._api_request("modes")
+        modes = cast(list[dict[str, Any]], await self._api_request("modes"))
         _LOGGER.debug("Loaded modes")
         self._modes = [Mode(m) for m in modes]
 
@@ -487,7 +487,7 @@ class Hub:
         # machine and the Hubitat hub are on the same network.
         with _open_socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
             s.connect((self.host, 80))
-            address: str = s.getsockname()[0]
+            address = cast(str, s.getsockname()[0])
 
         self._server = create_server(
             self._process_event, address, self.port or 0, self.ssl_context

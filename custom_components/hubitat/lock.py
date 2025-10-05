@@ -28,7 +28,7 @@ _device_attrs = (
 )
 
 
-class HubitatLock(HubitatEntity, LockEntity):
+class HubitatLock(LockEntity, HubitatEntity):
     """Representation of a Hubitat lock."""
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):

@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from json import loads
 from types import MappingProxyType
-from typing import Any, Literal, Mapping, Sequence, TypedDict, cast
+from typing import Any, Literal, Mapping, Sequence, TypedDict, cast, override
 
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 
@@ -16,6 +16,8 @@ class AttributeData(TypedDict):
 
 
 class Attribute:
+    _properties: AttributeData
+
     def __init__(self, properties: AttributeData):
         self._properties = properties
 
@@ -28,7 +30,7 @@ class Attribute:
         return self._properties["dataType"]
 
     @property
-    def value(self) -> str | float | datetime:
+    def value(self) -> str | float | datetime | None:
         return self._properties["currentValue"]
 
     @property
@@ -88,6 +90,7 @@ class Attribute:
         for key in "name", "type", "value", "unit":
             yield key, getattr(self, key)
 
+    @override
     def __str__(self):
         return (
             f'<Attribute name="{self.name}" type="{self.type}" value="{self.value}"'
@@ -96,24 +99,26 @@ class Attribute:
 
 
 class Device:
+    _properties: dict[str, Any]
+
     def __init__(self, properties: dict[str, Any]):
         self.update_state(properties)
 
     @property
     def id(self) -> str:
-        return self._properties["id"]
+        return cast(str, self._properties["id"])
 
     @property
     def name(self) -> str:
-        return self._properties["name"]
+        return cast(str, self._properties["name"])
 
     @property
     def label(self) -> str:
-        return self._properties["label"]
+        return cast(str, self._properties["label"])
 
     @property
     def type(self) -> str:
-        return self._properties["type"]
+        return cast(str, self._properties["type"])
 
     @property
     def model(self) -> str | None:
@@ -203,7 +208,7 @@ class Event:
 
     @property
     def device_id(self) -> str:
-        return self._properties["deviceId"]
+        return cast(str, self._properties["deviceId"])
 
     @property
     def device_name(self) -> str | None:
@@ -215,7 +220,7 @@ class Event:
 
     @property
     def attribute(self) -> str:
-        return self._properties["name"]
+        return cast(str, self._properties["name"])
 
     @property
     def type(self) -> str | None:
@@ -223,7 +228,7 @@ class Event:
 
     @property
     def value(self) -> str | float:
-        return self._properties["value"]
+        return cast(str | float, self._properties["value"])
 
     @property
     def unit(self) -> str | None:
@@ -241,6 +246,7 @@ class Event:
         ):
             yield key, getattr(self, key)
 
+    @override
     def __str__(self) -> str:
         return (
             f'<Event device_id="{self.device_id}" device_name="{self.device_name}"'

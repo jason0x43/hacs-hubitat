@@ -26,7 +26,7 @@ ATTR_EVENTS = {
 }
 
 
-class HubitatButtonEventEntity(HubitatEntity, EventEntity):  # pyright: ignore[reportIncompatibleVariableOverride]
+class HubitatButtonEventEntity(EventEntity, HubitatEntity):
     """Representation of an Hubitat button event"""
 
     _button_id: str

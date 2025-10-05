@@ -1,14 +1,18 @@
+# pyright: reportAny=false, reportPrivateUsage=false
+
 import json
 import re
 from os.path import dirname, join
-from typing import Any
+from typing import Any, final
+from unittest import mock
 from unittest.mock import MagicMock, patch
 from urllib.parse import unquote
 
 import pytest
 
-from custom_components.hubitat.hubitatmaker.const import HsmCommand
-from custom_components.hubitat.hubitatmaker.hub import Hub, InvalidConfig
+from custom_components.hubitat.hubitatmaker.const import DeviceAttribute, HsmCommand
+from custom_components.hubitat.hubitatmaker.error import InvalidConfig
+from custom_components.hubitat.hubitatmaker.hub import Hub
 
 hub_edit_page: str = ""
 devices: dict[str, Any] = {}
@@ -23,11 +27,12 @@ def fake_get_mac_address(**kwargs: str):
     return "aa:bb:cc:dd:ee:ff"
 
 
+@final
 class FakeResponse:
     def __init__(
         self,
-        status=200,
-        data: str | dict | list = "",
+        status: int = 200,
+        data: str | dict[str, Any] | list[Any] = "",
         method: str = "GET",
         url: str = "/",
         reason: str = "",
@@ -49,9 +54,15 @@ class FakeResponse:
         return json.dumps(self._data)
 
 
-def create_fake_request(responses: dict = {}):
+default_responses = {}
+
+
+def create_fake_request(responses: dict[str, Any] = default_responses):
+    @final
     class FakeRequest:
-        def __init__(self, method: str, url: str, **kwargs: Any):
+        response: Any
+
+        def __init__(self, method: str, url: str, **kwargs: dict[str, Any]):
             if url.endswith("/hub/edit"):
                 if "/hub/edit" in responses.keys():
                     self.response = responses["/hub/edit"]
@@ -98,7 +109,7 @@ def create_fake_request(responses: dict = {}):
                         new_mode = "disarmed"
                     self.response = FakeResponse(data={"hsm": new_mode}, url=url)
                 elif dev_match:
-                    dev_id = dev_match.group(1)
+                    dev_id: str = dev_match.group(1)
                     self.response = FakeResponse(
                         data=device_details.get(dev_id, {}), url=url
                     )
@@ -110,7 +121,7 @@ def create_fake_request(responses: dict = {}):
         async def __aenter__(self):
             return self.response
 
-        async def __aexit__(self, exc_type, exc, tb):
+        async def __aexit__(self, exc_type: object, exc: object, tb: object):
             pass
 
     return FakeRequest
@@ -164,7 +175,7 @@ def test_initial_values() -> None:
 @patch("aiohttp.request", new=create_fake_request())
 @patch("custom_components.hubitat.hubitatmaker.server.Server")
 @pytest.mark.asyncio
-async def test_start_server(MockServer) -> None:
+async def test_start_server(MockServer: mock.Mock) -> None:
     """Hub should start a server when asked to."""
     hub = Hub("1.2.3.4", "1234", "token", True)
     await hub.start()
@@ -221,7 +232,7 @@ async def test_start_no_mode() -> None:
 @patch("aiohttp.request", new=create_fake_request())
 @patch("custom_components.hubitat.hubitatmaker.server.Server")
 @pytest.mark.asyncio
-async def test_default_event_url(MockServer) -> None:
+async def test_default_event_url(MockServer: mock.Mock) -> None:
     """Default event URL should be server URL."""
     MockServer.return_value.url = "http://127.0.0.1:81"
     hub = Hub("1.2.3.4", "1234", "token")
@@ -233,7 +244,7 @@ async def test_default_event_url(MockServer) -> None:
 @patch("aiohttp.request", new=create_fake_request())
 @patch("custom_components.hubitat.hubitatmaker.server.Server")
 @pytest.mark.asyncio
-async def test_custom_event_url(MockServer) -> None:
+async def test_custom_event_url(MockServer: mock.Mock) -> None:
     """Event URL should be configurable."""
     MockServer.return_value.url = "http://127.0.0.1:81"
     hub = Hub("1.2.3.4", "1234", "token", event_url="http://foo.local")
@@ -245,7 +256,7 @@ async def test_custom_event_url(MockServer) -> None:
 @patch("aiohttp.request", new=create_fake_request())
 @patch("custom_components.hubitat.hubitatmaker.server.Server")
 @pytest.mark.asyncio
-async def test_custom_event_url_without_port(MockServer) -> None:
+async def test_custom_event_url_without_port(MockServer: mock.Mock) -> None:
     """Event URL should use custom port if none was provided."""
     MockServer.return_value.url = "http://127.0.0.1:81"
     hub = Hub("1.2.3.4", "1234", "token", 420, event_url="http://foo.local")
@@ -257,7 +268,7 @@ async def test_custom_event_url_without_port(MockServer) -> None:
 @patch("aiohttp.request", new=create_fake_request())
 @patch("custom_components.hubitat.hubitatmaker.server.Server")
 @pytest.mark.asyncio
-async def test_custom_event_port(MockServer) -> None:
+async def test_custom_event_port(MockServer: mock.Mock) -> None:
     """Event server port should be configurable."""
     MockServer.return_value.url = "http://127.0.0.1:81"
     hub = Hub("1.2.3.4", "1234", "token", 420)
@@ -268,7 +279,7 @@ async def test_custom_event_port(MockServer) -> None:
 @patch("aiohttp.request", new=create_fake_request())
 @patch("custom_components.hubitat.hubitatmaker.server.Server")
 @pytest.mark.asyncio
-async def test_custom_event_port_from_url(MockServer) -> None:
+async def test_custom_event_port_from_url(MockServer: mock.Mock) -> None:
     """Event server port should come from event URL if none was provided."""
     MockServer.return_value.url = "http://127.0.0.1:81"
     hub = Hub("1.2.3.4", "1234", "token", event_url="http://foo.local:416")
@@ -279,7 +290,7 @@ async def test_custom_event_port_from_url(MockServer) -> None:
 @patch("aiohttp.request", new=create_fake_request())
 @patch("custom_components.hubitat.hubitatmaker.server.Server")
 @pytest.mark.asyncio
-async def test_custom_event_port_and_url(MockServer) -> None:
+async def test_custom_event_port_and_url(MockServer: mock.Mock) -> None:
     """Explicit event server port should override port from URL."""
     MockServer.return_value.url = "http://127.0.0.1:81"
     hub = Hub("1.2.3.4", "1234", "token", 420, "http://foo.local:416")
@@ -290,7 +301,7 @@ async def test_custom_event_port_and_url(MockServer) -> None:
 @patch("aiohttp.request", new=create_fake_request())
 @patch("custom_components.hubitat.hubitatmaker.server.Server")
 @pytest.mark.asyncio
-async def test_stop_server(MockServer) -> None:
+async def test_stop_server(MockServer: mock.Mock) -> None:
     """Hub should stop a server when stopped."""
     hub = Hub("1.2.3.4", "1234", "token", True)
     await hub.start()
@@ -317,12 +328,12 @@ async def test_process_event() -> None:
     hub = Hub("1.2.3.4", "1234", "token")
     await hub.start()
     device = hub.devices["176"]
-    attr = device.attributes["switch"]
+    attr = device.attributes[DeviceAttribute.SWITCH]
     assert attr.value == "off"
 
     hub._process_event(events["device"])
 
-    attr = device.attributes["switch"]
+    attr = device.attributes[DeviceAttribute.SWITCH]
     assert attr.value == "on"
 
 
@@ -378,12 +389,12 @@ async def test_process_other_event() -> None:
     hub = Hub("1.2.3.4", "1234", "token")
     await hub.start()
     device = hub.devices["176"]
-    attr = device.attributes["switch"]
+    attr = device.attributes[DeviceAttribute.SWITCH]
     assert attr.value == "off"
 
     hub._process_event(events["other"])
 
-    attr = device.attributes["switch"]
+    attr = device.attributes[DeviceAttribute.SWITCH]
     assert attr.value == "off"
 
 
@@ -420,7 +431,7 @@ async def test_process_set_mode() -> None:
 @patch("aiohttp.request", new=create_fake_request())
 @patch("custom_components.hubitat.hubitatmaker.server.Server")
 @pytest.mark.asyncio
-async def test_set_event_url(MockServer) -> None:
+async def test_set_event_url(MockServer: mock.Mock) -> None:
     """Started hub should allow event URL to be set."""
     server_url = "http://127.0.0.1:81"
     MockServer.return_value.url = server_url
@@ -440,7 +451,7 @@ async def test_set_event_url(MockServer) -> None:
 @patch("aiohttp.request", new=create_fake_request())
 @patch("custom_components.hubitat.hubitatmaker.server.Server")
 @pytest.mark.asyncio
-async def test_set_port(MockServer) -> None:
+async def test_set_port(MockServer: mock.Mock) -> None:
     """Started hub should allow port to be set."""
     hub = Hub("1.2.3.4", "1234", "token")
     await hub.start()

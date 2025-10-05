@@ -84,8 +84,9 @@ _device_attrs = (
 )
 
 
-class HubitatThermostat(HubitatEntity, ClimateEntity):
+class HubitatThermostat(ClimateEntity, HubitatEntity):
     """Representation of a Hubitat switch."""
+    _attr_supported_features: ClimateEntityFeature
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         HubitatEntity.__init__(self, **kwargs)
@@ -99,7 +100,7 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
             HVACMode.OFF,
         ]
         self._attr_fan_modes: list[str] | None = HASS_FAN_MODES
-        self._attr_supported_features: ClimateEntityFeature = (  # pyright: ignore[reportIncompatibleVariableOverride]
+        self._attr_supported_features = (
             ClimateEntityFeature.TARGET_TEMPERATURE
             | ClimateEntityFeature.PRESET_MODE
             | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
@@ -112,7 +113,7 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         self._attr_min_temp: float = 4.4
 
         if hasattr(ClimateEntityFeature, "TURN_OFF"):
-            self._attr_supported_features |= getattr(ClimateEntityFeature, "TURN_OFF")
+            self._attr_supported_features |= ClimateEntityFeature.TURN_OFF
             self._enable_turn_on_off_backwards_compatibility: bool = False
 
         self.load_state()
