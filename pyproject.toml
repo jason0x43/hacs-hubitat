@@ -31,17 +31,16 @@ dev = [
     "ruff",
     "pre-commit<3.0.0,>=2.4.0",
     "homeassistant==2025.8.0",
-    "pyright>=1.1.359",
     "pytest-asyncio>=0.16.0",
     "setuptools>=62.2.0",
     "tomlkit>=0.12.3",
     "taskipy>=1.14.1",
+    "basedpyright>=1.31.6",
 ]
 
 [tool.pyright]
 include = ["custom_components/hubitat"]
 exclude = ["**/__pycache__"]
-extraPaths = ["__pypackages__/3.9/lib"]
 venvPath = "."
 venv = ".venv"
 stubPath = "."
