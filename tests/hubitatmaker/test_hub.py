@@ -1,4 +1,4 @@
-# pyright: reportAny=false, reportPrivateUsage=false
+# pyright: reportPrivateUsage=false
 
 import json
 import re
