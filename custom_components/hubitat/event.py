@@ -52,13 +52,19 @@ class HubitatButtonEventEntity(EventEntity, HubitatEntity):
         if not self.enabled:
             return
 
-        if event.attribute not in ATTR_EVENTS:
+        try:
+            attribute = DeviceAttribute(event.attribute)
+        except ValueError:
+            _LOGGER.debug("Ignoring unknown button attribute: %s", event.attribute)
+            return
+
+        if attribute not in ATTR_EVENTS:
             return
 
         if event.value != self._button_id:
             return
 
-        event_type = ATTR_EVENTS[event.attribute]
+        event_type = ATTR_EVENTS[attribute]
         self._trigger_event(event_type)
         self.async_write_ha_state()
 
