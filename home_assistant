@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+
+import json
+from http.client import HTTPResponse
+from os import environ
+from os.path import dirname, join, normpath
+from subprocess import call, getoutput
+from sys import argv
+from typing import Any, cast
+from urllib.request import urlopen
+
+
+def release_key(release: str) -> str:
+    parts = release.split(".")
+    if len(parts[0]) == 4:
+        parts[1] = parts[1].zfill(2)
+        subparts = parts[2].split("b")
+        subparts[0] = subparts[0].zfill(2)
+        return f"{parts[0]}.{parts[1]}.{'b'.join(subparts)}"
+    return release
+
+
+args = argv[1:]
+
+if len(args) > 0:
+    version = args[0]
+else:
+    response = cast(HTTPResponse, urlopen("https://pypi.org/pypi/homeassistant/json"))
+    data = response.read()
+    payload = cast(dict[str, Any], json.loads(data.decode("utf-8")))
+    releases_field = payload.get("releases")
+    if not isinstance(releases_field, dict):
+        raise RuntimeError("PyPI response did not include releases map")
+    releases_dict = cast(dict[str, Any], releases_field)
+    releases = sorted(releases_dict.keys(), key=release_key)
+    version = releases[-1]
+
+name = f"homeassistant-{version}"
+scriptdir = normpath(dirname(__file__))
+hacs_path = normpath(f"{scriptdir}/../hacs-hubitat.git")
+
+print(f"Using {join(scriptdir, 'config')} for config")
+print(f"Using {join(hacs_path, 'custom_components', 'hubitat')} for hacs_hubitat")
+
+exists = getoutput(f"docker ps --all --filter name={name} --format '{{ .Names }}'")
+
+if len(exists) > 0:
+    print(f"Starting {name}")
+    cmd = ["docker", "start"]
+
+    if "HASS_DAEMONIZE" in environ:
+        cmd.append("-a")
+
+    cmd.append(name)
+else:
+    print(f"Creating {name}")
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--name",
+        name,
+    ]
+
+    if "HASS_DAEMONIZE" in environ:
+        cmd.append("-d")
+
+    cmd.extend(
+        [
+            "-v",
+            "/etc/localtime:/etc/localtime:ro",
+            "-v",
+            f"{scriptdir}/config:/config",
+            "-v",
+            f"{hacs_path}/custom_components/hubitat:/config/custom_components/hubitat",
+            "-p",
+            "8123:8123",
+            "-p",
+            "21064:21064",
+            "-p",
+            "12345:12345",
+            "-p",
+            "12346:12346",
+            f"homeassistant/home-assistant:{version}",
+        ]
+    )
+
+call(cmd)
