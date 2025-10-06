@@ -1,46 +1,44 @@
 #!/usr/bin/env python3
 
-import json
-from http.client import HTTPResponse
+import argparse
+import os
 from os import environ
-from os.path import dirname, join, normpath
+from os.path import dirname
+from pathlib import Path
 from subprocess import call, getoutput
 from sys import argv
-from typing import Any, cast
-from urllib.request import urlopen
+from typing import cast
 
 
-def release_key(release: str) -> str:
-    parts = release.split(".")
-    if len(parts[0]) == 4:
-        parts[1] = parts[1].zfill(2)
-        subparts = parts[2].split("b")
-        subparts[0] = subparts[0].zfill(2)
-        return f"{parts[0]}.{parts[1]}.{'b'.join(subparts)}"
-    return release
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Start a Home Assistant container")
+    parser.add_argument(
+        "version",
+        help="Home Assistant version (e.g., 2023.12.0)",
+    )
+
+    if len(argv) == 1:
+        parser.print_help()
+        parser.exit()
+
+    return parser.parse_args()
 
 
-args = argv[1:]
-
-if len(args) > 0:
-    version = args[0]
-else:
-    response = cast(HTTPResponse, urlopen("https://pypi.org/pypi/homeassistant/json"))
-    data = response.read()
-    payload = cast(dict[str, Any], json.loads(data.decode("utf-8")))
-    releases_field = payload.get("releases")
-    if not isinstance(releases_field, dict):
-        raise RuntimeError("PyPI response did not include releases map")
-    releases_dict = cast(dict[str, Any], releases_field)
-    releases = sorted(releases_dict.keys(), key=release_key)
-    version = releases[-1]
+args = parse_args()
+version = cast(str, args.version)
 
 name = f"homeassistant-{version}"
-scriptdir = normpath(dirname(__file__))
-hacs_path = normpath(f"{scriptdir}/../hacs-hubitat.git")
+scriptdir = Path(dirname(__file__))
+config_path = (
+    Path(os.getenv("HASS_CONFIG_PATH") or (f"{scriptdir}/config")).absolute().resolve()
+)
 
-print(f"Using {join(scriptdir, 'config')} for config")
-print(f"Using {join(hacs_path, 'custom_components', 'hubitat')} for hacs_hubitat")
+if not config_path.exists():
+    print(f"Config path {config_path} does not exist.")
+    exit(1)
+
+print(f"Using {scriptdir / 'custom_components' / 'hubitat'} for hacs_hubitat")
+print(f"Using {config_path} for config")
 
 exists = getoutput(f"docker ps --all --filter name={name} --format '{{ .Names }}'")
 
@@ -70,9 +68,9 @@ else:
             "-v",
             "/etc/localtime:/etc/localtime:ro",
             "-v",
-            f"{scriptdir}/config:/config",
+            f"{config_path}:/config",
             "-v",
-            f"{hacs_path}/custom_components/hubitat:/config/custom_components/hubitat",
+            f"{scriptdir}/custom_components/hubitat:/config/custom_components/hubitat",
             "-p",
             "8123:8123",
             "-p",
@@ -85,4 +83,7 @@ else:
         ]
     )
 
-call(cmd)
+try:
+    call(cmd)
+except KeyboardInterrupt:
+    pass
