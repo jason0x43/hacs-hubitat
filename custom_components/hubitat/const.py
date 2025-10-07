@@ -120,6 +120,11 @@ TEMP_C = "C"
 class TriggerInfo:
     """Trigger metadata."""
 
+    attr: str
+    event: str
+    conf: str
+    subconfs: tuple[str, ...] | None
+
     def __init__(
         self, attr: str, event: str, conf: str, subconfs: tuple[str, ...] | None = None
     ):

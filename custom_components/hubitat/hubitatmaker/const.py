@@ -116,6 +116,7 @@ class DeviceAttribute(StrEnum):
     HELD = "held"
     HOME_HEALTH = "HomeHealth"
     HSM_STATUS = "hsm_status"
+    HUBITAT_LAST_UPDATE = "hubitat_last_update"
     HUE = "hue"
     HUMIDITY = "humidity"
     ILLUMINANCE = "illuminance"

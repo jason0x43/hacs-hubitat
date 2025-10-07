@@ -1,24 +1,28 @@
 import asyncio
 import threading
 from asyncio.base_events import Server as AsyncioServer
-from socket import socket as Socket
 from ssl import SSLContext
-from typing import Any, Callable, Dict, List, Optional, cast
+from typing import Any, Callable, cast
 
 from aiohttp import web
 
-EventCallback = Callable[[Dict[str, Any]], None]
+EventCallback = Callable[[dict[str, Any]], None]
 
 
 class Server:
     """A handle to a running server."""
+
+    host: str
+    port: int
+    handle_event: EventCallback
+    ssl_context: SSLContext | None
 
     def __init__(
         self,
         handle_event: EventCallback,
         host: str,
         port: int,
-        ssl_context: Optional[SSLContext] = None,
+        ssl_context: SSLContext | None = None,
     ):
         """Initialize a Server."""
         self.host = host
@@ -26,6 +30,9 @@ class Server:
         self.handle_event = handle_event
         self.ssl_context = ssl_context
         self._main_loop = asyncio.get_event_loop()
+        self._runner: web.AppRunner
+        self._startup_event: threading.Event
+        self._server_loop: asyncio.AbstractEventLoop
 
     @property
     def url(self) -> str:
@@ -78,7 +85,7 @@ class Server:
         # underlying server ended up listening on
         if self.port == 0:
             site_server = cast(AsyncioServer, site._server)
-            sockets = cast(List[Socket], site_server.sockets)
+            sockets = list(site_server.sockets or [])
             socket = sockets[0]
             self.port = socket.getsockname()[1]
 
@@ -95,7 +102,7 @@ def create_server(
     handle_event: EventCallback,
     host: str = "0.0.0.0",
     port: int = 0,
-    ssl_context: Optional[SSLContext] = None,
+    ssl_context: SSLContext | None = None,
 ) -> Server:
     """Create a new server."""
     return Server(handle_event, host, port, ssl_context)

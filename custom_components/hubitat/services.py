@@ -1,6 +1,6 @@
 import json
 from logging import getLogger
-from typing import cast
+from typing import Any, Sequence, cast
 
 import voluptuous as vol
 
@@ -71,11 +71,12 @@ SET_HUB_MODE_SCHEMA = vol.Schema(
 
 def async_register_services(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: ConfigEntry,  # noqa: ARG001
 ) -> None:
     def get_entity(service: ServiceCall) -> HubitatEntity:
         entity_id = cast(str, service.data.get(ATTR_ENTITY_ID))
-        hubs = cast(list[Hub], hass.data[DOMAIN].values())
+        domain_data = cast(dict[str, Hub], hass.data[DOMAIN])
+        hubs = domain_data.values()
         for hub in hubs:
             for entity in hub.entities:
                 if entity.entity_id == entity_id:
@@ -93,14 +94,14 @@ def async_register_services(
         code_list = []
         if codes_str:
             try:
-                codes = json.loads(codes_str)
+                codes = cast(dict[str, Any], json.loads(codes_str))
             except json.JSONDecodeError:
                 _LOGGER.error("json doc not decodable: %s", codes_str)
                 return {HassStateAttribute.CODES: []}
             code_list = cast(
                 JsonValueType,
                 sorted(
-                    [{ATTR_POSITION: key, **value} for key, value in codes.items()],
+                    [{ATTR_POSITION: key, **value} for key, value in codes.items()],  # pyright: ignore[reportAny]
                     key=lambda x: int(x[ATTR_POSITION]),
                 ),
             )
@@ -109,7 +110,7 @@ def async_register_services(
     async def send_command(service: ServiceCall) -> None:
         entity = get_entity(service)
         cmd = cast(str, service.data.get(ATTR_COMMAND))
-        args = cast(str, service.data.get(ATTR_ARGUMENTS))
+        args = cast(list[str] | str | None, service.data.get(ATTR_ARGUMENTS))
         if args is not None:
             if not isinstance(args, list):
                 args = [args]
@@ -146,16 +147,18 @@ def async_register_services(
         If ATTR_HUB is specified, return the hub with that ID. Otherwise,
         return all the hubs.
         """
-        hubs = []
+        hubs: Sequence[Hub] = []
+        domain_data = cast(dict[str, Hub], hass.data[DOMAIN])
         if ATTR_HUB in service.data:
             hub_id = cast(str, service.data.get(ATTR_HUB)).lower()
-            for hub in hass.data[DOMAIN].values():
+            for hub in domain_data.values():
                 if hub.id == hub_id:
                     hubs.append(hub)
             if len(hubs) == 0:
                 _LOGGER.error("Could not find a hub with ID %s", hub_id)
+                raise ValueError(f"Hub with ID '{hub_id}' not found.")
         else:
-            hubs = cast(list[Hub], hass.data[DOMAIN].values())
+            hubs = domain_data.values()
 
         return hubs
 
@@ -205,7 +208,7 @@ def async_register_services(
     )
 
 
-def async_remove_services(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+def async_remove_services(hass: HomeAssistant, config_entry: ConfigEntry) -> None:  # noqa: ARG001
     hass.services.async_remove(DOMAIN, ServiceName.CLEAR_CODE)
     hass.services.async_remove(DOMAIN, ServiceName.SET_CODE)
     hass.services.async_remove(DOMAIN, ServiceName.SET_CODE_LENGTH)

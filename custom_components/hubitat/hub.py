@@ -280,8 +280,14 @@ class Hub:
         if CONF_ACCESS_TOKEN not in entry.data:
             raise ValueError("Missing access token in config entry")
 
-        url = entry.options.get(H_CONF_SERVER_URL, entry.data.get(H_CONF_SERVER_URL))
-        port = entry.options.get(H_CONF_SERVER_PORT, entry.data.get(H_CONF_SERVER_PORT))
+        url = cast(
+            str | None,
+            entry.options.get(H_CONF_SERVER_URL, entry.data.get(H_CONF_SERVER_URL)),
+        )
+        port = cast(
+            int | None,
+            entry.options.get(H_CONF_SERVER_PORT, entry.data.get(H_CONF_SERVER_PORT)),
+        )
 
         # Previous versions of the integration may have saved a value of "" for
         # server_url with the assumption that a use_server_url flag would control
@@ -290,12 +296,18 @@ class Hub:
         if url == "":
             url = None
 
-        ssl_cert = entry.options.get(
-            H_CONF_SERVER_SSL_CERT,
-            entry.data.get(H_CONF_SERVER_SSL_CERT),
+        ssl_cert = cast(
+            str | None,
+            entry.options.get(
+                H_CONF_SERVER_SSL_CERT,
+                entry.data.get(H_CONF_SERVER_SSL_CERT),
+            ),
         )
-        ssl_key = entry.options.get(
-            H_CONF_SERVER_SSL_KEY, entry.data.get(H_CONF_SERVER_SSL_KEY)
+        ssl_key = cast(
+            str | None,
+            entry.options.get(
+                H_CONF_SERVER_SSL_KEY, entry.data.get(H_CONF_SERVER_SSL_KEY)
+            ),
         )
         ssl_context = await hass.async_add_executor_job(
             _create_ssl_context, ssl_cert, ssl_key
@@ -369,8 +381,9 @@ class Hub:
 
         _LOGGER.debug("Registered platforms")
 
-        should_update_rooms = entry.options.get(
-            H_CONF_SYNC_AREAS, entry.data.get(H_CONF_SYNC_AREAS)
+        should_update_rooms = cast(
+            bool | None,
+            entry.options.get(H_CONF_SYNC_AREAS, entry.data.get(H_CONF_SYNC_AREAS)),
         )
         if should_update_rooms:
             _update_device_rooms(hub, hass)
@@ -432,8 +445,9 @@ class Hub:
         _LOGGER.debug("Handling options update...")
         hub = get_hub(hass, config_entry.entry_id)
 
-        host: str | None = config_entry.options.get(
-            CONF_HOST, config_entry.data.get(CONF_HOST)
+        host = cast(
+            str | None,
+            config_entry.options.get(CONF_HOST, config_entry.data.get(CONF_HOST)),
         )
         if host is not None and host != hub.host:
             await hub.set_host(host)
@@ -450,8 +464,11 @@ class Hub:
             await hub.set_port(port)
             _LOGGER.debug("Set event server port to %s", port)
 
-        url = config_entry.options.get(
-            H_CONF_SERVER_URL, config_entry.data.get(H_CONF_SERVER_URL)
+        url = cast(
+            str | None,
+            config_entry.options.get(
+                H_CONF_SERVER_URL, config_entry.data.get(H_CONF_SERVER_URL)
+            ),
         )
         if url == "":
             url = None
@@ -459,13 +476,19 @@ class Hub:
             await hub.set_event_url(url)
             _LOGGER.debug("Set event server URL to %s", url)
 
-        ssl_cert = config_entry.options.get(
-            H_CONF_SERVER_SSL_CERT,
-            config_entry.data.get(H_CONF_SERVER_SSL_CERT),
+        ssl_cert = cast(
+            str | None,
+            config_entry.options.get(
+                H_CONF_SERVER_SSL_CERT,
+                config_entry.data.get(H_CONF_SERVER_SSL_CERT),
+            ),
         )
-        ssl_key = config_entry.options.get(
-            H_CONF_SERVER_SSL_KEY,
-            config_entry.data.get(H_CONF_SERVER_SSL_KEY),
+        ssl_key = cast(
+            str | None,
+            config_entry.options.get(
+                H_CONF_SERVER_SSL_KEY,
+                config_entry.data.get(H_CONF_SERVER_SSL_KEY),
+            ),
         )
         ssl_context = await hass.async_add_executor_job(
             _create_ssl_context, ssl_cert, ssl_key
@@ -717,6 +740,7 @@ if TYPE_CHECKING:
         discovery_keys=test_discovery_keys,  # pyright: ignore[reportArgumentType]
         options=None,
         unique_id=None,
+        subentries_data=None,
     )
     hubitat_hub = HubitatHub("", "", "")
     device = Device({})

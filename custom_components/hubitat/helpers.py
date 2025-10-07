@@ -1,3 +1,5 @@
+from typing import cast
+
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry
@@ -40,4 +42,4 @@ def get_hub_for_device(hass: HomeAssistant, device: DeviceEntry) -> Hub | None:
 
 def get_hub(hass: HomeAssistant, config_entry_id: str) -> Hub:
     """Get the Hub device associated with a given config entry."""
-    return hass.data[DOMAIN].get(config_entry_id)
+    return cast(Hub, hass.data[DOMAIN].get(config_entry_id))

@@ -1,5 +1,6 @@
 import re
 from hashlib import sha256
+from typing import cast
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.device_registry import DeviceEntry
@@ -25,7 +26,10 @@ def get_hub_short_id(hub: HasToken) -> str:
 
 
 def get_device_overrides(config_entry: ConfigEntry) -> dict[str, str]:
-    return config_entry.options.get(H_CONF_DEVICE_TYPE_OVERRIDES, {})
+    return cast(
+        dict[str, str],
+        config_entry.options.get(H_CONF_DEVICE_TYPE_OVERRIDES, {}),
+    )
 
 
 def get_hub_device_id(hub: HasToken, device: str | Device) -> str:

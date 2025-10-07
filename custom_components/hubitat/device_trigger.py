@@ -8,9 +8,11 @@ from typing import Any, Callable, cast
 import voluptuous as vol
 
 from custom_components.hubitat.util import get_hubitat_device_id
+from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
 from homeassistant.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
 )
+from homeassistant.components.homeassistant.triggers import event
 from homeassistant.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
@@ -47,23 +49,6 @@ from .helpers import (
 )
 from .hub import Hub
 from .hubitatmaker import Device, DeviceAttribute, DeviceCapability
-
-try:
-    from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
-except Exception:
-    from homeassistant.components.device_automation import (
-        TRIGGER_BASE_SCHEMA,  # type: ignore
-    )
-
-    DEVICE_TRIGGER_BASE_SCHEMA = TRIGGER_BASE_SCHEMA
-
-
-# The `event` type moved in HA 0.115
-try:
-    from homeassistant.components.homeassistant.triggers import event
-except ImportError:
-    from homeassistant.components.automation import event  # type: ignore
-
 
 TRIGGER_TYPES = tuple([v.conf for v in TRIGGER_CAPABILITIES.values()])
 TRIGGER_SUBTYPES = set(
@@ -187,16 +172,19 @@ async def async_attach_trigger(
 
 
 class DeviceWrapper:
+    _device: Device
+    _hub: Hub
+
     def __init__(self, device: Device, hub: Hub):
         self._device = device
         self._hub = hub
 
     @property
-    def device(self):
+    def device(self) -> Device:
         return self._device
 
     @property
-    def hub(self):
+    def hub(self) -> Hub:
         return self._hub
 
 
@@ -269,5 +257,5 @@ def get_lock_codes(device: Device) -> list[str]:
         codes = loads(codes_str)
         return [codes[id]["name"] for id in codes]
     except Exception as e:
-        _LOGGER.warn("Error getting lock codes for %s: %s", device, e)
+        _LOGGER.warning("Error getting lock codes for %s: %s", device, e)
         return []
