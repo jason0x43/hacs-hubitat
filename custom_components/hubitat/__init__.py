@@ -3,7 +3,7 @@
 import re
 from asyncio import gather
 from logging import getLogger
-from typing import Any, cast
+from typing import Any
 
 import voluptuous as vol
 
@@ -16,7 +16,7 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant
 
 from .const import DOMAIN, H_CONF_HUBITAT_EVENT, PLATFORMS
-from .hub import Hub, get_hub
+from .hub import Hub, get_domain_data, get_hub
 
 _LOGGER = getLogger(__name__)
 
@@ -33,11 +33,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     _LOGGER.debug(f"Setting up Hubitat for {config_entry.entry_id}")
 
-    if DOMAIN not in hass.data:
-        hass.data[DOMAIN] = {}
+    domain_data =get_domain_data(hass)
 
     hub: Hub = await Hub.create(
-        hass, config_entry, len(cast(dict[str, Any], hass.data[DOMAIN])) + 1
+        hass, config_entry, len(domain_data) + 1
     )
 
     hub.async_update_device_registry()
@@ -85,6 +84,6 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     _LOGGER.debug(f"Unloaded all components for {config_entry.entry_id}")
 
     if unload_ok:
-        cast(dict[str, Any], hass.data[DOMAIN]).pop(config_entry.entry_id)
+        get_domain_data(hass).pop(config_entry.entry_id)
 
     return unload_ok

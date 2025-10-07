@@ -1,6 +1,6 @@
 import json
 from logging import getLogger
-from typing import Any, Sequence, cast
+from typing import Any, cast
 
 import voluptuous as vol
 
@@ -31,7 +31,7 @@ from .const import (
     ServiceName,
 )
 from .device import HubitatEntity
-from .hub import Hub
+from .hub import Hub, get_domain_data
 from .lock import HubitatLock
 
 _LOGGER = getLogger(__name__)
@@ -71,11 +71,13 @@ SET_HUB_MODE_SCHEMA = vol.Schema(
 
 def async_register_services(
     hass: HomeAssistant,
-    entry: ConfigEntry,  # noqa: ARG001
+    entry: ConfigEntry,
 ) -> None:
+    _ = entry  # Unused but required by interface
+
     def get_entity(service: ServiceCall) -> HubitatEntity:
         entity_id = cast(str, service.data.get(ATTR_ENTITY_ID))
-        domain_data = cast(dict[str, Hub], hass.data[DOMAIN])
+        domain_data = get_domain_data(hass)
         hubs = domain_data.values()
         for hub in hubs:
             for entity in hub.entities:
@@ -140,15 +142,15 @@ def async_register_services(
         delay = cast(int, service.data.get(ATTR_LENGTH))
         await entity.set_exit_delay(delay)
 
-    def get_target_hubs(service: ServiceCall):
+    def get_target_hubs(service: ServiceCall) -> list[Hub]:
         """
         Return the target hubs for a service call.
 
         If ATTR_HUB is specified, return the hub with that ID. Otherwise,
         return all the hubs.
         """
-        hubs: Sequence[Hub] = []
-        domain_data = cast(dict[str, Hub], hass.data[DOMAIN])
+        hubs: list[Hub] = []
+        domain_data = get_domain_data(hass)
         if ATTR_HUB in service.data:
             hub_id = cast(str, service.data.get(ATTR_HUB)).lower()
             for hub in domain_data.values():
@@ -158,7 +160,7 @@ def async_register_services(
                 _LOGGER.error("Could not find a hub with ID %s", hub_id)
                 raise ValueError(f"Hub with ID '{hub_id}' not found.")
         else:
-            hubs = domain_data.values()
+            hubs = list(domain_data.values())
 
         return hubs
 
@@ -208,7 +210,8 @@ def async_register_services(
     )
 
 
-def async_remove_services(hass: HomeAssistant, config_entry: ConfigEntry) -> None:  # noqa: ARG001
+def async_remove_services(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    _ = config_entry  # Unused but required by interface
     hass.services.async_remove(DOMAIN, ServiceName.CLEAR_CODE)
     hass.services.async_remove(DOMAIN, ServiceName.SET_CODE)
     hass.services.async_remove(DOMAIN, ServiceName.SET_CODE_LENGTH)

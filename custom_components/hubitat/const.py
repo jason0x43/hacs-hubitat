@@ -1,4 +1,5 @@
 """Constants for the Hubitat integration."""
+
 from enum import StrEnum
 from typing import Literal, get_args
 

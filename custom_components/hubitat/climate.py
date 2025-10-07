@@ -86,6 +86,7 @@ _device_attrs = (
 
 class HubitatThermostat(ClimateEntity, HubitatEntity):
     """Representation of a Hubitat switch."""
+
     _attr_supported_features: ClimateEntityFeature
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
@@ -120,10 +121,9 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
 
     @override
     def load_state(self):
-        # Ignore type error for compatibility across HA versions
         # In 2025.4.1 this is int | None, in 2025.10.1+ it's float | None
-        # The function returns float | None which works at runtime in both
-        self._attr_current_humidity = self._get_current_humidity()  # pyright: ignore[reportAttributeAccessIssue, reportIncompatibleVariableOverride]
+        # We use float | None which works at runtime in both versions
+        self._attr_current_humidity: float | None = self._get_current_humidity()
         self._attr_current_temperature: float | None = self._get_current_temperature()
         self._attr_fan_mode: str | None = self._get_fan_mode()
         self._attr_hvac_mode: HVACMode | None = self._get_hvac_mode()

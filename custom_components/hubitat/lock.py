@@ -90,12 +90,12 @@ class HubitatLock(LockEntity, HubitatEntity):
         return _device_attrs
 
     @override
-    async def async_lock(self, **kwargs: Any) -> None: # pyright: ignore[reportAny]
+    async def async_lock(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
         """Lock the lock."""
         await self.send_command(DeviceCommand.LOCK)
 
     @override
-    async def async_unlock(self, **kwargs: Any) -> None: # pyright: ignore[reportAny]
+    async def async_unlock(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
         """Unlock the lock."""
         await self.send_command(DeviceCommand.UNLOCK)
 

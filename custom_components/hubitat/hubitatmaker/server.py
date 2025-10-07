@@ -16,6 +16,7 @@ class Server:
     port: int
     handle_event: EventCallback
     ssl_context: SSLContext | None
+    _main_loop: asyncio.AbstractEventLoop
 
     def __init__(
         self,
@@ -65,7 +66,7 @@ class Server:
 
     async def _handle_request(self, request: web.Request) -> web.Response:
         """Handle an incoming request."""
-        event = await request.json()
+        event = cast(dict[str, Any], await request.json())
         # This handler will be called on the server thread. Call the external
         # handler on the app thread.
         self._main_loop.call_soon_threadsafe(self.handle_event, event)
@@ -84,7 +85,11 @@ class Server:
         # If the Server was initialized with port 0, determine what port the
         # underlying server ended up listening on
         if self.port == 0:
-            site_server = cast(AsyncioServer, site._server)
+            # Access the protected _server attribute to get socket info
+            site_server = cast(
+                AsyncioServer,
+                site._server,  # pyright: ignore[reportPrivateUsage]
+            )
             sockets = list(site_server.sockets or [])
             socket = sockets[0]
             self.port = socket.getsockname()[1]

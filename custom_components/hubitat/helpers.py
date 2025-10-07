@@ -1,13 +1,10 @@
-from typing import cast
-
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry
 from homeassistant.helpers.device_registry import DeviceEntry
 
-from .const import DOMAIN
 from .error import DeviceError
-from .hub import Hub
+from .hub import Hub, get_domain_data
 
 
 def are_config_entries_loaded(hass: HomeAssistant, device_id: str) -> bool:
@@ -20,9 +17,7 @@ def are_config_entries_loaded(hass: HomeAssistant, device_id: str) -> bool:
     return True
 
 
-def get_device_entry_by_device_id(
-    hass: HomeAssistant, device_id: str
-) -> DeviceEntry:
+def get_device_entry_by_device_id(hass: HomeAssistant, device_id: str) -> DeviceEntry:
     """Get the device entry for a given device ID."""
     dreg = device_registry.async_get(hass)
     device = dreg.async_get(device_id)
@@ -40,6 +35,6 @@ def get_hub_for_device(hass: HomeAssistant, device: DeviceEntry) -> Hub | None:
     return None
 
 
-def get_hub(hass: HomeAssistant, config_entry_id: str) -> Hub:
+def get_hub(hass: HomeAssistant, config_entry_id: str) -> Hub | None:
     """Get the Hub device associated with a given config entry."""
-    return cast(Hub, hass.data[DOMAIN].get(config_entry_id))
+    return get_domain_data(hass).get(config_entry_id)

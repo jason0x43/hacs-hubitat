@@ -89,9 +89,7 @@ class HubitatSensor(SensorEntity, HubitatEntity):
         )
 
         self._attribute = attribute
-        self._attr_name: str | None = (
-            f"{super().name} {attr_name}".title()
-        )
+        self._attr_name: str | None = f"{super().name} {attr_name}".title()
         self._attr_native_unit_of_measurement: str | None = unit
         self._attr_device_class: SensorDeviceClass | None = device_class
         self._attr_state_class: SensorStateClass | str | None = state_class

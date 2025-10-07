@@ -106,6 +106,7 @@ class HubitatEntityArgs(TypedDict):
 
 class HubitatEntity(HubitatBase, UpdateableEntity, ABC):
     """An entity related to a Hubitat device."""
+
     hass: HomeAssistant
 
     def __init__(
@@ -150,20 +151,16 @@ class HubitatEntity(HubitatBase, UpdateableEntity, ABC):
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         return None
 
-    def async_schedule_update_ha_state(self):
-        ...
+    def async_schedule_update_ha_state(self): ...
 
     @cached_property
-    def unique_id(self) -> str | None:
-        ...
+    def unique_id(self) -> str | None: ...
 
     @cached_property
-    def name(self) -> str | UndefinedType | None:
-        ...
+    def name(self) -> str | UndefinedType | None: ...
 
     @property
-    def enabled(self) -> bool:
-        ...
+    def enabled(self) -> bool: ...
 
     async def async_added_to_hass(self) -> None:
         _LOGGER.debug("Added %s with hass=%s", self, self.hass)

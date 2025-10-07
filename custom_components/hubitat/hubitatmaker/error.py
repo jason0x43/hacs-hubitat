@@ -1,5 +1,3 @@
-from typing import Any
-
 from aiohttp import ClientResponse
 
 
@@ -18,16 +16,12 @@ class InvalidConfig(Exception):
 class InvalidMode(Exception):
     """Error indicating that a mode is invalid."""
 
-    def __init__(self, mode: str, **kwargs: Any):
+    def __init__(self, mode: str, **kwargs: object):
         super().__init__(f"Invalid mode '{mode}'")
 
 
 class RequestError(Exception):
     """An error indicating that a request failed."""
 
-    def __init__(self, resp: ClientResponse, **kwargs: Any):
-        # Pyright doesn't like the @reify used on ClientResponse.url
-        any_resp: Any = resp
-        super().__init__(
-            f"{resp.method} {any_resp.url} - [{resp.status}] {resp.reason}"
-        )
+    def __init__(self, resp: ClientResponse, **kwargs: object):
+        super().__init__(f"{resp.method} {resp.url} - [{resp.status}] {resp.reason}")

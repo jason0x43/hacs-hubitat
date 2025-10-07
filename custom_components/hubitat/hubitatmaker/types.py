@@ -1,7 +1,8 @@
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from json import loads
 from types import MappingProxyType
-from typing import Any, Literal, Mapping, Sequence, TypedDict, cast, override
+from typing import Any, Literal, TypedDict, cast, override
 
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 
@@ -168,9 +169,7 @@ class Device:
         self._capabilities: tuple[str, ...] = tuple(caps)
 
         cmd_list = cast(list[str | int], properties.get("commands", []))
-        commands: list[str] = [
-            p for p in cmd_list if isinstance(p, str)
-        ]
+        commands: list[str] = [p for p in cmd_list if isinstance(p, str)]
         self._commands: tuple[str, ...] = tuple(commands)
 
         self._attributes[DeviceAttribute.LAST_UPDATE] = Attribute(

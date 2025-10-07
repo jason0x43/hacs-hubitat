@@ -362,7 +362,8 @@ class Hub:
         )
 
         hub = Hub(hass, entry, index, hubitat_hub, device)
-        hass.data[DOMAIN][entry.entry_id] = hub
+        domain_data = get_domain_data(hass)
+        domain_data[entry.entry_id] = hub
 
         # Add a listener for every device exported by the hub. The listener
         # will re-export the Hubitat event as a hubitat_event in HA if it
@@ -576,7 +577,8 @@ async def _update_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
 
 def get_hub(hass: HomeAssistant, config_entry_id: str) -> Hub:
     """Get the Hub device associated with a given config entry."""
-    return cast(Hub, hass.data[DOMAIN][config_entry_id])
+    domain_data = get_domain_data(hass)
+    return domain_data[config_entry_id]
 
 
 def _create_ssl_context(ssl_cert: str | None, ssl_key: str | None) -> SSLContext | None:
@@ -723,6 +725,15 @@ def _update_device_rooms(hub: Hub, hass: HomeAssistant) -> None:
         elif hass_device.area_id:
             _ = dreg.async_clear_area_id(hass_device.id)
             _LOGGER.debug("Cleared location of %s", device.name)
+
+
+def get_domain_data(hass: HomeAssistant) -> dict[str, Hub]:
+    """Return the Hubitat domain data dictionary, creating it if necessary."""
+    data = cast(dict[str, Hub] | None, hass.data.get(DOMAIN))
+    if data is None:
+        data = {}
+        hass.data[DOMAIN] = data
+    return data
 
 
 if TYPE_CHECKING:
