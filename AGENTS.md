@@ -8,20 +8,23 @@ This is a Home Assistant integration for Hubitat hubs that allows Hubitat device
 
 ## Development Commands
 
+### Development Setup
+
+- Initialize development environment: `uv sync`
+
 ### Testing
-- Run tests: `uv run pytest tests` or `./scripts/test.sh`
-- Test with specific pattern: `uv run pytest tests -k "test_pattern"`
+
+- Run tests: `uv run pytest`
+- Test with specific pattern: `uv run pytest -k "test_pattern"`
 
 ### Code Quality
-- Type checking: `uv run basedpyright custom_components/hubitat`
+
+- Type checking: `uv run basedpyright`
 - Linting: `uv run ruff check`
 - Format code: `uv run ruff format`
 
-### Development Setup
-- Initialize development environment: `./dev init` (sets up pre-commit hooks and validators)
-- Run type checker and tests: `./dev test`
-
 ### Package Management
+
 - Install dependencies: `uv sync`
 - Add development dependency: `uv add --dev <package>`
 
@@ -77,10 +80,12 @@ The event server is automatically configured in the Maker API instance to push d
 ## Key Configuration
 
 ### Manifest (`custom_components/hubitat/manifest.json`)
+
 - Integration metadata and Home Assistant compatibility
 - No external dependencies (uses built-in HTTP libraries)
 
 ### Constants (`custom_components/hubitat/const.py`)
+
 - Platform definitions, configuration keys
 - Device capability mappings
 - Event types and trigger definitions
@@ -88,22 +93,26 @@ The event server is automatically configured in the Maker API instance to push d
 ## Development Notes
 
 ### Device Capability Mapping
+
 - Devices are mapped to HA platforms based on Hubitat capabilities
 - Some devices may appear as multiple entities (e.g., a lock with battery sensor)
 - Device type detection uses heuristics for ambiguous devices (e.g., switches vs lights)
 
 ### Event Server Architecture
+
 - Python HTTP server runs alongside Home Assistant
 - Automatically configured in Hubitat's Maker API
 - Supports SSL for secure communication
 - Port selection is automatic but can be manually configured
 
 ### Testing Strategy
+
 - Unit tests focus on device mapping and capability detection
 - Mock Hubitat API responses for predictable testing
 - Integration tests validate the full setup flow
 
 ### Dependencies
+
 - Uses `uv` for dependency management
 - Minimal external dependencies (only basedpyright for type checking)
 - Built-in Home Assistant libraries for core functionality
