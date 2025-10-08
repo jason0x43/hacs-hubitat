@@ -137,13 +137,17 @@ class HubitatEntity(HubitatBase, UpdateableEntity, ABC):
         if not temp:
             self._hub.add_device_listener(self._device.id, self.handle_event)
             _LOGGER.debug(
-                "Added device listener for %s (%s)", self._device.id, self.__class__
+                "Added device listener for %s (%s)",
+                self._device.id,
+                self.__class__,
             )
 
     def __del__(self):
         self._hub.remove_device_listener(self._device.id, self.handle_event)
         _LOGGER.debug(
-            "Removed device listener for %s (%s)", self._device.id, self.__class__
+            "Removed device listener for %s (%s)",
+            self._device.id,
+            self.__class__,
         )
 
     @property
@@ -198,7 +202,8 @@ class HubitatEventEmitter(HubitatBase):
         entry = self._hub.config_entry
         dreg = device_registry.async_get(self._hub.hass)
         _ = dreg.async_get_or_create(
-            config_entry_id=entry.entry_id, **get_device_info(self._hub, self._device)
+            config_entry_id=entry.entry_id,
+            **get_device_info(self._hub, self._device),
         )
         _LOGGER.debug("Created device for %s", self)
 

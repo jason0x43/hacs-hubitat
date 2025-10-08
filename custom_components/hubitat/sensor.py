@@ -712,7 +712,11 @@ _SENSOR_ATTRS: tuple[
     (DeviceAttribute.CARBON_DIOXIDE, HubitatCarbonDioxide, None),
     (DeviceAttribute.CARBON_DIOXIDE_LEVEL, HubitatCarbonDioxideLevel, None),
     (DeviceAttribute.CARBON_MONOXIDE_LEVEL, HubitatCarbonMonoxideLevel, None),
-    (DeviceAttribute.CUMULATIVE_CUBIC_METER, HubitatWaterCumulativeM3Sensor, None),
+    (
+        DeviceAttribute.CUMULATIVE_CUBIC_METER,
+        HubitatWaterCumulativeM3Sensor,
+        None,
+    ),
     (DeviceAttribute.CUMULATIVE_LITER, HubitatWaterCumulativeLiterSensor, None),
     (DeviceAttribute.DAY_CUBIC_METER, HubitatWaterDayM3Sensor, None),
     (DeviceAttribute.DAY_EURO, HubitatWaterDayPriceSensor, None),
@@ -759,7 +763,12 @@ async def async_setup_entry(
 
     # Add an update sensor for every device
     _ = create_and_add_entities(
-        hass, entry, async_add_entities, "sensor", HubitatUpdateSensor, is_update_sensor
+        hass,
+        entry,
+        async_add_entities,
+        "sensor",
+        HubitatUpdateSensor,
+        is_update_sensor,
     )
 
     for attr in _SENSOR_ATTRS:
@@ -811,7 +820,9 @@ async def async_setup_entry(
 
 
 def add_hub_entities(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Add entities for hub services."""
 

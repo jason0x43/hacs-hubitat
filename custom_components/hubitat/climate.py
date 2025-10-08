@@ -67,7 +67,12 @@ class ClimateFanMode(StrEnum):
 PRESET_AWAY_AND_ECO = "Away and Eco"
 HASS_FAN_MODES = [FAN_ON, FAN_AUTO]
 HASS_PRESET_MODES = [PRESET_HOME, PRESET_AWAY]
-HASS_NEST_PRESET_MODES = [PRESET_HOME, PRESET_AWAY, PRESET_ECO, PRESET_AWAY_AND_ECO]
+HASS_NEST_PRESET_MODES = [
+    PRESET_HOME,
+    PRESET_AWAY,
+    PRESET_ECO,
+    PRESET_AWAY_AND_ECO,
+]
 
 
 _device_attrs = (
@@ -301,7 +306,12 @@ async def async_setup_entry(
 ) -> None:
     """Initialize thermostat devices."""
     _ = create_and_add_entities(
-        hass, entry, async_add_entities, "climate", HubitatThermostat, is_thermostat
+        hass,
+        entry,
+        async_add_entities,
+        "climate",
+        HubitatThermostat,
+        is_thermostat,
     )
 
 

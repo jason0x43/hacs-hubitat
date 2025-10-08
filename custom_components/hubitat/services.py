@@ -37,7 +37,10 @@ from .lock import HubitatLock
 _LOGGER = getLogger(__name__)
 
 CLEAR_CODE_SCHEMA = vol.Schema(
-    {vol.Required(ATTR_ENTITY_ID): cv.entity_id, vol.Required(ATTR_POSITION): int}
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_id,
+        vol.Required(ATTR_POSITION): int,
+    }
 )
 GET_CODES_SCHEMA = vol.Schema({vol.Required(ATTR_ENTITY_ID): cv.entity_id})
 SEND_COMMAND_SCHEMA = vol.Schema(
@@ -185,7 +188,10 @@ def async_register_services(
         supports_response=SupportsResponse.ONLY,
     )
     hass.services.async_register(
-        DOMAIN, ServiceName.SEND_COMMAND, send_command, schema=SEND_COMMAND_SCHEMA
+        DOMAIN,
+        ServiceName.SEND_COMMAND,
+        send_command,
+        schema=SEND_COMMAND_SCHEMA,
     )
     hass.services.async_register(
         DOMAIN, ServiceName.SET_CODE, set_code, schema=SET_CODE_SCHEMA
@@ -197,16 +203,25 @@ def async_register_services(
         schema=SET_CODE_LENGTH_SCHEMA,
     )
     hass.services.async_register(
-        DOMAIN, ServiceName.SET_ENTRY_DELAY, set_entry_delay, schema=SET_DELAY_SCHEMA
+        DOMAIN,
+        ServiceName.SET_ENTRY_DELAY,
+        set_entry_delay,
+        schema=SET_DELAY_SCHEMA,
     )
     hass.services.async_register(
-        DOMAIN, ServiceName.SET_EXIT_DELAY, set_exit_delay, schema=SET_DELAY_SCHEMA
+        DOMAIN,
+        ServiceName.SET_EXIT_DELAY,
+        set_exit_delay,
+        schema=SET_DELAY_SCHEMA,
     )
     hass.services.async_register(
         DOMAIN, ServiceName.SET_HSM, set_hsm, schema=SET_HSM_SCHEMA
     )
     hass.services.async_register(
-        DOMAIN, ServiceName.SET_HUB_MODE, set_hub_mode, schema=SET_HUB_MODE_SCHEMA
+        DOMAIN,
+        ServiceName.SET_HUB_MODE,
+        set_hub_mode,
+        schema=SET_HUB_MODE_SCHEMA,
     )
 
 

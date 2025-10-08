@@ -496,12 +496,15 @@ class Hub:
         )
         await hub.set_ssl_context(ssl_context)
         _LOGGER.debug(
-            "Set event server SSL cert to %s and SSL key to %s", ssl_cert, ssl_key
+            "Set event server SSL cert to %s and SSL key to %s",
+            ssl_cert,
+            ssl_key,
         )
 
         temp_unit = (
             config_entry.options.get(
-                CONF_TEMPERATURE_UNIT, config_entry.data.get(CONF_TEMPERATURE_UNIT)
+                CONF_TEMPERATURE_UNIT,
+                config_entry.data.get(CONF_TEMPERATURE_UNIT),
             )
             or TEMP_F
         )
@@ -654,7 +657,10 @@ def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:
         id_set = dev_ids[0]
         if len(id_set) == 3:
             new_ids = {
-                (cast(tuple[str, str, str], id_set)[0], f"{id_set[1]}:{id_set[2]}")
+                (
+                    cast(tuple[str, str, str], id_set)[0],
+                    f"{id_set[1]}:{id_set[2]}",
+                )
             }
             _ = dreg.async_update_device(new_dev.id, new_identifiers=new_ids)
             _LOGGER.info(
@@ -756,6 +762,10 @@ if TYPE_CHECKING:
     hubitat_hub = HubitatHub("", "", "")
     device = Device({})
     HUB_TYPECHECK = Hub(
-        hass=test_hass, entry=test_entry, index=0, hub=hubitat_hub, device=device
+        hass=test_hass,
+        entry=test_entry,
+        index=0,
+        hub=hubitat_hub,
+        device=device,
     )
     DEVICE_TYPECHECK = Device({})

@@ -17,7 +17,11 @@ from homeassistant.config_entries import (
     OptionsFlow,
     OptionsFlowWithConfigEntry,
 )
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_TEMPERATURE_UNIT
+from homeassistant.const import (
+    CONF_ACCESS_TOKEN,
+    CONF_HOST,
+    CONF_TEMPERATURE_UNIT,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry
 from homeassistant.helpers.device_registry import DeviceEntry
@@ -342,7 +346,11 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
             return await self.async_step_override_switches()
 
         return await self._async_step_override_type(
-            user_input, "light", ConfigStep.OVERRIDE_LIGHTS, next_step, is_switch
+            user_input,
+            "light",
+            ConfigStep.OVERRIDE_LIGHTS,
+            next_step,
+            is_switch,
         )
 
     async def async_step_override_switches(

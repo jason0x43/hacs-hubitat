@@ -10,7 +10,13 @@ from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 class AttributeData(TypedDict):
     name: DeviceAttribute
     dataType: Literal[
-        "ENUM", "STRING", "DYNAMIC_ENUM", "JSON_OBJECT", "NUMBER", "DATE", "VECTOR3"
+        "ENUM",
+        "STRING",
+        "DYNAMIC_ENUM",
+        "JSON_OBJECT",
+        "NUMBER",
+        "DATE",
+        "VECTOR3",
     ]
     currentValue: str | float | datetime
     unit: str | None
@@ -147,7 +153,10 @@ class Device:
         return self._commands
 
     def update_attr(
-        self, attr_name: DeviceAttribute, value: str | int, value_unit: str | None
+        self,
+        attr_name: DeviceAttribute,
+        value: str | int,
+        value_unit: str | None,
     ) -> None:
         attr = self.attributes[attr_name]
         attr.update_value(value, value_unit)

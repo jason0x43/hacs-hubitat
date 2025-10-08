@@ -194,7 +194,9 @@ def is_fan(device: Device, overrides: dict[str, str] | None = None) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize fan devices."""
     _ = create_and_add_entities(

@@ -52,7 +52,9 @@ class HubitatSelect(SelectEntity, HubitatEntity):
 class HubitatModeSelect(HubitatSelect):
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         super().__init__(
-            attribute=DeviceAttribute.MODE, options=kwargs["hub"].modes or [], **kwargs
+            attribute=DeviceAttribute.MODE,
+            options=kwargs["hub"].modes or [],
+            **kwargs,
         )
 
     @override

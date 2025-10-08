@@ -127,7 +127,11 @@ class TriggerInfo:
     subconfs: tuple[str, ...] | None
 
     def __init__(
-        self, attr: str, event: str, conf: str, subconfs: tuple[str, ...] | None = None
+        self,
+        attr: str,
+        event: str,
+        conf: str,
+        subconfs: tuple[str, ...] | None = None,
     ):
         """Initialize a TriggerInfo."""
         self.attr = attr

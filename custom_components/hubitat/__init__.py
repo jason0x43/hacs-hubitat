@@ -33,11 +33,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     _LOGGER.debug(f"Setting up Hubitat for {config_entry.entry_id}")
 
-    domain_data =get_domain_data(hass)
+    domain_data = get_domain_data(hass)
 
-    hub: Hub = await Hub.create(
-        hass, config_entry, len(domain_data) + 1
-    )
+    hub: Hub = await Hub.create(hass, config_entry, len(domain_data) + 1)
 
     hub.async_update_device_registry()
 

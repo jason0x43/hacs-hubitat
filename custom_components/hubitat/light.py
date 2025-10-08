@@ -282,7 +282,10 @@ class HubitatLight(LightEntity, HubitatEntity):
             await self.send_command(DeviceCommand.OFF)
 
 
-LIGHT_CAPABILITIES = (DeviceCapability.COLOR_TEMP, DeviceCapability.COLOR_CONTROL)
+LIGHT_CAPABILITIES = (
+    DeviceCapability.COLOR_TEMP,
+    DeviceCapability.COLOR_CONTROL,
+)
 
 # Ideally this would be multi-lingual
 MATCH_LIGHT = re.compile(

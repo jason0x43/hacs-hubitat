@@ -8,7 +8,9 @@ from typing import Any, Callable, cast
 import voluptuous as vol
 
 from custom_components.hubitat.util import get_hubitat_device_id
-from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
+from homeassistant.components.device_automation import (
+    DEVICE_TRIGGER_BASE_SCHEMA,
+)
 from homeassistant.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
 )

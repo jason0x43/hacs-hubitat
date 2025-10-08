@@ -278,7 +278,12 @@ async def async_setup_entry(
             return attr[0] in device.attributes
 
         _ = create_and_add_entities(
-            hass, config_entry, async_add_entities, "binary_sensor", attr[1], is_sensor
+            hass,
+            config_entry,
+            async_add_entities,
+            "binary_sensor",
+            attr[1],
+            is_sensor,
         )
 
 

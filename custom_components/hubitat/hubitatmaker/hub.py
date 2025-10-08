@@ -372,7 +372,11 @@ class Hub:
     ) -> None:
         """Update a device attribute value."""
         _LOGGER.debug(
-            "Updating %s of %s to %s (%s)", attr_name, device_id, value, value_unit
+            "Updating %s of %s to %s (%s)",
+            attr_name,
+            device_id,
+            value,
+            value_unit,
         )
         try:
             dev = self._devices[device_id]
@@ -424,7 +428,10 @@ class Hub:
             conn = aiohttp.TCPConnector(ssl=False)
             try:
                 async with aiohttp.request(
-                    method, f"{self.api_url}/{path}", params=params, connector=conn
+                    method,
+                    f"{self.api_url}/{path}",
+                    params=params,
+                    connector=conn,
                 ) as resp:
                     if resp.status >= 400:
                         # retry on server errors or request timeout w/ increasing delay
