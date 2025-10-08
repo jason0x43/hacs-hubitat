@@ -1,13 +1,15 @@
+# pyright: reportAny=false, reportPrivateUsage=false
+
 from asyncio import Future
 from collections.abc import Awaitable
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 
 @patch("custom_components.hubitat.config_flow.HubitatHub")
 @pytest.mark.asyncio
-async def test_validate_input(HubitatHub) -> None:
+async def test_validate_input(HubitatHub: Mock) -> None:
     check_called = False
 
     def check_config() -> Awaitable[None]:

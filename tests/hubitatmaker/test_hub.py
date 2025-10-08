@@ -1,4 +1,4 @@
-# pyright: reportPrivateUsage=false
+# pyright: reportPrivateUsage=false, reportAny=false
 
 import json
 import re
@@ -10,7 +10,10 @@ from urllib.parse import unquote
 
 import pytest
 
-from custom_components.hubitat.hubitatmaker.const import DeviceAttribute, HsmCommand
+from custom_components.hubitat.hubitatmaker.const import (
+    DeviceAttribute,
+    HsmCommand,
+)
 from custom_components.hubitat.hubitatmaker.error import InvalidConfig
 from custom_components.hubitat.hubitatmaker.hub import Hub
 
@@ -23,7 +26,7 @@ hsm: dict[str, str] = {}
 requests: list[dict[str, Any]] = []
 
 
-def fake_get_mac_address(**kwargs: str):
+def fake_get_mac_address(**_kwargs: str):
     return "aa:bb:cc:dd:ee:ff"
 
 

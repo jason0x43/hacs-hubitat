@@ -63,7 +63,9 @@ async def test_entity_migration(get_hub: Mock) -> None:
 @patch("custom_components.hubitat.entities.HubitatEventEmitter")
 @pytest.mark.asyncio
 async def test_add_event_emitters(HubitatEventEmitter: Mock, get_hub: Mock) -> None:
-    from custom_components.hubitat.device import HubitatEventEmitter as HEventEmitter
+    from custom_components.hubitat.device import (
+        HubitatEventEmitter as HEventEmitter,
+    )
 
     mock_device_1 = NonCallableMock(type="switch", attributes=["state"])
     mock_device_2 = NonCallableMock(type="button", attributes=["state"])
