@@ -59,7 +59,7 @@ PRESSURE_UNITS: dict[str, UnitOfPressure] = {
 }
 
 
-class HubitatSensor(HubitatEntity, SensorEntity):
+class HubitatSensor(SensorEntity, HubitatEntity):
     """A generic Hubitat sensor."""
 
     _attribute: DeviceAttribute
@@ -89,11 +89,9 @@ class HubitatSensor(HubitatEntity, SensorEntity):
         )
 
         self._attribute = attribute
-        self._attr_name: str | None = (
-            f"{super(HubitatEntity, self).name} {attr_name}".title()
-        )
+        self._attr_name: str | None = f"{super().name} {attr_name}".title()
         self._attr_native_unit_of_measurement: str | None = unit
-        self._attr_device_class: SensorDeviceClass | None = device_class  # pyright: ignore[reportIncompatibleVariableOverride]
+        self._attr_device_class: SensorDeviceClass | None = device_class
         self._attr_state_class: SensorStateClass | str | None = state_class
         self._attr_unique_id: str | None = f"{super().unique_id}::sensor::{attribute}"
         self._attr_entity_registry_enabled_default: bool = (
@@ -714,7 +712,11 @@ _SENSOR_ATTRS: tuple[
     (DeviceAttribute.CARBON_DIOXIDE, HubitatCarbonDioxide, None),
     (DeviceAttribute.CARBON_DIOXIDE_LEVEL, HubitatCarbonDioxideLevel, None),
     (DeviceAttribute.CARBON_MONOXIDE_LEVEL, HubitatCarbonMonoxideLevel, None),
-    (DeviceAttribute.CUMULATIVE_CUBIC_METER, HubitatWaterCumulativeM3Sensor, None),
+    (
+        DeviceAttribute.CUMULATIVE_CUBIC_METER,
+        HubitatWaterCumulativeM3Sensor,
+        None,
+    ),
     (DeviceAttribute.CUMULATIVE_LITER, HubitatWaterCumulativeLiterSensor, None),
     (DeviceAttribute.DAY_CUBIC_METER, HubitatWaterDayM3Sensor, None),
     (DeviceAttribute.DAY_EURO, HubitatWaterDayPriceSensor, None),
@@ -761,7 +763,12 @@ async def async_setup_entry(
 
     # Add an update sensor for every device
     _ = create_and_add_entities(
-        hass, entry, async_add_entities, "sensor", HubitatUpdateSensor, is_update_sensor
+        hass,
+        entry,
+        async_add_entities,
+        "sensor",
+        HubitatUpdateSensor,
+        is_update_sensor,
     )
 
     for attr in _SENSOR_ATTRS:
@@ -780,7 +787,7 @@ async def async_setup_entry(
 
     # Create sensor entities for any attributes that don't correspond to known
     # sensor types
-    unknown_entities: list[HubitatEntity] = []
+    unknown_entities: list[HubitatSensor] = []
     hub = get_hub(hass, entry.entry_id)
 
     for id in hub.devices:
@@ -813,11 +820,13 @@ async def async_setup_entry(
 
 
 def add_hub_entities(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Add entities for hub services."""
 
-    hub_entities: list[HubitatEntity] = []
+    hub_entities: list[HubitatSensor] = []
     hub = get_hub(hass, entry.entry_id)
 
     if hub.hsm_supported:

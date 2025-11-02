@@ -3,22 +3,21 @@ name = "hubitat"
 version = "0.9.43"
 description = "A Hubitat integration for Home Assistant"
 authors = [{ name = "Jason Cheatham", email = "jason@jasoncheatham.com" }]
-dependencies = [
-    "pyright>=1.1.359",
-]
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.13.2"
 license = { text = "MIT" }
+dependencies = [
+    "homeassistant>=2025.4.0",
+]
 
 [project.urls]
 homepage = "https://github.com/jason0x43/hacs-hubitat"
 
 [project.optional-dependencies]
 
-#[tool.uv.scripts]
-#test-lint = "pyright custom_components/hubitat"
-#test-test = "pytest tests"
-#test = { chain = ["test-lint", "test-test"] }
-#pub = "python scripts/publish.py"
+[tool.taskipy.tasks]
+lint = "pyright custom_components/hubitat"
+test = "pytest tests"
+pub = "python scripts/publish.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -27,20 +26,21 @@ filterwarnings = [
     "ignore:Inheritance class HomeAssistantApplication:DeprecationWarning",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "ruff",
     "pre-commit<3.0.0,>=2.4.0",
-    "homeassistant==2024.11.0",
+    "homeassistant==2025.10.1",
     "pytest-asyncio>=0.16.0",
     "setuptools>=62.2.0",
     "tomlkit>=0.12.3",
+    "taskipy>=1.14.1",
+    "basedpyright>=1.31.6",
 ]
 
 [tool.pyright]
 include = ["custom_components/hubitat"]
 exclude = ["**/__pycache__"]
-extraPaths = ["__pypackages__/3.9/lib"]
 venvPath = "."
 venv = ".venv"
 stubPath = "."
@@ -49,6 +49,7 @@ reportMissingImports = true
 reportOptionalCall = true
 reportOptionalMemberAccess = true
 reportOptionalSubscript = true
+reportUnusedCallResult = false
 reportUnusedClass = true
 reportUnusedFunction = true
 reportUnusedImport = true

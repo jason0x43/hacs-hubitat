@@ -1,24 +1,29 @@
 import asyncio
 import threading
 from asyncio.base_events import Server as AsyncioServer
-from socket import socket as Socket
 from ssl import SSLContext
-from typing import Any, Callable, Dict, List, Optional, cast
+from typing import Any, Callable, cast
 
 from aiohttp import web
 
-EventCallback = Callable[[Dict[str, Any]], None]
+EventCallback = Callable[[dict[str, Any]], None]
 
 
 class Server:
     """A handle to a running server."""
+
+    host: str
+    port: int
+    handle_event: EventCallback
+    ssl_context: SSLContext | None
+    _main_loop: asyncio.AbstractEventLoop
 
     def __init__(
         self,
         handle_event: EventCallback,
         host: str,
         port: int,
-        ssl_context: Optional[SSLContext] = None,
+        ssl_context: SSLContext | None = None,
     ):
         """Initialize a Server."""
         self.host = host
@@ -26,6 +31,9 @@ class Server:
         self.handle_event = handle_event
         self.ssl_context = ssl_context
         self._main_loop = asyncio.get_event_loop()
+        self._runner: web.AppRunner
+        self._startup_event: threading.Event
+        self._server_loop: asyncio.AbstractEventLoop
 
     @property
     def url(self) -> str:
@@ -58,7 +66,7 @@ class Server:
 
     async def _handle_request(self, request: web.Request) -> web.Response:
         """Handle an incoming request."""
-        event = await request.json()
+        event = cast(dict[str, Any], await request.json())
         # This handler will be called on the server thread. Call the external
         # handler on the app thread.
         self._main_loop.call_soon_threadsafe(self.handle_event, event)
@@ -77,8 +85,12 @@ class Server:
         # If the Server was initialized with port 0, determine what port the
         # underlying server ended up listening on
         if self.port == 0:
-            site_server = cast(AsyncioServer, site._server)
-            sockets = cast(List[Socket], site_server.sockets)
+            # Access the protected _server attribute to get socket info
+            site_server = cast(
+                AsyncioServer,
+                site._server,  # pyright: ignore[reportPrivateUsage]
+            )
+            sockets = list(site_server.sockets or [])
             socket = sockets[0]
             self.port = socket.getsockname()[1]
 
@@ -95,7 +107,7 @@ def create_server(
     handle_event: EventCallback,
     host: str = "0.0.0.0",
     port: int = 0,
-    ssl_context: Optional[SSLContext] = None,
+    ssl_context: SSLContext | None = None,
 ) -> Server:
     """Create a new server."""
     return Server(handle_event, host, port, ssl_context)

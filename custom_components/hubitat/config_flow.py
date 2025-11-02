@@ -3,7 +3,7 @@
 import logging
 from collections.abc import Awaitable
 from copy import deepcopy
-from typing import Any, Callable, TypedDict, override
+from typing import Any, Callable, TypedDict, cast, override
 
 import voluptuous as vol
 from voluptuous.schema_builder import Schema
@@ -17,7 +17,11 @@ from homeassistant.config_entries import (
     OptionsFlow,
     OptionsFlowWithConfigEntry,
 )
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_TEMPERATURE_UNIT
+from homeassistant.const import (
+    CONF_ACCESS_TOKEN,
+    CONF_HOST,
+    CONF_TEMPERATURE_UNIT,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry
 from homeassistant.helpers.device_registry import DeviceEntry
@@ -317,7 +321,7 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
         )
 
         if user_input is not None:
-            conf_devs: list[str] = user_input[H_CONF_DEVICES]
+            conf_devs = cast(list[str], user_input[H_CONF_DEVICES])
             ids = [id for id in conf_devs]
             _remove_devices(self.hass, ids)
             return await self.async_step_override_lights()
@@ -342,7 +346,11 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
             return await self.async_step_override_switches()
 
         return await self._async_step_override_type(
-            user_input, "light", ConfigStep.OVERRIDE_LIGHTS, next_step, is_switch
+            user_input,
+            "light",
+            ConfigStep.OVERRIDE_LIGHTS,
+            next_step,
+            is_switch,
         )
 
     async def async_step_override_switches(
@@ -467,9 +475,9 @@ async def _validate_input(user_input: dict[str, Any]) -> ValidatedInput:
     """Validate that the user input can create a working connection."""
 
     # data has the keys from CONFIG_SCHEMA with values provided by the user.
-    host: str = user_input[CONF_HOST]
-    app_id: str = user_input[H_CONF_APP_ID]
-    token: str = user_input[CONF_ACCESS_TOKEN]
+    host = cast(str, user_input[CONF_HOST])
+    app_id = cast(str, user_input[H_CONF_APP_ID])
+    token = cast(str, user_input[CONF_ACCESS_TOKEN])
     port: int | None = user_input.get(H_CONF_SERVER_PORT)
     event_url: str | None = user_input.get(H_CONF_SERVER_URL)
 

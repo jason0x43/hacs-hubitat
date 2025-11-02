@@ -31,14 +31,14 @@ _device_attrs = (
 _speeds = {}
 
 
-class HubitatFan(HubitatEntity, FanEntity):
+class HubitatFan(FanEntity, HubitatEntity):
     """Representation of a Hubitat fan."""
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         """Initialize a Hubitat fan."""
         HubitatEntity.__init__(self, **kwargs)
         FanEntity.__init__(self)
-        self._attr_supported_features: FanEntityFeature = FanEntityFeature.SET_SPEED  # pyright: ignore[reportIncompatibleVariableOverride]
+        self._attr_supported_features: FanEntityFeature = FanEntityFeature.SET_SPEED
 
         # Enable TURN_ON and TURN_OFF when used with a supporting version of
         # HomeAssistant
@@ -194,7 +194,9 @@ def is_fan(device: Device, overrides: dict[str, str] | None = None) -> bool:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize fan devices."""
     _ = create_and_add_entities(

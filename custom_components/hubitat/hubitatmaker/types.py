@@ -1,21 +1,30 @@
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from json import loads
 from types import MappingProxyType
-from typing import Any, Literal, Mapping, Sequence, TypedDict, cast
+from typing import Any, Literal, TypedDict, cast, override
 
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 
 
 class AttributeData(TypedDict):
-    name: str
+    name: DeviceAttribute
     dataType: Literal[
-        "ENUM", "STRING", "DYNAMIC_ENUM", "JSON_OBJECT", "NUMBER", "DATE", "VECTOR3"
+        "ENUM",
+        "STRING",
+        "DYNAMIC_ENUM",
+        "JSON_OBJECT",
+        "NUMBER",
+        "DATE",
+        "VECTOR3",
     ]
     currentValue: str | float | datetime
     unit: str | None
 
 
 class Attribute:
+    _properties: AttributeData
+
     def __init__(self, properties: AttributeData):
         self._properties = properties
 
@@ -28,7 +37,7 @@ class Attribute:
         return self._properties["dataType"]
 
     @property
-    def value(self) -> str | float | datetime:
+    def value(self) -> str | float | datetime | None:
         return self._properties["currentValue"]
 
     @property
@@ -88,6 +97,7 @@ class Attribute:
         for key in "name", "type", "value", "unit":
             yield key, getattr(self, key)
 
+    @override
     def __str__(self):
         return (
             f'<Attribute name="{self.name}" type="{self.type}" value="{self.value}"'
@@ -96,24 +106,27 @@ class Attribute:
 
 
 class Device:
+    _properties: dict[str, Any]
+    _attributes_ro: MappingProxyType[DeviceAttribute, Attribute]
+
     def __init__(self, properties: dict[str, Any]):
         self.update_state(properties)
 
     @property
     def id(self) -> str:
-        return self._properties["id"]
+        return cast(str, self._properties["id"])
 
     @property
     def name(self) -> str:
-        return self._properties["name"]
+        return cast(str, self._properties["name"])
 
     @property
     def label(self) -> str:
-        return self._properties["label"]
+        return cast(str, self._properties["label"])
 
     @property
     def type(self) -> str:
-        return self._properties["type"]
+        return cast(str, self._properties["type"])
 
     @property
     def model(self) -> str | None:
@@ -140,7 +153,10 @@ class Device:
         return self._commands
 
     def update_attr(
-        self, attr_name: DeviceAttribute, value: str | int, value_unit: str | None
+        self,
+        attr_name: DeviceAttribute,
+        value: str | int,
+        value_unit: str | None,
     ) -> None:
         attr = self.attributes[attr_name]
         attr.update_value(value, value_unit)
@@ -153,22 +169,21 @@ class Device:
 
         self._attributes: dict[DeviceAttribute, Attribute] = {}
         self._attributes_ro = MappingProxyType(self._attributes)
-        for attr in properties.get("attributes", []):
+        attrs = cast(list[AttributeData], properties.get("attributes", []))
+        for attr in attrs:
             self._attributes[attr["name"]] = Attribute(attr)
 
-        caps: list[str] = [
-            p for p in properties.get("capabilities", []) if isinstance(p, str)
-        ]
+        cap_list = cast(list[str | int], properties.get("capabilities", []))
+        caps: list[str] = [p for p in cap_list if isinstance(p, str)]
         self._capabilities: tuple[str, ...] = tuple(caps)
 
-        commands: list[str] = [
-            p for p in properties.get("commands", []) if isinstance(p, str)
-        ]
+        cmd_list = cast(list[str | int], properties.get("commands", []))
+        commands: list[str] = [p for p in cmd_list if isinstance(p, str)]
         self._commands: tuple[str, ...] = tuple(commands)
 
         self._attributes[DeviceAttribute.LAST_UPDATE] = Attribute(
             {
-                "name": "hubitat_last_update",
+                "name": DeviceAttribute.HUBITAT_LAST_UPDATE,
                 "dataType": "NUMBER",
                 "currentValue": datetime.now(UTC),
                 "unit": None,
@@ -189,7 +204,8 @@ class Device:
         ):
             yield key, getattr(self, key)
 
-    def __str__(self):
+    @override
+    def __str__(self) -> str:
         return (
             f'<Device id="{self.id}" name="{self.name}" label="{self.label}"'
             f' type="{self.type}" model="{self.model}"'
@@ -198,12 +214,14 @@ class Device:
 
 
 class Event:
+    _properties: dict[str, Any]
+
     def __init__(self, properties: dict[str, Any]):
         self._properties = properties
 
     @property
     def device_id(self) -> str:
-        return self._properties["deviceId"]
+        return cast(str, self._properties["deviceId"])
 
     @property
     def device_name(self) -> str | None:
@@ -215,7 +233,7 @@ class Event:
 
     @property
     def attribute(self) -> str:
-        return self._properties["name"]
+        return cast(str, self._properties["name"])
 
     @property
     def type(self) -> str | None:
@@ -223,7 +241,7 @@ class Event:
 
     @property
     def value(self) -> str | float:
-        return self._properties["value"]
+        return cast(str | float, self._properties["value"])
 
     @property
     def unit(self) -> str | None:
@@ -241,6 +259,7 @@ class Event:
         ):
             yield key, getattr(self, key)
 
+    @override
     def __str__(self) -> str:
         return (
             f'<Event device_id="{self.device_id}" device_name="{self.device_name}"'
@@ -250,12 +269,14 @@ class Event:
 
 
 class Mode:
+    _properties: dict[str, Any]
+
     def __init__(self, properties: dict[str, Any]):
         self._properties = properties
 
     @property
     def active(self) -> bool:
-        return self._properties["active"]
+        return cast(bool, self._properties["active"])
 
     @active.setter
     def active(self, value: bool) -> None:
@@ -263,11 +284,11 @@ class Mode:
 
     @property
     def id(self) -> int:
-        return self._properties.get("id", -1)
+        return cast(int, self._properties.get("id", -1))
 
     @property
     def name(self) -> str:
-        return self._properties["name"]
+        return cast(str, self._properties["name"])
 
     def __iter__(self):
         for key in (
@@ -277,5 +298,6 @@ class Mode:
         ):
             yield key, getattr(self, key)
 
+    @override
     def __str__(self) -> str:
         return f'<Mode id="{self.id}" name="{self.name}" active="{self.active}">'

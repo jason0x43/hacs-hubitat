@@ -1,11 +1,12 @@
 from logging import getLogger
-from typing import Callable, TypeVar
+from typing import Callable, TypeVar, cast
 
 from custom_components.hubitat.const import Platform
 from custom_components.hubitat.util import get_device_overrides
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry
+from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .device import HubitatEntity, HubitatEventEmitter
@@ -41,7 +42,7 @@ def create_and_add_entities(
 
     if len(entities) > 0:
         hub.add_entities(entities)
-        async_add_entities(entities)
+        async_add_entities(cast(list[Entity], entities))
 
     # Devices that have this entity type when not overridden
     original_devices_with_entity = [

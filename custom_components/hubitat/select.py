@@ -10,7 +10,7 @@ from .device import HubitatEntity, HubitatEntityArgs
 from .hub import get_hub
 
 
-class HubitatSelect(HubitatEntity, SelectEntity):
+class HubitatSelect(SelectEntity, HubitatEntity):
     _attribute: DeviceAttribute
 
     def __init__(
@@ -52,7 +52,9 @@ class HubitatSelect(HubitatEntity, SelectEntity):
 class HubitatModeSelect(HubitatSelect):
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         super().__init__(
-            attribute=DeviceAttribute.MODE, options=kwargs["hub"].modes or [], **kwargs
+            attribute=DeviceAttribute.MODE,
+            options=kwargs["hub"].modes or [],
+            **kwargs,
         )
 
     @override

@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+from os import environ
+from os.path import dirname
+from pathlib import Path
+from subprocess import call, getoutput
+from sys import argv
+from typing import cast
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Start a Home Assistant container")
+    parser.add_argument(
+        "version",
+        help="Home Assistant version (e.g., 2023.12.0)",
+    )
+
+    if len(argv) == 1:
+        parser.print_help()
+        parser.exit()
+
+    return parser.parse_args()
+
+
+args = parse_args()
+version = cast(str, args.version)
+
+name = f"homeassistant-{version}"
+scriptdir = Path(dirname(__file__))
+config_path = (
+    Path(os.getenv("HASS_CONFIG_PATH") or (f"{scriptdir}/config")).absolute().resolve()
+)
+
+if not config_path.exists():
+    print(f"Config path {config_path} does not exist.")
+    exit(1)
+
+print(f"Using {scriptdir / 'custom_components' / 'hubitat'} for hacs_hubitat")
+print(f"Using {config_path} for config")
+
+exists = getoutput(f"docker ps --all --filter name={name} --format '{{ .Names }}'")
+
+if len(exists) > 0:
+    print(f"Starting {name}")
+    cmd = ["docker", "start"]
+
+    if "HASS_DAEMONIZE" in environ:
+        cmd.append("-a")
+
+    cmd.append(name)
+else:
+    print(f"Creating {name}")
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "--name",
+        name,
+    ]
+
+    if "HASS_DAEMONIZE" in environ:
+        cmd.append("-d")
+
+    cmd.extend(
+        [
+            "-v",
+            "/etc/localtime:/etc/localtime:ro",
+            "-v",
+            f"{config_path}:/config",
+            "-v",
+            f"{scriptdir}/custom_components/hubitat:/config/custom_components/hubitat",
+            "-p",
+            "8123:8123",
+            "-p",
+            "21064:21064",
+            "-p",
+            "12345:12345",
+            "-p",
+            "12346:12346",
+            f"homeassistant/home-assistant:{version}",
+        ]
+    )
+
+try:
+    call(cmd)
+except KeyboardInterrupt:
+    pass

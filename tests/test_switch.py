@@ -1,16 +1,22 @@
-from typing import List
+from typing import TypeVar
 from unittest.mock import Mock, call, patch
 
 import pytest
 
+from custom_components.hubitat.device import HubitatEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import Entity
+
+E = TypeVar("E", bound=HubitatEntity)
 
 
 @pytest.mark.asyncio
 @patch("custom_components.hubitat.switch.create_and_add_entities")
 @patch("custom_components.hubitat.switch.create_and_add_event_emitters")
-async def test_setup_entry(create_emitters, create_entities) -> None:
+async def test_setup_entry(
+    create_emitters: Mock,
+    create_entities: Mock,
+) -> None:
     create_entities.return_value = []
     create_emitters.return_value = None
 
@@ -27,7 +33,7 @@ async def test_setup_entry(create_emitters, create_entities) -> None:
     mock_hass = Mock(spec=["async_register"])
     mock_config_entry = Mock(spec=ConfigEntry)
 
-    def add_entities(_: List[Entity]) -> None:
+    def add_entities(_: list[Entity]) -> None:
         pass
 
     mock_add_entities = Mock(spec=add_entities)

@@ -24,11 +24,15 @@ from .hubitatmaker import (
 _LOGGER = getLogger(__name__)
 
 
-class HubitatCover(HubitatEntity, CoverEntity):  # pyright: ignore[reportIncompatibleVariableOverride]
+class HubitatCover(CoverEntity, HubitatEntity):
     """Representation of a Hubitat cover."""
 
     _attribute: DeviceAttribute
     _features: CoverEntityFeature
+    _attr_supported_features: CoverEntityFeature | None
+    _attr_unique_id: str | None
+    _attr_name: str | None
+    _device_attrs: tuple[DeviceAttribute, ...]
 
     def __init__(
         self,
@@ -42,10 +46,10 @@ class HubitatCover(HubitatEntity, CoverEntity):  # pyright: ignore[reportIncompa
         CoverEntity.__init__(self)
 
         self._attribute = attribute
-        self._attr_supported_features: CoverEntityFeature | None = features  # pyright: ignore[reportIncompatibleVariableOverride]
-        self._attr_unique_id: str | None = f"{super().unique_id}::cover::{attribute}"
-        self._attr_name: str | None = f"{super().name} {self._attribute}".title()
-        self._device_attrs: tuple[DeviceAttribute, ...] = (
+        self._attr_supported_features = features
+        self._attr_unique_id = f"{super().unique_id}::cover::{attribute}"
+        self._attr_name = f"{super().name} {self._attribute}".title()
+        self._device_attrs = (
             self._attribute,
             DeviceAttribute.LEVEL,
             DeviceAttribute.POSITION,

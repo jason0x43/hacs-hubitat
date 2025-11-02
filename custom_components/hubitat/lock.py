@@ -28,7 +28,7 @@ _device_attrs = (
 )
 
 
-class HubitatLock(HubitatEntity, LockEntity):
+class HubitatLock(LockEntity, HubitatEntity):
     """Representation of a Hubitat lock."""
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
@@ -90,12 +90,12 @@ class HubitatLock(HubitatEntity, LockEntity):
         return _device_attrs
 
     @override
-    async def async_lock(self, **kwargs: Any) -> None: # pyright: ignore[reportAny]
+    async def async_lock(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
         """Lock the lock."""
         await self.send_command(DeviceCommand.LOCK)
 
     @override
-    async def async_unlock(self, **kwargs: Any) -> None: # pyright: ignore[reportAny]
+    async def async_unlock(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
         """Unlock the lock."""
         await self.send_command(DeviceCommand.UNLOCK)
 

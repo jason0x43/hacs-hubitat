@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    name: Lint, Type Check, and Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Check Home Assistant dependency is latest non-beta
+        run: |
+          # Get the current pinned version from pyproject.toml
+          CURRENT_VERSION=$(grep 'homeassistant==' pyproject.toml | sed -n 's/.*homeassistant==\([0-9.]*\).*/\1/p' | head -1)
+          if [ -z "$CURRENT_VERSION" ]; then
+            echo "Error: Could not determine current homeassistant version"
+            exit 1
+          fi
+          echo "Current homeassistant dev dependency: $CURRENT_VERSION"
+          
+          # Get the latest non-beta version from PyPI
+          LATEST_VERSION=$(curl -s https://pypi.org/pypi/homeassistant/json | \
+            python3 -c "import sys, json; releases = json.load(sys.stdin)['releases']; print(max([v for v in releases.keys() if not any(x in v for x in ['a', 'b', 'rc', 'dev'])], key=lambda x: [int(i) for i in x.split('.')]))")
+          echo "Latest homeassistant release: $LATEST_VERSION"
+          
+          # Compare versions
+          if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
+            echo "::warning::homeassistant dev dependency ($CURRENT_VERSION) is not the latest release ($LATEST_VERSION)"
+            echo "::warning::Consider updating to homeassistant==$LATEST_VERSION in pyproject.toml"
+          else
+            echo "✓ homeassistant dev dependency is up to date"
+          fi
+
+      - name: Run ruff check
+        run: uv run ruff check
+
+      - name: Run basedpyright
+        run: uv run basedpyright
+
+      - name: Run pytest
+        run: uv run pytest

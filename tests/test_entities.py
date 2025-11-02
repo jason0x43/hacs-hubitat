@@ -1,9 +1,9 @@
-from typing import Dict, Optional
+from typing import cast
 from unittest.mock import Mock, NonCallableMock, patch
 
 import pytest
 
-from custom_components.hubitat.device import Hub
+from custom_components.hubitat.hub import Hub
 from custom_components.hubitat.hubitatmaker import Device
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -12,7 +12,7 @@ from homeassistant.helpers.entity_registry import EntityRegistry
 
 def mock_get_reg(_: HomeAssistant) -> EntityRegistry:
     MockReg = Mock(spec=EntityRegistry)
-    mock_reg = MockReg()
+    mock_reg = cast(Mock, MockReg())
     mock_reg.configure_mock(entities={})
     return mock_reg
 
@@ -27,7 +27,7 @@ async def test_entity_migration(get_hub: Mock) -> None:
     mock_device_1 = NonCallableMock(type="switch", attributes=["state"], label="Switch")
     mock_device_2 = NonCallableMock(type="fan", attributes=["state"], label="Fan")
     MockHub = Mock(spec=Hub)
-    mock_hub = MockHub()
+    mock_hub = cast(Mock, MockHub())
     mock_hub.configure_mock(
         devices={"id1": mock_device_1, "id2": mock_device_2}, token="12345"
     )
@@ -39,9 +39,10 @@ async def test_entity_migration(get_hub: Mock) -> None:
 
     mock_hass = Mock(spec=["async_create_task"])
     MockConfigEntry = Mock(spec=ConfigEntry)
-    mock_entry = MockConfigEntry()
+    mock_entry = cast(Mock, MockConfigEntry())
 
-    def _is_switch(device: Device, overrides: Optional[Dict[str, str]] = None) -> bool:
+    def _is_switch(device: Device, overrides: dict[str, str] | None = None) -> bool:
+        _ = overrides  # unused but part of interface
         return device.type == "switch"
 
     is_switch = Mock(side_effect=_is_switch)
@@ -62,22 +63,25 @@ async def test_entity_migration(get_hub: Mock) -> None:
 @patch("custom_components.hubitat.entities.HubitatEventEmitter")
 @pytest.mark.asyncio
 async def test_add_event_emitters(HubitatEventEmitter: Mock, get_hub: Mock) -> None:
+    from custom_components.hubitat.device import (
+        HubitatEventEmitter as HEventEmitter,
+    )
+
     mock_device_1 = NonCallableMock(type="switch", attributes=["state"])
     mock_device_2 = NonCallableMock(type="button", attributes=["state"])
     MockHub = Mock(spec=Hub)
-    mock_hub = MockHub()
+    mock_hub = cast(Mock, MockHub())
     mock_hub.devices = {"id1": mock_device_1, "id2": mock_device_2}
     get_hub.return_value = mock_hub
 
-    HubitatEventEmitter.return_value.update_device_registry = Mock(
-        return_value="update_registry"
-    )
+    hee = cast(HEventEmitter, HubitatEventEmitter.return_value)
+    hee.update_device_registry = Mock(return_value="update_registry")
 
     from custom_components.hubitat.entities import create_and_add_event_emitters
 
     mock_hass = Mock(spec=["async_create_task"])
     MockConfigEntry = Mock(spec=ConfigEntry)
-    mock_entry = MockConfigEntry()
+    mock_entry = cast(Mock, MockConfigEntry())
 
     def mock_is_emitter(device: Device) -> bool:
         return device.type == "button"
@@ -88,6 +92,6 @@ async def test_add_event_emitters(HubitatEventEmitter: Mock, get_hub: Mock) -> N
 
     assert HubitatEventEmitter.call_count == 1, "expected 1 emitter to be created"
 
-    assert (
-        mock_hub.add_event_emitters.call_count == 1
-    ), "event emitters should have been added to hub"
+    assert mock_hub.add_event_emitters.call_count == 1, (  # pyright: ignore[reportAny]
+        "event emitters should have been added to hub"
+    )

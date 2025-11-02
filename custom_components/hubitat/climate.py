@@ -67,7 +67,12 @@ class ClimateFanMode(StrEnum):
 PRESET_AWAY_AND_ECO = "Away and Eco"
 HASS_FAN_MODES = [FAN_ON, FAN_AUTO]
 HASS_PRESET_MODES = [PRESET_HOME, PRESET_AWAY]
-HASS_NEST_PRESET_MODES = [PRESET_HOME, PRESET_AWAY, PRESET_ECO, PRESET_AWAY_AND_ECO]
+HASS_NEST_PRESET_MODES = [
+    PRESET_HOME,
+    PRESET_AWAY,
+    PRESET_ECO,
+    PRESET_AWAY_AND_ECO,
+]
 
 
 _device_attrs = (
@@ -84,8 +89,10 @@ _device_attrs = (
 )
 
 
-class HubitatThermostat(HubitatEntity, ClimateEntity):
+class HubitatThermostat(ClimateEntity, HubitatEntity):
     """Representation of a Hubitat switch."""
+
+    _attr_supported_features: ClimateEntityFeature
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         HubitatEntity.__init__(self, **kwargs)
@@ -99,7 +106,7 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
             HVACMode.OFF,
         ]
         self._attr_fan_modes: list[str] | None = HASS_FAN_MODES
-        self._attr_supported_features: ClimateEntityFeature = (  # pyright: ignore[reportIncompatibleVariableOverride]
+        self._attr_supported_features = (
             ClimateEntityFeature.TARGET_TEMPERATURE
             | ClimateEntityFeature.PRESET_MODE
             | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
@@ -112,14 +119,16 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         self._attr_min_temp: float = 4.4
 
         if hasattr(ClimateEntityFeature, "TURN_OFF"):
-            self._attr_supported_features |= getattr(ClimateEntityFeature, "TURN_OFF")
+            self._attr_supported_features |= ClimateEntityFeature.TURN_OFF
             self._enable_turn_on_off_backwards_compatibility: bool = False
 
         self.load_state()
 
     @override
     def load_state(self):
-        self._attr_current_humidity: int | None = self._get_current_humidity()
+        # In 2025.4.1 this is int | None, in 2025.10.1+ it's float | None
+        # We use float | None which works at runtime in both versions
+        self._attr_current_humidity: float | None = self._get_current_humidity()
         self._attr_current_temperature: float | None = self._get_current_temperature()
         self._attr_fan_mode: str | None = self._get_fan_mode()
         self._attr_hvac_mode: HVACMode | None = self._get_hvac_mode()
@@ -135,8 +144,9 @@ class HubitatThermostat(HubitatEntity, ClimateEntity):
         )
         self._attr_temperature_unit: str = self._get_temperature_unit()
 
-    def _get_current_humidity(self) -> int | None:
-        return self.get_int_attr(DeviceAttribute.HUMIDITY)
+    def _get_current_humidity(self) -> float | None:
+        humidity = self.get_int_attr(DeviceAttribute.HUMIDITY)
+        return float(humidity) if humidity is not None else None
 
     def _get_current_temperature(self) -> float | None:
         return self.get_float_attr(DeviceAttribute.TEMP)
@@ -296,7 +306,12 @@ async def async_setup_entry(
 ) -> None:
     """Initialize thermostat devices."""
     _ = create_and_add_entities(
-        hass, entry, async_add_entities, "climate", HubitatThermostat, is_thermostat
+        hass,
+        entry,
+        async_add_entities,
+        "climate",
+        HubitatThermostat,
+        is_thermostat,
     )
 
 

@@ -15,6 +15,8 @@ def test_normal_lock_codes() -> None:
                 {
                     "name": DeviceAttribute.LOCK_CODES,
                     "currentValue": '{"1":{"name":"Test","code":"1234"}}',
+                    "dataType": "JSON_OBJECT",
+                    "unit": None,
                 }
             )
         }
@@ -37,7 +39,12 @@ def test_encrypted_lock_codes() -> None:
     device.configure_mock(
         attributes={
             DeviceAttribute.LOCK_CODES: Attribute(
-                {"name": DeviceAttribute.LOCK_CODES, "currentValue": "abc1235Qbxyz"}
+                {
+                    "name": DeviceAttribute.LOCK_CODES,
+                    "currentValue": "abc1235Qbxyz",
+                    "dataType": "STRING",
+                    "unit": None,
+                }
             )
         }
     )

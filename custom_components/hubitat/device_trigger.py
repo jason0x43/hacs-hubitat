@@ -8,9 +8,13 @@ from typing import Any, Callable, cast
 import voluptuous as vol
 
 from custom_components.hubitat.util import get_hubitat_device_id
+from homeassistant.components.device_automation import (
+    DEVICE_TRIGGER_BASE_SCHEMA,
+)
 from homeassistant.components.device_automation.exceptions import (
     InvalidDeviceAutomationConfig,
 )
+from homeassistant.components.homeassistant.triggers import event
 from homeassistant.const import (
     CONF_DEVICE_ID,
     CONF_DOMAIN,
@@ -48,23 +52,6 @@ from .helpers import (
 from .hub import Hub
 from .hubitatmaker import Device, DeviceAttribute, DeviceCapability
 
-try:
-    from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
-except Exception:
-    from homeassistant.components.device_automation import (
-        TRIGGER_BASE_SCHEMA,  # type: ignore
-    )
-
-    DEVICE_TRIGGER_BASE_SCHEMA = TRIGGER_BASE_SCHEMA
-
-
-# The `event` type moved in HA 0.115
-try:
-    from homeassistant.components.homeassistant.triggers import event
-except ImportError:
-    from homeassistant.components.automation import event  # type: ignore
-
-
 TRIGGER_TYPES = tuple([v.conf for v in TRIGGER_CAPABILITIES.values()])
 TRIGGER_SUBTYPES = set(
     chain.from_iterable(
@@ -72,7 +59,7 @@ TRIGGER_SUBTYPES = set(
     )
 )
 
-TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
+TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(  # pyright: ignore[reportUnknownMemberType]
     {
         vol.Required(CONF_TYPE): vol.In(TRIGGER_TYPES),
         vol.Required(H_CONF_SUBTYPE): str,
@@ -86,25 +73,27 @@ async def async_validate_trigger_config(
     hass: HomeAssistant, config: dict[str, Any]
 ) -> dict[str, Any]:
     """Validate a trigger config."""
-    config = TRIGGER_SCHEMA(config)
-    device = get_device_entry_by_device_id(hass, config[CONF_DEVICE_ID])
+    # Voluptuous returns unknown types, so we assert the expected type
+    validated_config = cast(dict[str, Any], TRIGGER_SCHEMA(config))
+    device_id = cast(str, validated_config[CONF_DEVICE_ID])
+    device = get_device_entry_by_device_id(hass, device_id)
 
     if are_config_entries_loaded(hass, device.id):
         hubitat_device = get_hubitat_device(hass, device.id)
         if hubitat_device:
             types = get_trigger_types(hubitat_device.device)
-            trigger_type = config[CONF_TYPE]
+            trigger_type = cast(str, validated_config[CONF_TYPE])
             if trigger_type not in types:
                 _LOGGER.warning("Device doesn't support '%s'", trigger_type)
                 raise InvalidDeviceAutomationConfig
 
-            trigger_subtype = config.get(H_CONF_SUBTYPE)
+            trigger_subtype = cast(str | None, validated_config.get(H_CONF_SUBTYPE))
             if trigger_subtype:
                 subtypes = get_trigger_subtypes(hubitat_device.device, trigger_type)
                 if not subtypes or trigger_subtype not in subtypes:
                     _LOGGER.warning("Device doesn't support '%s'", trigger_subtype)
 
-    return config
+    return validated_config
 
 
 async def async_get_triggers(
@@ -115,7 +104,7 @@ async def async_get_triggers(
     if device is None:
         return []
 
-    triggers = []
+    triggers: list[dict[str, Any]] = []
     trigger_types = get_trigger_types(device.device)
 
     for trigger_type in trigger_types:
@@ -154,16 +143,15 @@ async def async_attach_trigger(
 ) -> Callable[[], None]:
     """Attach a trigger."""
 
-    hubitat_device = get_hubitat_device(hass, config[CONF_DEVICE_ID])
+    device_id = cast(str, config[CONF_DEVICE_ID])
+    hubitat_device = get_hubitat_device(hass, device_id)
     if hubitat_device is None:
-        _LOGGER.warning(
-            "Could not find Hubitat device for ID %s", config[CONF_DEVICE_ID]
-        )
+        _LOGGER.warning("Could not find Hubitat device for ID %s", device_id)
         raise InvalidDeviceAutomationConfig
 
     # Event data should match up to the data a hubitat_event event would
     # contain
-    event_data = {
+    event_data: dict[str, Any] = {
         ATTR_DEVICE_ID: hubitat_device.device.id,
         ATTR_HUB: hubitat_device.hub.id,
         ATTR_ATTRIBUTE: config[CONF_TYPE],
@@ -171,12 +159,16 @@ async def async_attach_trigger(
     if H_CONF_SUBTYPE in config:
         event_data[ATTR_VALUE] = config[H_CONF_SUBTYPE]
 
-    trigger = event.TRIGGER_SCHEMA(
-        {
-            CONF_PLATFORM: "event",
-            event.CONF_EVENT_TYPE: H_CONF_HUBITAT_EVENT,
-            CONF_EVENT_DATA: event_data,
-        }
+    # Voluptuous schema returns unknown type, so we cast
+    trigger = cast(
+        dict[str, Any],
+        event.TRIGGER_SCHEMA(
+            {
+                CONF_PLATFORM: "event",
+                event.CONF_EVENT_TYPE: H_CONF_HUBITAT_EVENT,
+                CONF_EVENT_DATA: event_data,
+            }
+        ),
     )
 
     _LOGGER.debug("Attaching trigger %s", trigger)
@@ -187,16 +179,19 @@ async def async_attach_trigger(
 
 
 class DeviceWrapper:
+    _device: Device
+    _hub: Hub
+
     def __init__(self, device: Device, hub: Hub):
         self._device = device
         self._hub = hub
 
     @property
-    def device(self):
+    def device(self) -> Device:
         return self._device
 
     @property
-    def hub(self):
+    def hub(self) -> Hub:
         return self._hub
 
 
@@ -218,7 +213,7 @@ def get_hubitat_device(hass: HomeAssistant, device_id: str) -> DeviceWrapper | N
 
 def get_trigger_types(device: Device) -> list[str]:
     """Return the list of trigger types for a device."""
-    types = []
+    types: list[str] = []
 
     if DeviceCapability.DOUBLE_TAPABLE_BUTTON in device.capabilities:
         types.append(H_CONF_DOUBLE_TAPPED)
@@ -266,8 +261,8 @@ def get_lock_codes(device: Device) -> list[str]:
     """Return the lock codes for a lock."""
     try:
         codes_str = cast(str, device.attributes[DeviceAttribute.LOCK_CODES].value)
-        codes = loads(codes_str)
-        return [codes[id]["name"] for id in codes]
+        codes: dict[str, Any] = cast(dict[str, Any], loads(codes_str))
+        return [cast(str, codes[id]["name"]) for id in codes]
     except Exception as e:
-        _LOGGER.warn("Error getting lock codes for %s: %s", device, e)
+        _LOGGER.warning("Error getting lock codes for %s: %s", device, e)
         return []

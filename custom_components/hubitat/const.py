@@ -1,4 +1,5 @@
 """Constants for the Hubitat integration."""
+
 from enum import StrEnum
 from typing import Literal, get_args
 
@@ -120,8 +121,17 @@ TEMP_C = "C"
 class TriggerInfo:
     """Trigger metadata."""
 
+    attr: str
+    event: str
+    conf: str
+    subconfs: tuple[str, ...] | None
+
     def __init__(
-        self, attr: str, event: str, conf: str, subconfs: tuple[str, ...] | None = None
+        self,
+        attr: str,
+        event: str,
+        conf: str,
+        subconfs: tuple[str, ...] | None = None,
     ):
         """Initialize a TriggerInfo."""
         self.attr = attr

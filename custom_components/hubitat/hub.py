@@ -280,8 +280,14 @@ class Hub:
         if CONF_ACCESS_TOKEN not in entry.data:
             raise ValueError("Missing access token in config entry")
 
-        url = entry.options.get(H_CONF_SERVER_URL, entry.data.get(H_CONF_SERVER_URL))
-        port = entry.options.get(H_CONF_SERVER_PORT, entry.data.get(H_CONF_SERVER_PORT))
+        url = cast(
+            str | None,
+            entry.options.get(H_CONF_SERVER_URL, entry.data.get(H_CONF_SERVER_URL)),
+        )
+        port = cast(
+            int | None,
+            entry.options.get(H_CONF_SERVER_PORT, entry.data.get(H_CONF_SERVER_PORT)),
+        )
 
         # Previous versions of the integration may have saved a value of "" for
         # server_url with the assumption that a use_server_url flag would control
@@ -290,12 +296,18 @@ class Hub:
         if url == "":
             url = None
 
-        ssl_cert = entry.options.get(
-            H_CONF_SERVER_SSL_CERT,
-            entry.data.get(H_CONF_SERVER_SSL_CERT),
+        ssl_cert = cast(
+            str | None,
+            entry.options.get(
+                H_CONF_SERVER_SSL_CERT,
+                entry.data.get(H_CONF_SERVER_SSL_CERT),
+            ),
         )
-        ssl_key = entry.options.get(
-            H_CONF_SERVER_SSL_KEY, entry.data.get(H_CONF_SERVER_SSL_KEY)
+        ssl_key = cast(
+            str | None,
+            entry.options.get(
+                H_CONF_SERVER_SSL_KEY, entry.data.get(H_CONF_SERVER_SSL_KEY)
+            ),
         )
         ssl_context = await hass.async_add_executor_job(
             _create_ssl_context, ssl_cert, ssl_key
@@ -350,7 +362,8 @@ class Hub:
         )
 
         hub = Hub(hass, entry, index, hubitat_hub, device)
-        hass.data[DOMAIN][entry.entry_id] = hub
+        domain_data = get_domain_data(hass)
+        domain_data[entry.entry_id] = hub
 
         # Add a listener for every device exported by the hub. The listener
         # will re-export the Hubitat event as a hubitat_event in HA if it
@@ -369,8 +382,9 @@ class Hub:
 
         _LOGGER.debug("Registered platforms")
 
-        should_update_rooms = entry.options.get(
-            H_CONF_SYNC_AREAS, entry.data.get(H_CONF_SYNC_AREAS)
+        should_update_rooms = cast(
+            bool | None,
+            entry.options.get(H_CONF_SYNC_AREAS, entry.data.get(H_CONF_SYNC_AREAS)),
         )
         if should_update_rooms:
             _update_device_rooms(hub, hass)
@@ -432,8 +446,9 @@ class Hub:
         _LOGGER.debug("Handling options update...")
         hub = get_hub(hass, config_entry.entry_id)
 
-        host: str | None = config_entry.options.get(
-            CONF_HOST, config_entry.data.get(CONF_HOST)
+        host = cast(
+            str | None,
+            config_entry.options.get(CONF_HOST, config_entry.data.get(CONF_HOST)),
         )
         if host is not None and host != hub.host:
             await hub.set_host(host)
@@ -450,8 +465,11 @@ class Hub:
             await hub.set_port(port)
             _LOGGER.debug("Set event server port to %s", port)
 
-        url = config_entry.options.get(
-            H_CONF_SERVER_URL, config_entry.data.get(H_CONF_SERVER_URL)
+        url = cast(
+            str | None,
+            config_entry.options.get(
+                H_CONF_SERVER_URL, config_entry.data.get(H_CONF_SERVER_URL)
+            ),
         )
         if url == "":
             url = None
@@ -459,25 +477,34 @@ class Hub:
             await hub.set_event_url(url)
             _LOGGER.debug("Set event server URL to %s", url)
 
-        ssl_cert = config_entry.options.get(
-            H_CONF_SERVER_SSL_CERT,
-            config_entry.data.get(H_CONF_SERVER_SSL_CERT),
+        ssl_cert = cast(
+            str | None,
+            config_entry.options.get(
+                H_CONF_SERVER_SSL_CERT,
+                config_entry.data.get(H_CONF_SERVER_SSL_CERT),
+            ),
         )
-        ssl_key = config_entry.options.get(
-            H_CONF_SERVER_SSL_KEY,
-            config_entry.data.get(H_CONF_SERVER_SSL_KEY),
+        ssl_key = cast(
+            str | None,
+            config_entry.options.get(
+                H_CONF_SERVER_SSL_KEY,
+                config_entry.data.get(H_CONF_SERVER_SSL_KEY),
+            ),
         )
         ssl_context = await hass.async_add_executor_job(
             _create_ssl_context, ssl_cert, ssl_key
         )
         await hub.set_ssl_context(ssl_context)
         _LOGGER.debug(
-            "Set event server SSL cert to %s and SSL key to %s", ssl_cert, ssl_key
+            "Set event server SSL cert to %s and SSL key to %s",
+            ssl_cert,
+            ssl_key,
         )
 
         temp_unit = (
             config_entry.options.get(
-                CONF_TEMPERATURE_UNIT, config_entry.data.get(CONF_TEMPERATURE_UNIT)
+                CONF_TEMPERATURE_UNIT,
+                config_entry.data.get(CONF_TEMPERATURE_UNIT),
             )
             or TEMP_F
         )
@@ -553,7 +580,8 @@ async def _update_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
 
 def get_hub(hass: HomeAssistant, config_entry_id: str) -> Hub:
     """Get the Hub device associated with a given config entry."""
-    return cast(Hub, hass.data[DOMAIN][config_entry_id])
+    domain_data = get_domain_data(hass)
+    return domain_data[config_entry_id]
 
 
 def _create_ssl_context(ssl_cert: str | None, ssl_key: str | None) -> SSLContext | None:
@@ -629,7 +657,10 @@ def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:
         id_set = dev_ids[0]
         if len(id_set) == 3:
             new_ids = {
-                (cast(tuple[str, str, str], id_set)[0], f"{id_set[1]}:{id_set[2]}")
+                (
+                    cast(tuple[str, str, str], id_set)[0],
+                    f"{id_set[1]}:{id_set[2]}",
+                )
             }
             _ = dreg.async_update_device(new_dev.id, new_identifiers=new_ids)
             _LOGGER.info(
@@ -702,6 +733,15 @@ def _update_device_rooms(hub: Hub, hass: HomeAssistant) -> None:
             _LOGGER.debug("Cleared location of %s", device.name)
 
 
+def get_domain_data(hass: HomeAssistant) -> dict[str, Hub]:
+    """Return the Hubitat domain data dictionary, creating it if necessary."""
+    data = cast(dict[str, Hub] | None, hass.data.get(DOMAIN))
+    if data is None:
+        data = {}
+        hass.data[DOMAIN] = data
+    return data
+
+
 if TYPE_CHECKING:
     test_hass = HomeAssistant("")
     test_discovery_keys: MappingProxyType[str, tuple[DiscoveryKey, ...]] = (
@@ -717,10 +757,15 @@ if TYPE_CHECKING:
         discovery_keys=test_discovery_keys,  # pyright: ignore[reportArgumentType]
         options=None,
         unique_id=None,
+        subentries_data=None,
     )
     hubitat_hub = HubitatHub("", "", "")
     device = Device({})
     HUB_TYPECHECK = Hub(
-        hass=test_hass, entry=test_entry, index=0, hub=hubitat_hub, device=device
+        hass=test_hass,
+        entry=test_entry,
+        index=0,
+        hub=hubitat_hub,
+        device=device,
     )
     DEVICE_TYPECHECK = Device({})

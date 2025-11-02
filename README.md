@@ -1,6 +1,7 @@
 # Hubitat Integration for Home Assistant
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+[![CI](https://github.com/jason0x43/hacs-hubitat/actions/workflows/ci.yml/badge.svg)](https://github.com/jason0x43/hacs-hubitat/actions/workflows/ci.yml)
 
 This integration uses [Hubitat’s](hubitat.com)
 [Maker API](https://docs.hubitat.com/index.php?title=Hubitat™_Maker_API) to
