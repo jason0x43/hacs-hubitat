@@ -76,6 +76,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
                     _LOGGER.info("Successfully reconnected to Hubitat hub")
                     hub.async_update_device_registry()
 
+                    # Cancel the retry task now that we're connected
+                    hub.cancel_retry_task()
+
                     # Fire ready event now that we're connected
                     hass.bus.fire(H_CONF_HUBITAT_EVENT, {"name": "ready"})
 
@@ -100,7 +103,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
         # Retry immediately once, then periodically
         _ = hass.async_create_task(retry_connection())
-        _ = async_track_time_interval(hass, retry_connection, RETRY_CONNECT_INTERVAL)
+        unsub = async_track_time_interval(
+            hass, retry_connection, RETRY_CONNECT_INTERVAL
+        )
+        hub.set_retry_task_unsub(unsub)
 
     async_register_services(hass, config_entry)
 

@@ -86,6 +86,7 @@ class Hub:
     _device_listeners: dict[str, list[Listener]]
     _hub: HubitatHub
     _is_connected: bool
+    _retry_task_unsub: CALLBACK_TYPE | None
 
     def __init__(
         self,
@@ -127,6 +128,7 @@ class Hub:
         self._hub = hub
         self.device = device
         self._is_connected = False
+        self._retry_task_unsub = None
 
     @property
     def app_id(self) -> str:
@@ -270,11 +272,26 @@ class Hub:
         self._device_listeners = {}
         self._hub_device_listeners = []
 
+    def set_retry_task_unsub(self, unsub: CALLBACK_TYPE) -> None:
+        """Set the retry task cancellation callback."""
+        self._retry_task_unsub = unsub
+
+    def cancel_retry_task(self) -> None:
+        """Cancel the retry task if it's running."""
+        if self._retry_task_unsub is not None:
+            self._retry_task_unsub()
+            self._retry_task_unsub = None
+
     async def unload(self) -> None:
         """Unload the hub."""
         for emitter in self.event_emitters:
             await emitter.async_will_remove_from_hass()
         self.unsub_config_listener()
+
+        # Cancel retry task if it's still running
+        if self._retry_task_unsub is not None:
+            self._retry_task_unsub()
+            self._retry_task_unsub = None
 
     def get_state_attributes(self) -> dict[str, Any]:
         """Get the state attributes for the hub entity."""
