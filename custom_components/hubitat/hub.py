@@ -87,6 +87,7 @@ class Hub:
     _hub: HubitatHub
     _is_connected: bool
     _retry_task_unsub: CALLBACK_TYPE | None
+    _platforms_setup: bool
 
     def __init__(
         self,
@@ -129,6 +130,7 @@ class Hub:
         self.device = device
         self._is_connected = False
         self._retry_task_unsub = None
+        self._platforms_setup = False
 
     @property
     def app_id(self) -> str:
@@ -561,88 +563,110 @@ class Hub:
 
         _LOGGER.debug("Connecting to Hubitat hub...")
 
-        # Start the hub (this will raise ConnectionError if it fails)
-        await self._hub.start(force_refresh=True)
+        # Force refresh if devices were partially loaded from a previous failed
+        # connection attempt
+        force_refresh = len(self._hub.devices) > 0
 
-        # Update the device with hub info
-        self.device = Device(
-            {
-                "id": get_hub_short_id(self._hub),
-                "name": HUB_DEVICE_NAME,
-                "label": HUB_DEVICE_NAME,
-                "model": "Cx",
-                "manufacturer": HUB_NAME,
-                "attributes": [
-                    {
-                        "name": "mode",
-                        "currentValue": self._hub.mode,
-                        "dataType": "ENUM",
-                    },
-                    {
-                        "name": "hsm_status",
-                        "currentValue": self._hub.hsm_status,
-                        "dataType": "ENUM",
-                    },
-                ],
-                "capabilities": [],
-                "commands": [],
-            }
-        )
+        try:
+            # Start the hub (this will raise ConnectionError if it fails)
+            await self._hub.start(force_refresh=force_refresh)
 
-        # Add listeners for all devices
-        for device_id in self._hub.devices:
-            self._hub.add_device_listener(device_id, self.handle_event)
+            # Update the device with hub info
+            self.device = Device(
+                {
+                    "id": get_hub_short_id(self._hub),
+                    "name": HUB_DEVICE_NAME,
+                    "label": HUB_DEVICE_NAME,
+                    "model": "Cx",
+                    "manufacturer": HUB_NAME,
+                    "attributes": [
+                        {
+                            "name": "mode",
+                            "currentValue": self._hub.mode,
+                            "dataType": "ENUM",
+                        },
+                        {
+                            "name": "hsm_status",
+                            "currentValue": self._hub.hsm_status,
+                            "dataType": "ENUM",
+                        },
+                    ],
+                    "capabilities": [],
+                    "commands": [],
+                }
+            )
 
-        # Update device identifiers
-        if self.id:
-            _update_device_ids(self.id, self.hass)
+            # Add listeners for all devices
+            for device_id in self._hub.devices:
+                self._hub.add_device_listener(device_id, self.handle_event)
 
-        # Initialize entities
-        await self.hass.config_entries.async_forward_entry_setups(
-            self.config_entry, PLATFORMS
-        )
+            # Update device identifiers
+            if self.id:
+                _update_device_ids(self.id, self.hass)
 
-        _LOGGER.debug("Registered platforms")
-
-        should_update_rooms = cast(
-            bool | None,
-            self.config_entry.options.get(
-                H_CONF_SYNC_AREAS, self.config_entry.data.get(H_CONF_SYNC_AREAS)
-            ),
-        )
-        if should_update_rooms:
-            _update_device_rooms(self, self.hass)
-
-        if self.mode_supported:
-
-            def handle_mode_event(event: Event):
-                self.device.update_attr(
-                    DeviceAttribute.MODE, cast(str, event.value), None
+            # Initialize entities (only once - this is not idempotent)
+            if not self._platforms_setup:
+                await self.hass.config_entries.async_forward_entry_setups(
+                    self.config_entry, PLATFORMS
                 )
-                for listener in self._hub_device_listeners:
-                    listener(event)
+                self._platforms_setup = True
 
-            self._hub.add_mode_listener(handle_mode_event)
-            if self.mode:
-                self.device.update_attr(DeviceAttribute.MODE, self.mode, None)
+            _LOGGER.debug("Registered platforms")
 
-        if self.hsm_supported:
+            should_update_rooms = cast(
+                bool | None,
+                self.config_entry.options.get(
+                    H_CONF_SYNC_AREAS, self.config_entry.data.get(H_CONF_SYNC_AREAS)
+                ),
+            )
+            if should_update_rooms:
+                _update_device_rooms(self, self.hass)
 
-            def handle_hsm_status_event(event: Event):
-                self.device.update_attr(
-                    DeviceAttribute.HSM_STATUS, cast(str, event.value), None
-                )
-                for listener in self._hub_device_listeners:
-                    listener(event)
+            if self.mode_supported:
 
-            self._hub.add_hsm_listener(handle_hsm_status_event)
-            if self.hsm_status:
-                self.device.update_attr(
-                    DeviceAttribute.HSM_STATUS, self.hsm_status, None
-                )
+                def handle_mode_event(event: Event):
+                    self.device.update_attr(
+                        DeviceAttribute.MODE, cast(str, event.value), None
+                    )
+                    for listener in self._hub_device_listeners:
+                        listener(event)
 
-        self._is_connected = True
-        _LOGGER.debug("Hub connection complete")
+                self._hub.add_mode_listener(handle_mode_event)
+                if self.mode:
+                    self.device.update_attr(DeviceAttribute.MODE, self.mode, None)
+
+            if self.hsm_supported:
+
+                def handle_hsm_status_event(event: Event):
+                    self.device.update_attr(
+                        DeviceAttribute.HSM_STATUS, cast(str, event.value), None
+                    )
+                    for listener in self._hub_device_listeners:
+                        listener(event)
+
+                self._hub.add_hsm_listener(handle_hsm_status_event)
+                if self.hsm_status:
+                    self.device.update_attr(
+                        DeviceAttribute.HSM_STATUS, self.hsm_status, None
+                    )
+
+            self._is_connected = True
+            _LOGGER.debug("Hub connection complete")
+
+        except Exception:
+            # If connection fails, clean up to allow clean retry
+            # Stop the event server to avoid "address in use" errors
+            self._hub.stop()
+
+            # Clear device listeners that were added
+            for device_id in self._hub.devices:
+                self._hub.remove_device_listeners(device_id)
+
+            # Clear mode and HSM listeners
+            self._hub.remove_mode_listeners()
+            self._hub.remove_hsm_status_listeners()
+
+            raise
 
     def async_update_device_registry(self) -> None:
         """Add a device for this hub to the device registry."""
