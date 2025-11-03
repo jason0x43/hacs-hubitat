@@ -2,7 +2,6 @@
 
 import asyncio
 import re
-from asyncio import gather
 from datetime import datetime, timedelta
 from logging import getLogger
 from typing import Any
@@ -137,7 +136,7 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     async_remove_services(hass, config_entry)
 
     unload_ok = all(
-        await gather(
+        await asyncio.gather(
             *[
                 hass.config_entries.async_forward_entry_unload(config_entry, component)
                 for component in PLATFORMS
