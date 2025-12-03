@@ -291,9 +291,7 @@ class Hub:
         self.unsub_config_listener()
 
         # Cancel retry task if it's still running
-        if self._retry_task_unsub is not None:
-            self._retry_task_unsub()
-            self._retry_task_unsub = None
+        self.cancel_retry_task()
 
     def get_state_attributes(self) -> dict[str, Any]:
         """Get the state attributes for the hub entity."""
