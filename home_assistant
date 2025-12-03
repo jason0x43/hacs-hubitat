@@ -1,89 +1,214 @@
 #!/usr/bin/env python3
 
+# pyright: reportAny=false
+
 import argparse
 import os
+import shutil
+import tarfile
+from datetime import datetime
 from os import environ
 from os.path import dirname
 from pathlib import Path
 from subprocess import call, getoutput
 from sys import argv
-from typing import cast
+
+
+def get_config_path() -> Path:
+    scriptdir = Path(dirname(__file__))
+    return (
+        Path(os.getenv("HASS_CONFIG_PATH") or (f"{scriptdir}/config"))
+        .absolute()
+        .resolve()
+    )
+
+
+def get_scriptdir() -> Path:
+    return Path(dirname(__file__))
+
+
+def cmd_start(args: argparse.Namespace) -> None:
+    """Start a Home Assistant container."""
+    version = args.version
+    name = f"homeassistant-{version}"
+    scriptdir = get_scriptdir()
+    config_path = get_config_path()
+
+    if not config_path.exists():
+        print(f"Config path {config_path} does not exist.")
+        exit(1)
+
+    print(f"Using {scriptdir / 'custom_components' / 'hubitat'} for hacs_hubitat")
+    print(f"Using {config_path} for config")
+
+    exists = getoutput(f"docker ps --all --filter name={name} --format '{{ .Names }}'")
+
+    if len(exists) > 0:
+        print(f"Starting {name}")
+        cmd = ["docker", "start"]
+
+        if "HASS_DAEMONIZE" in environ:
+            cmd.append("-a")
+
+        cmd.append(name)
+    else:
+        print(f"Creating {name}")
+        cmd = [
+            "docker",
+            "run",
+            "--rm",
+            "--name",
+            name,
+        ]
+
+        if "HASS_DAEMONIZE" in environ:
+            cmd.append("-d")
+
+        cmd.extend(
+            [
+                "-v",
+                "/etc/localtime:/etc/localtime:ro",
+                "-v",
+                f"{config_path}:/config",
+                "-v",
+                f"{scriptdir}/custom_components/hubitat:/config/custom_components/hubitat",
+                "-p",
+                "8123:8123",
+                "-p",
+                "21064:21064",
+                "-p",
+                "12345:12345",
+                "-p",
+                "12346:12346",
+                f"homeassistant/home-assistant:{version}",
+            ]
+        )
+
+    try:
+        call(cmd)
+    except KeyboardInterrupt:
+        pass
+
+
+def cmd_config_save(args: argparse.Namespace) -> None:
+    """Archive the config directory to a tar.gz file."""
+    config_path = get_config_path()
+
+    if not config_path.exists():
+        print(f"Config path {config_path} does not exist.")
+        exit(1)
+
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    archive_name = f"config.{timestamp}.tar.gz"
+    archive_path = Path.cwd() / archive_name
+
+    print(f"Archiving {config_path} to {archive_path}")
+
+    with tarfile.open(archive_path, "w:gz") as tar:
+        tar.add(config_path, arcname="config")
+
+    print(f"Saved config to {archive_path}")
+
+
+def cmd_config_restore(args: argparse.Namespace) -> None:
+    """Restore config from a tar.gz archive."""
+    archive_path = Path(args.archive).absolute().resolve()
+    config_path = get_config_path()
+
+    if not archive_path.exists():
+        print(f"Archive {archive_path} does not exist.")
+        exit(1)
+
+    if not tarfile.is_tarfile(archive_path):
+        print(f"{archive_path} is not a valid tar archive.")
+        exit(1)
+
+    print(f"This will restore {archive_path}")
+    print(f"to {config_path}")
+    if config_path.exists():
+        print(f"WARNING: Existing config at {config_path} will be deleted.")
+
+    response = input("Continue? [y/N] ").strip().lower()
+    if response != "y":
+        print("Aborted.")
+        exit(0)
+
+    print(f"Restoring {archive_path} to {config_path}")
+
+    # Remove existing config directory
+    if config_path.exists():
+        print(f"Removing existing config at {config_path}")
+        shutil.rmtree(config_path)
+
+    # Extract archive to parent directory (archive contains 'config' folder)
+    with tarfile.open(archive_path, "r:gz") as tar:
+        tar.extractall(path=config_path.parent, filter="fully_trusted")
+
+    # Rename extracted 'config' to the actual config path name if different
+    extracted_path = config_path.parent / "config"
+    if extracted_path != config_path:
+        extracted_path.rename(config_path)
+
+    print(f"Restored config to {config_path}")
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Start a Home Assistant container")
-    parser.add_argument(
+    parser = argparse.ArgumentParser(description="Home Assistant development helper")
+    subparsers = parser.add_subparsers(
+        dest="command", title="commands", help="Available commands"
+    )
+
+    # start command
+    start_parser = subparsers.add_parser(
+        "start", help="Start a Home Assistant container"
+    )
+    start_parser.add_argument(
         "version",
         help="Home Assistant version (e.g., 2023.12.0)",
     )
+    start_parser.set_defaults(func=cmd_start)
+
+    # config command with subcommands
+    config_parser = subparsers.add_parser("config", help="Config management commands")
+    config_subparsers = config_parser.add_subparsers(
+        title="commands", dest="config_command", help="Config commands"
+    )
+
+    # config save
+    save_parser = config_subparsers.add_parser(
+        "save", help="Archive config directory to tar.gz"
+    )
+    save_parser.set_defaults(func=cmd_config_save)
+
+    # config restore
+    restore_parser = config_subparsers.add_parser(
+        "restore", help="Restore config from tar.gz archive"
+    )
+    restore_parser.add_argument(
+        "archive",
+        help="Path to the config archive (tar.gz file)",
+    )
+    restore_parser.set_defaults(func=cmd_config_restore)
 
     if len(argv) == 1:
         parser.print_help()
         parser.exit()
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    # Handle missing subcommand for config
+    if args.command == "config" and args.config_command is None:
+        config_parser.print_help()
+        parser.exit()
+
+    return args
 
 
-args = parse_args()
-version = cast(str, args.version)
+def main() -> None:
+    args = parse_args()
+    if hasattr(args, "func"):
+        args.func(args)
 
-name = f"homeassistant-{version}"
-scriptdir = Path(dirname(__file__))
-config_path = (
-    Path(os.getenv("HASS_CONFIG_PATH") or (f"{scriptdir}/config")).absolute().resolve()
-)
 
-if not config_path.exists():
-    print(f"Config path {config_path} does not exist.")
-    exit(1)
-
-print(f"Using {scriptdir / 'custom_components' / 'hubitat'} for hacs_hubitat")
-print(f"Using {config_path} for config")
-
-exists = getoutput(f"docker ps --all --filter name={name} --format '{{ .Names }}'")
-
-if len(exists) > 0:
-    print(f"Starting {name}")
-    cmd = ["docker", "start"]
-
-    if "HASS_DAEMONIZE" in environ:
-        cmd.append("-a")
-
-    cmd.append(name)
-else:
-    print(f"Creating {name}")
-    cmd = [
-        "docker",
-        "run",
-        "--rm",
-        "--name",
-        name,
-    ]
-
-    if "HASS_DAEMONIZE" in environ:
-        cmd.append("-d")
-
-    cmd.extend(
-        [
-            "-v",
-            "/etc/localtime:/etc/localtime:ro",
-            "-v",
-            f"{config_path}:/config",
-            "-v",
-            f"{scriptdir}/custom_components/hubitat:/config/custom_components/hubitat",
-            "-p",
-            "8123:8123",
-            "-p",
-            "21064:21064",
-            "-p",
-            "12345:12345",
-            "-p",
-            "12346:12346",
-            f"homeassistant/home-assistant:{version}",
-        ]
-    )
-
-try:
-    call(cmd)
-except KeyboardInterrupt:
-    pass
+if __name__ == "__main__":
+    main()
