@@ -193,17 +193,18 @@ async def test_start() -> None:
     hub = Hub("1.2.3.4", "1234", "token")
     await hub.start()
     # 13 requests:
-    #   0: set event URL
-    #   1: request devices
-    #   2...: request device details
-    #   -2: request modes
-    #   -1: request hsm status
+    #   0: request devices
+    #   1...: request device details
+    #   -3: request modes
+    #   -2: request hsm status
+    #   -1: set event URL
     assert len(requests) == 13
-    assert re.search("devices$", requests[1]["url"]) is not None
+    assert re.search("devices$", requests[0]["url"]) is not None
+    assert re.search(r"devices/\d+$", requests[1]["url"]) is not None
     assert re.search(r"devices/\d+$", requests[2]["url"]) is not None
-    assert re.search(r"devices/\d+$", requests[3]["url"]) is not None
-    assert re.search("modes$", requests[-2]["url"]) is not None
-    assert re.search("hsm$", requests[-1]["url"]) is not None
+    assert re.search("modes$", requests[-3]["url"]) is not None
+    assert re.search("hsm$", requests[-2]["url"]) is not None
+    assert re.search("postURL", requests[-1]["url"]) is not None
 
 
 @patch(
@@ -240,7 +241,7 @@ async def test_default_event_url(MockServer: mock.Mock) -> None:
     MockServer.return_value.url = "http://127.0.0.1:81"
     hub = Hub("1.2.3.4", "1234", "token")
     await hub.start()
-    url = unquote(requests[0]["url"])
+    url = unquote(requests[-1]["url"])
     assert re.search(r"http://127.0.0.1:81$", url) is not None
 
 
@@ -252,7 +253,7 @@ async def test_custom_event_url(MockServer: mock.Mock) -> None:
     MockServer.return_value.url = "http://127.0.0.1:81"
     hub = Hub("1.2.3.4", "1234", "token", event_url="http://foo.local")
     await hub.start()
-    url = unquote(requests[0]["url"])
+    url = unquote(requests[-1]["url"])
     assert re.search(r"http://foo\.local$", url) is not None
 
 
@@ -264,7 +265,7 @@ async def test_custom_event_url_without_port(MockServer: mock.Mock) -> None:
     MockServer.return_value.url = "http://127.0.0.1:81"
     hub = Hub("1.2.3.4", "1234", "token", 420, event_url="http://foo.local")
     await hub.start()
-    url = unquote(requests[0]["url"])
+    url = unquote(requests[-1]["url"])
     assert re.search(r"http://foo\.local:420$", url) is not None
 
 

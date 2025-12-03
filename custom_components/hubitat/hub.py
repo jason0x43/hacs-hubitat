@@ -85,6 +85,9 @@ class Hub:
     _hub_device_listeners: list[Listener]
     _device_listeners: dict[str, list[Listener]]
     _hub: HubitatHub
+    _is_connected: bool
+    _retry_task_unsub: CALLBACK_TYPE | None
+    _platforms_setup: bool
 
     def __init__(
         self,
@@ -125,11 +128,19 @@ class Hub:
         self._device_listeners = {}
         self._hub = hub
         self.device = device
+        self._is_connected = False
+        self._retry_task_unsub = None
+        self._platforms_setup = False
 
     @property
     def app_id(self) -> str:
         """The Maker API app ID for this hub."""
         return cast(str, self.config_entry.data.get(H_CONF_APP_ID))
+
+    @property
+    def is_connected(self) -> bool:
+        """Return whether the hub is currently connected."""
+        return self._is_connected
 
     @property
     def devices(self) -> Mapping[str, Device]:
@@ -263,11 +274,34 @@ class Hub:
         self._device_listeners = {}
         self._hub_device_listeners = []
 
+    def set_retry_task_unsub(self, unsub: CALLBACK_TYPE) -> None:
+        """Set the retry task cancellation callback."""
+        self._retry_task_unsub = unsub
+
+    def cancel_retry_task(self) -> None:
+        """Cancel the retry task if it's running."""
+        if self._retry_task_unsub is not None:
+            self._retry_task_unsub()
+            self._retry_task_unsub = None
+
     async def unload(self) -> None:
         """Unload the hub."""
         for emitter in self.event_emitters:
             await emitter.async_will_remove_from_hass()
         self.unsub_config_listener()
+
+        # Cancel retry task if it's still running
+        self.cancel_retry_task()
+
+    def get_state_attributes(self) -> dict[str, Any]:
+        """Get the state attributes for the hub entity."""
+        attrs = {
+            CONF_ID: f"{self._hub.host}::{self._hub.app_id}",
+            CONF_HOST: self.host,
+            ATTR_HIDDEN: True,
+            CONF_TEMPERATURE_UNIT: self.temperature_unit,
+        }
+        return attrs
 
     @staticmethod
     async def create(hass: HomeAssistant, entry: ConfigEntry, index: int) -> "Hub":
@@ -362,6 +396,7 @@ class Hub:
         )
 
         hub = Hub(hass, entry, index, hubitat_hub, device)
+        hub._is_connected = True
         domain_data = get_domain_data(hass)
         domain_data[entry.entry_id] = hub
 
@@ -393,12 +428,7 @@ class Hub:
         hass.states.async_set(
             hub.entity_id,
             "connected",
-            {
-                CONF_ID: f"{hubitat_hub.host}::{hubitat_hub.app_id}",
-                CONF_HOST: hubitat_hub.host,
-                ATTR_HIDDEN: True,
-                CONF_TEMPERATURE_UNIT: hub.temperature_unit,
-            },
+            hub.get_state_attributes(),
         )
 
         if hub.mode_supported:
@@ -426,6 +456,215 @@ class Hub:
                 hub.device.update_attr(DeviceAttribute.HSM_STATUS, hub.hsm_status, None)
 
         return hub
+
+    @staticmethod
+    async def create_offline(
+        hass: HomeAssistant, entry: ConfigEntry, index: int
+    ) -> "Hub":
+        """Create a hub instance without connecting to it.
+
+        This is used when the hub is unavailable at startup but we still want
+        to register the integration and retry later.
+        """
+
+        if CONF_HOST not in entry.data:
+            raise ValueError("Missing host in config entry")
+        if H_CONF_APP_ID not in entry.data:
+            raise ValueError("Missing app ID in config entry")
+        if CONF_ACCESS_TOKEN not in entry.data:
+            raise ValueError("Missing access token in config entry")
+
+        url = cast(
+            str | None,
+            entry.options.get(H_CONF_SERVER_URL, entry.data.get(H_CONF_SERVER_URL)),
+        )
+        port = cast(
+            int | None,
+            entry.options.get(H_CONF_SERVER_PORT, entry.data.get(H_CONF_SERVER_PORT)),
+        )
+
+        if url == "":
+            url = None
+
+        ssl_cert = cast(
+            str | None,
+            entry.options.get(
+                H_CONF_SERVER_SSL_CERT,
+                entry.data.get(H_CONF_SERVER_SSL_CERT),
+            ),
+        )
+        ssl_key = cast(
+            str | None,
+            entry.options.get(
+                H_CONF_SERVER_SSL_KEY, entry.data.get(H_CONF_SERVER_SSL_KEY)
+            ),
+        )
+        ssl_context = await hass.async_add_executor_job(
+            _create_ssl_context, ssl_cert, ssl_key
+        )
+
+        host = cast(
+            str,
+            entry.options.get(CONF_HOST, entry.data.get(CONF_HOST)),
+        )
+        app_id = cast(str, entry.data.get(H_CONF_APP_ID))
+        token = cast(str, entry.data.get(CONF_ACCESS_TOKEN))
+
+        _LOGGER.debug("Creating offline Hubitat hub instance")
+
+        # Create the HubitatHub but don't start it yet
+        hubitat_hub = HubitatHub(
+            host,
+            app_id,
+            token,
+            port=port,
+            event_url=url,
+            ssl_context=ssl_context,
+        )
+
+        # Create a placeholder device for the hub
+        device = Device(
+            {
+                "id": "unknown",
+                "name": HUB_DEVICE_NAME,
+                "label": HUB_DEVICE_NAME,
+                "model": "Cx",
+                "manufacturer": HUB_NAME,
+                "attributes": [],
+                "capabilities": [],
+                "commands": [],
+            }
+        )
+
+        hub = Hub(hass, entry, index, hubitat_hub, device)
+        hub._is_connected = False
+        domain_data = get_domain_data(hass)
+        domain_data[entry.entry_id] = hub
+
+        # Create an entity for the Hubitat hub in unavailable state
+        hass.states.async_set(
+            hub.entity_id,
+            "unavailable",
+            hub.get_state_attributes(),
+        )
+
+        return hub
+
+    async def async_connect(self) -> None:
+        """Connect to the Hubitat hub.
+
+        This is called after create_offline() to complete initialization.
+        """
+        if self._is_connected:
+            _LOGGER.debug("Hub is already connected")
+            return
+
+        _LOGGER.debug("Connecting to Hubitat hub...")
+
+        # Force refresh if devices were partially loaded from a previous failed
+        # connection attempt
+        force_refresh = len(self._hub.devices) > 0
+
+        try:
+            # Start the hub (this will raise ConnectionError if it fails)
+            await self._hub.start(force_refresh=force_refresh)
+
+            # Update the device with hub info
+            self.device = Device(
+                {
+                    "id": get_hub_short_id(self._hub),
+                    "name": HUB_DEVICE_NAME,
+                    "label": HUB_DEVICE_NAME,
+                    "model": "Cx",
+                    "manufacturer": HUB_NAME,
+                    "attributes": [
+                        {
+                            "name": "mode",
+                            "currentValue": self._hub.mode,
+                            "dataType": "ENUM",
+                        },
+                        {
+                            "name": "hsm_status",
+                            "currentValue": self._hub.hsm_status,
+                            "dataType": "ENUM",
+                        },
+                    ],
+                    "capabilities": [],
+                    "commands": [],
+                }
+            )
+
+            # Add listeners for all devices
+            for device_id in self._hub.devices:
+                self._hub.add_device_listener(device_id, self.handle_event)
+
+            # Update device identifiers
+            if self.id:
+                _update_device_ids(self.id, self.hass)
+
+            # Initialize entities (only once - this is not idempotent)
+            if not self._platforms_setup:
+                await self.hass.config_entries.async_forward_entry_setups(
+                    self.config_entry, PLATFORMS
+                )
+                self._platforms_setup = True
+
+            _LOGGER.debug("Registered platforms")
+
+            should_update_rooms = cast(
+                bool | None,
+                self.config_entry.options.get(
+                    H_CONF_SYNC_AREAS, self.config_entry.data.get(H_CONF_SYNC_AREAS)
+                ),
+            )
+            if should_update_rooms:
+                _update_device_rooms(self, self.hass)
+
+            if self.mode_supported:
+
+                def handle_mode_event(event: Event):
+                    self.device.update_attr(
+                        DeviceAttribute.MODE, cast(str, event.value), None
+                    )
+                    for listener in self._hub_device_listeners:
+                        listener(event)
+
+                self._hub.add_mode_listener(handle_mode_event)
+                if self.mode:
+                    self.device.update_attr(DeviceAttribute.MODE, self.mode, None)
+
+            if self.hsm_supported:
+
+                def handle_hsm_status_event(event: Event):
+                    self.device.update_attr(
+                        DeviceAttribute.HSM_STATUS, cast(str, event.value), None
+                    )
+                    for listener in self._hub_device_listeners:
+                        listener(event)
+
+                self._hub.add_hsm_listener(handle_hsm_status_event)
+                if self.hsm_status:
+                    self.device.update_attr(
+                        DeviceAttribute.HSM_STATUS, self.hsm_status, None
+                    )
+
+            self._is_connected = True
+            _LOGGER.debug("Hub connection complete")
+
+        except Exception:
+            # If connection fails, clean up to allow clean retry
+            # Stop the event server to avoid "address in use" errors
+            self._hub.stop()
+
+            # Clear device listeners that were added
+            for device_id in self._hub.devices:
+                self._hub.remove_device_listeners(device_id)
+
+            # Clear mode and HSM listeners
+            self._hub.remove_mode_listeners()
+            self._hub.remove_hsm_status_listeners()
+
+            raise
 
     def async_update_device_registry(self) -> None:
         """Add a device for this hub to the device registry."""

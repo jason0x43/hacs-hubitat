@@ -1,7 +1,8 @@
 """The Hubitat integration."""
 
+import asyncio
 import re
-from asyncio import gather
+from datetime import datetime, timedelta
 from logging import getLogger
 from typing import Any
 
@@ -14,11 +15,18 @@ from custom_components.hubitat.services import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant
+from homeassistant.helpers.event import async_track_time_interval
 
 from .const import DOMAIN, H_CONF_HUBITAT_EVENT, PLATFORMS
 from .hub import Hub, get_domain_data, get_hub
 
 _LOGGER = getLogger(__name__)
+
+# Time to attempt initial hub connection during startup
+STARTUP_CONNECT_TIMEOUT = 15  # seconds
+
+# Interval for retrying hub connection after startup failure
+RETRY_CONNECT_INTERVAL = timedelta(seconds=60)
 
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 
@@ -35,9 +43,69 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     domain_data = get_domain_data(hass)
 
-    hub: Hub = await Hub.create(hass, config_entry, len(domain_data) + 1)
+    # Try to connect to the hub with a timeout
+    hub: Hub | None = None
 
-    hub.async_update_device_registry()
+    # First create an offline hub to get a HubitatHub instance we can cleanup
+    # if the connection attempt times out
+    hub = await Hub.create_offline(hass, config_entry, len(domain_data) + 1)
+
+    try:
+        # Try to connect with timeout
+        await asyncio.wait_for(hub.async_connect(), timeout=STARTUP_CONNECT_TIMEOUT)
+
+        hub.async_update_device_registry()
+
+        _LOGGER.info("Successfully connected to Hubitat hub")
+
+    except (asyncio.TimeoutError, ConnectionError) as e:
+        _LOGGER.warning(
+            "Unable to connect to Hubitat hub during startup (will retry): %s", e
+        )
+
+        # Schedule periodic connection attempts
+        async def retry_connection(_now: datetime | None = None) -> None:
+            """Attempt to reconnect to the hub."""
+            if not hub.is_connected:
+                _LOGGER.debug("Attempting to reconnect to Hubitat hub...")
+                try:
+                    await asyncio.wait_for(
+                        hub.async_connect(), timeout=STARTUP_CONNECT_TIMEOUT
+                    )
+                    _LOGGER.info("Successfully reconnected to Hubitat hub")
+                    hub.async_update_device_registry()
+
+                    # Cancel the retry task now that we're connected
+                    hub.cancel_retry_task()
+
+                    # Fire ready event now that we're connected
+                    hass.bus.fire(H_CONF_HUBITAT_EVENT, {"name": "ready"})
+
+                    # Update hub state
+                    if re.match(r"Hubitat \(\w{2}(:\w{2}){5}\)", config_entry.title):
+                        _ = hass.config_entries.async_update_entry(
+                            config_entry, title=f"Hubitat ({hub.id})"
+                        )
+
+                    hass.states.async_set(
+                        hub.entity_id,
+                        "connected",
+                        hub.get_state_attributes(),
+                    )
+                except (asyncio.TimeoutError, ConnectionError) as e:
+                    _LOGGER.debug("Reconnection attempt failed: %s", e)
+                    hass.states.async_set(
+                        hub.entity_id,
+                        "unavailable",
+                        hub.get_state_attributes(),
+                    )
+
+        # Retry immediately once, then periodically
+        _ = hass.async_create_task(retry_connection())
+        unsub = async_track_time_interval(
+            hass, retry_connection, RETRY_CONNECT_INTERVAL
+        )
+        hub.set_retry_task_unsub(unsub)
 
     async_register_services(hass, config_entry)
 
@@ -47,14 +115,17 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     _ = hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_hub)
 
     # If this config entry's title uses a MAC address, rename it to use the hub
-    # ID
-    if re.match(r"Hubitat \(\w{2}(:\w{2}){5}\)", config_entry.title):
+    # ID (only if hub is connected)
+    if hub.is_connected and re.match(
+        r"Hubitat \(\w{2}(:\w{2}){5}\)", config_entry.title
+    ):
         _ = hass.config_entries.async_update_entry(
             config_entry, title=f"Hubitat ({hub.id})"
         )
 
-    hass.bus.fire(H_CONF_HUBITAT_EVENT, {"name": "ready"})
-    _LOGGER.info("Hubitat is ready")
+    if hub.is_connected:
+        hass.bus.fire(H_CONF_HUBITAT_EVENT, {"name": "ready"})
+        _LOGGER.info("Hubitat is ready")
 
     return True
 
@@ -65,7 +136,7 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     async_remove_services(hass, config_entry)
 
     unload_ok = all(
-        await gather(
+        await asyncio.gather(
             *[
                 hass.config_entries.async_forward_entry_unload(config_entry, component)
                 for component in PLATFORMS

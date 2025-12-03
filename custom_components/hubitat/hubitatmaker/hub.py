@@ -182,20 +182,26 @@ class Hub:
             for dev in devices:
                 await self._load_device(cast(str, dev["id"]), force_refresh)
 
-    async def start(self) -> None:
+    async def start(self, force_refresh: bool = False) -> None:
         """Download initial state data, and start an event server if requested.
 
         Hub and device data will not be available until this method has
         completed. Methods that rely on that data will raise an error if called
         before this method has completed.
+
+        force_refresh:
+          If True, force a refresh of all device data even if devices have
+          already been loaded. This is useful when reconnecting after a
+          failed initialization.
         """
 
         self._mode_supported = None
         self._hsm_supported = None
 
+        # First verify we can connect to the hub by loading devices
+        # Don't start the event server until we know the hub is reachable
         try:
-            await self._start_server()
-            await self.load_devices()
+            await self.load_devices(force_refresh=force_refresh)
             _LOGGER.debug("Connected to Hubitat hub at %s", self.host)
         except aiohttp.ClientError as e:
             raise ConnectionError(str(e))
@@ -214,11 +220,14 @@ class Hub:
             self._hsm_supported = False
             _LOGGER.warning(f"Unable to access HSM status: {e}")
 
+        # Only start the event server after successfully connecting to the hub
+        await self._start_server()
+
     def stop(self) -> None:
         """Remove all listeners and stop the event server (if running)."""
         if self._server:
             self._server.stop()
-            _LOGGER.info("Stopped event server")
+            _LOGGER.debug("Stopped event server")
         self._listeners = {}
 
     async def refresh_device(self, device_id: str) -> None:
@@ -472,8 +481,14 @@ class Hub:
                 asyncio.TimeoutError,
                 ContentTypeError,
             ) as e:
-                # catch connection exceptions to retry w/ increasing delay
-                if attempt < MAX_REQUEST_ATTEMPT_COUNT:
+                # Don't retry on connection errors - if we can't reach the hub,
+                # retrying immediately won't help. Higher-level retry logic will
+                # handle reconnection attempts. Do retry on timeouts and content
+                # errors as those might be transient.
+                if (
+                    not isinstance(e, ClientConnectionError)
+                    and attempt < MAX_REQUEST_ATTEMPT_COUNT
+                ):
                     _LOGGER.debug(
                         "%s request to %s failed with %s. Retrying...",
                         method,
