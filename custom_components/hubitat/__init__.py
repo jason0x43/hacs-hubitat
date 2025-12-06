@@ -13,11 +13,11 @@ from custom_components.hubitat.services import (
     async_remove_services,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
+from homeassistant.const import CONF_ACCESS_TOKEN, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant
 from homeassistant.helpers.event import async_track_time_interval
 
-from .const import DOMAIN, H_CONF_HUBITAT_EVENT, PLATFORMS
+from .const import DOMAIN, H_CONF_HUB_ID, H_CONF_HUBITAT_EVENT, PLATFORMS
 from .hub import Hub, get_domain_data, get_hub
 
 _LOGGER = getLogger(__name__)
@@ -29,6 +29,32 @@ STARTUP_CONNECT_TIMEOUT = 15  # seconds
 RETRY_CONNECT_INTERVAL = timedelta(seconds=60)
 
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
+
+
+async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+    """Migrate old entry to new version."""
+    _LOGGER.debug("Migrating config entry from version %s", config_entry.version)
+
+    if config_entry.version == 1:
+        # Generate hub_id from current token (preserves existing IDs)
+        new_data = {**config_entry.data}
+        token: str | None = config_entry.data.get(CONF_ACCESS_TOKEN)
+        if token:
+            hub_id = str(token)[:8]
+            new_data[H_CONF_HUB_ID] = hub_id
+
+            hass.config_entries.async_update_entry(
+                config_entry,
+                data=new_data,
+                version=2,
+                unique_id=hub_id,
+            )
+            _LOGGER.info("Migrated config entry to version 2 with hub_id=%s", hub_id)
+        else:
+            _LOGGER.error("Cannot migrate config entry: no access token found")
+            return False
+
+    return True
 
 
 async def async_setup(_hass: HomeAssistant, _config: dict[str, Any]) -> bool:

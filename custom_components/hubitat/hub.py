@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from logging import getLogger
 from ssl import SSLContext
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast, override
 
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 from homeassistant.config_entries import ConfigEntry
@@ -17,7 +17,7 @@ from homeassistant.const import (
     UnitOfTemperature,
 )
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-from homeassistant.helpers import area_registry, device_registry
+from homeassistant.helpers import area_registry, device_registry, entity_registry
 from homeassistant.helpers.device_registry import DeviceEntry
 
 try:
@@ -36,6 +36,7 @@ from .const import (
     ATTR_HUB,
     DOMAIN,
     H_CONF_APP_ID,
+    H_CONF_HUB_ID,
     H_CONF_HUBITAT_EVENT,
     H_CONF_SERVER_PORT,
     H_CONF_SERVER_SSL_CERT,
@@ -52,7 +53,13 @@ from .hubitatmaker import (
     Hub as HubitatHub,
 )
 from .types import Removable, UpdateableEntity
-from .util import get_device_identifiers, get_hub_device_id, get_hub_short_id
+from .util import (
+    HasId,
+    get_device_identifiers,
+    get_hub_device_id,
+    get_hub_short_id,
+    get_token_hash,
+)
 
 _LOGGER = getLogger(__name__)
 
@@ -71,7 +78,7 @@ E = TypeVar("E", bound=UpdateableEntity)
 M = TypeVar("M", bound=Removable)
 
 
-class Hub:
+class Hub(HasId):
     """Representation of a Hubitat hub."""
 
     hass: HomeAssistant
@@ -163,8 +170,13 @@ class Hub:
         )
 
     @property
+    @override
     def id(self) -> str:
         """A unique ID for this hub instance."""
+        # Use stored hub_id if available, fall back to token-derived
+        stored_id: str | None = self.config_entry.data.get(H_CONF_HUB_ID)
+        if stored_id:
+            return str(stored_id)
         return get_hub_short_id(self._hub)
 
     @property
@@ -412,6 +424,9 @@ class Hub:
         if hub.id:
             _update_device_ids(hub.id, hass)
 
+        # Migrate entity unique IDs from old token-hash format to new hub-id format
+        _migrate_entity_unique_ids(hass, hub.id, token)
+
         # Initialize entities
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -601,6 +616,9 @@ class Hub:
             # Update device identifiers
             if self.id:
                 _update_device_ids(self.id, self.hass)
+
+            # Migrate entity unique IDs from old token-hash format to new hub-id format
+            _migrate_entity_unique_ids(self.hass, self.id, self.token)
 
             # Initialize entities (only once - this is not idempotent)
             if not self._platforms_setup:
@@ -835,6 +853,33 @@ def _create_ssl_context(ssl_cert: str | None, ssl_key: str | None) -> SSLContext
         return ssl_context
     else:
         return None
+
+
+def _migrate_entity_unique_ids(
+    hass: HomeAssistant, hub_id: str, old_token: str
+) -> None:
+    """Migrate entity unique IDs from old token-hash format to new hub-id format.
+
+    Old format: {sha256_hash_of_token}::{device_id}
+    New format: {hub_id}::{device_id}
+    """
+    ereg = entity_registry.async_get(hass)
+    old_hash = get_token_hash(old_token)
+    old_prefix = f"{old_hash}::"
+
+    entities_to_update: list[tuple[str, str]] = []
+
+    for entity_id in ereg.entities:
+        entity = ereg.entities[entity_id]
+        if entity.unique_id and entity.unique_id.startswith(old_prefix):
+            # Extract device_id from old format
+            device_id = entity.unique_id[len(old_prefix) :]
+            new_unique_id = f"{hub_id}::{device_id}"
+            entities_to_update.append((entity_id, new_unique_id))
+
+    for entity_id, new_unique_id in entities_to_update:
+        ereg.async_update_entity(entity_id, new_unique_id=new_unique_id)
+        _LOGGER.info("Migrated entity %s unique_id to %s", entity_id, new_unique_id)
 
 
 def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:

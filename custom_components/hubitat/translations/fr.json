@@ -89,7 +89,11 @@
                     "temperature_unit": "Unités de température (optionnel)",
                     "sync_areas": "Synchroniser les pièces"
                 },
-                "description": "Configurez les options pour Hubitat. Notez que la modification du 'Maker API app ID' provoquera la redécouverte vos appareils.",
+                "data_description": {
+                    "app_id": "Laissez vide pour conserver la valeur actuelle",
+                    "access_token": "Laissez vide pour conserver la valeur actuelle"
+                },
+                "description": "Configurez les options pour Hubitat. Notez que la modification du 'Maker API app ID' ou du jeton d'accès provoquera le rechargement de l'intégration.",
                 "title": "Options d'Hubitat"
             }
         }
