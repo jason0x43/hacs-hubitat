@@ -92,7 +92,11 @@
 					"temperature_unit": "Temperature units (optional)",
 					"sync_areas": "Synchronize rooms"
 				},
-				"description": "Configure options for Hubitat. Note that changing the Maker API app ID will cause the integration to rediscover your devices.",
+				"data_description": {
+					"app_id": "Leave blank to keep current value",
+					"access_token": "Leave blank to keep current value"
+				},
+				"description": "Configure options for Hubitat. Note that changing the Maker API app ID or access token will cause the integration to reload.",
 				"title": "Hubitat options"
 			}
 		}

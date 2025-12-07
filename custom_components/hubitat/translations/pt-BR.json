@@ -92,7 +92,11 @@
                     "temperature_unit": "Unidades de temperatura (opcional)",
                     "sync_areas": "Sincronizar cômodos"
                 },
-                "description": "Configure as opções para Hubitat. Observe que alterar o ID do aplicativo Maker API fará com que a integração redescubra seus dispositivos.",
+                "data_description": {
+                    "app_id": "Deixe em branco para manter o valor atual",
+                    "access_token": "Deixe em branco para manter o valor atual"
+                },
+                "description": "Configure as opções para Hubitat. Observe que alterar o ID do aplicativo Maker API ou o token de acesso fará com que a integração seja recarregada.",
                 "title": "Opções do Hubitat"
             }
         }

@@ -1,6 +1,6 @@
 import re
 from hashlib import sha256
-from typing import cast
+from typing import Protocol, cast
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.device_registry import DeviceEntry
@@ -32,10 +32,16 @@ def get_device_overrides(config_entry: ConfigEntry) -> dict[str, str]:
     )
 
 
-def get_hub_device_id(hub: HasToken, device: str | Device) -> str:
+class HasId(Protocol):
+    @property
+    def id(self) -> str:
+        ...
+
+
+def get_hub_device_id(hub: HasId, device: str | Device) -> str:
     """Return the hub-relative ID for a device"""
     device_id = device if isinstance(device, str) else device.id
-    return f"{get_token_hash(hub.token)}::{device_id}"
+    return f"{hub.id}::{device_id}"
 
 
 def get_hubitat_device_id(device: DeviceEntry) -> str:

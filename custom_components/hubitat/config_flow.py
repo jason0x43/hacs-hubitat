@@ -32,6 +32,7 @@ from .const import (
     H_CONF_DEVICE_LIST,
     H_CONF_DEVICE_TYPE_OVERRIDES,
     H_CONF_DEVICES,
+    H_CONF_HUB_ID,
     H_CONF_SERVER_PORT,
     H_CONF_SERVER_SSL_CERT,
     H_CONF_SERVER_SSL_KEY,
@@ -74,7 +75,7 @@ CONFIG_SCHEMA = vol.Schema(
 class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
     """Handle a config flow for Hubitat."""
 
-    VERSION: int = 1
+    VERSION: int = 2
     CONNECTION_CLASS: str = CONN_CLASS_LOCAL_PUSH
 
     hub: HubitatHub | None = None
@@ -100,6 +101,14 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
                 info = await _validate_input(user_input)
                 entry_data = deepcopy(user_input)
                 self.hub = info["hub"]
+
+                # Generate hub_id from initial token and store it
+                hub_id = get_hub_short_id(self.hub)
+                entry_data[H_CONF_HUB_ID] = hub_id
+
+                # Set unique_id to prevent duplicate config entries
+                await self.async_set_unique_id(hub_id)
+                self._abort_if_unique_id_configured()
 
                 placeholders: dict[str, Any] = {}
                 for key in user_input:
@@ -172,10 +181,16 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
 
         if user_input is not None:
             try:
+                # Use new app_id/token if provided, otherwise fall back to existing
+                app_id = user_input.get(H_CONF_APP_ID) or entry.data.get(H_CONF_APP_ID)
+                access_token = user_input.get(CONF_ACCESS_TOKEN) or entry.data.get(
+                    CONF_ACCESS_TOKEN
+                )
+
                 check_input: dict[str, str | None] = {
                     CONF_HOST: user_input[CONF_HOST],
-                    H_CONF_APP_ID: entry.data.get(H_CONF_APP_ID),
-                    CONF_ACCESS_TOKEN: entry.data.get(CONF_ACCESS_TOKEN),
+                    H_CONF_APP_ID: app_id,
+                    CONF_ACCESS_TOKEN: access_token,
                     H_CONF_SERVER_PORT: user_input.get(H_CONF_SERVER_PORT),
                     H_CONF_SERVER_URL: user_input.get(H_CONF_SERVER_URL),
                     H_CONF_SERVER_SSL_CERT: user_input.get(H_CONF_SERVER_SSL_CERT),
@@ -197,6 +212,12 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
                 )
                 self.options[CONF_TEMPERATURE_UNIT] = user_input[CONF_TEMPERATURE_UNIT]
                 self.options[H_CONF_SYNC_AREAS] = user_input.get(H_CONF_SYNC_AREAS)
+
+                # Track if connection values changed (to update entry.data later)
+                if user_input.get(H_CONF_APP_ID):
+                    self.options[H_CONF_APP_ID] = user_input[H_CONF_APP_ID]
+                if user_input.get(CONF_ACCESS_TOKEN):
+                    self.options[CONF_ACCESS_TOKEN] = user_input[CONF_ACCESS_TOKEN]
 
                 _LOGGER.debug("Moving to device removal step")
                 return await self.async_step_remove_devices()
@@ -232,6 +253,26 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
                     vol.Optional(
                         CONF_HOST,
                         default=entry.options.get(CONF_HOST, entry.data.get(CONF_HOST)),
+                    ): str,
+                    vol.Optional(
+                        H_CONF_APP_ID,
+                        description={
+                            "suggested_value": entry.options.get(
+                                H_CONF_APP_ID,
+                                entry.data.get(H_CONF_APP_ID),
+                            )
+                            or ""
+                        },
+                    ): str,
+                    vol.Optional(
+                        CONF_ACCESS_TOKEN,
+                        description={
+                            "suggested_value": entry.options.get(
+                                CONF_ACCESS_TOKEN,
+                                entry.data.get(CONF_ACCESS_TOKEN),
+                            )
+                            or ""
+                        },
                     ): str,
                     vol.Optional(
                         H_CONF_SERVER_URL,
@@ -362,6 +403,30 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
             # Copy self.options to ensure config entry is recreated
             self.options[H_CONF_DEVICE_TYPE_OVERRIDES] = self.overrides
             _LOGGER.debug(f"Set device type overrides to {self.overrides}")
+
+            # Update entry.data with new connection values if changed
+            entry = self.config_entry
+            new_data = {**entry.data}
+            data_changed = False
+
+            if self.options.get(H_CONF_APP_ID) and self.options[
+                H_CONF_APP_ID
+            ] != entry.data.get(H_CONF_APP_ID):
+                new_data[H_CONF_APP_ID] = self.options[H_CONF_APP_ID]
+                del self.options[H_CONF_APP_ID]
+                data_changed = True
+
+            if self.options.get(CONF_ACCESS_TOKEN) and self.options[
+                CONF_ACCESS_TOKEN
+            ] != entry.data.get(CONF_ACCESS_TOKEN):
+                new_data[CONF_ACCESS_TOKEN] = self.options[CONF_ACCESS_TOKEN]
+                del self.options[CONF_ACCESS_TOKEN]
+                data_changed = True
+
+            if data_changed:
+                self.hass.config_entries.async_update_entry(entry, data=new_data)
+                _LOGGER.debug("Updated entry.data with new connection values")
+
             _LOGGER.debug("Creating entry")
             return self.async_create_entry(title="", data=self.options)
 
