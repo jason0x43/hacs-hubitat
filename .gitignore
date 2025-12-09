@@ -5,3 +5,4 @@
 __pypackages__
 .pdm.toml
 .pdm-python
+config.*.tar.gz
