@@ -51,11 +51,11 @@ jobs:
             echo "✓ homeassistant dev dependency is up to date"
           fi
 
-      - name: Run ruff check
+      - name: Lint
         run: uv run ruff check
 
-      - name: Run basedpyright
-        run: uv run basedpyright
+      - name: Check types
+        run: uv run ty check
 
-      - name: Run pytest
+      - name: Run tests
         run: uv run pytest
