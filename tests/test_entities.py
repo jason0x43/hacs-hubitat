@@ -74,8 +74,8 @@ async def test_add_event_emitters(HubitatEventEmitter: Mock, get_hub: Mock) -> N
     mock_hub.devices = {"id1": mock_device_1, "id2": mock_device_2}
     get_hub.return_value = mock_hub
 
-    hee = cast(HEventEmitter, HubitatEventEmitter.return_value)
-    hee.update_device_registry = Mock(return_value="update_registry")
+    emitter = cast(HEventEmitter, HubitatEventEmitter.return_value)
+    emitter.update_device_registry = Mock(return_value="update_registry") # ty: ignore[invalid-assignment]
 
     from custom_components.hubitat.entities import create_and_add_event_emitters
 
@@ -92,6 +92,6 @@ async def test_add_event_emitters(HubitatEventEmitter: Mock, get_hub: Mock) -> N
 
     assert HubitatEventEmitter.call_count == 1, "expected 1 emitter to be created"
 
-    assert mock_hub.add_event_emitters.call_count == 1, (  # pyright: ignore[reportAny]
+    assert mock_hub.add_event_emitters.call_count == 1, (
         "event emitters should have been added to hub"
     )

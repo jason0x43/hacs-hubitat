@@ -36,10 +36,10 @@ except Exception:
     from enum import StrEnum
 
     from homeassistant.const import (
-        STATE_ALARM_ARMED_AWAY,  # pyright: ignore[reportAttributeAccessIssue,reportUnknownVariableType]
-        STATE_ALARM_ARMED_HOME,  # pyright: ignore[reportAttributeAccessIssue,reportUnknownVariableType]
-        STATE_ALARM_ARMED_NIGHT,  # pyright: ignore[reportAttributeAccessIssue,reportUnknownVariableType]
-        STATE_ALARM_DISARMED,  # pyright: ignore[reportAttributeAccessIssue,reportUnknownVariableType]
+        STATE_ALARM_ARMED_AWAY,  # ty: ignore[unresolved-import]
+        STATE_ALARM_ARMED_HOME,  # ty: ignore[unresolved-import]
+        STATE_ALARM_ARMED_NIGHT,  # ty: ignore[unresolved-import]
+        STATE_ALARM_DISARMED,  # ty: ignore[unresolved-import]
     )
 
     class AlarmControlPanelState(StrEnum):

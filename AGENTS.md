@@ -19,7 +19,7 @@ This is a Home Assistant integration for Hubitat hubs that allows Hubitat device
 
 ### Code Quality
 
-- Type checking: `uv run basedpyright`
+- Type checking: `uv run ty check`
 - Linting: `uv run ruff check`
 - Format code: `uv run ruff format`
 
@@ -114,5 +114,4 @@ The event server is automatically configured in the Maker API instance to push d
 ### Dependencies
 
 - Uses `uv` for dependency management
-- Minimal external dependencies (only basedpyright for type checking)
 - Built-in Home Assistant libraries for core functionality

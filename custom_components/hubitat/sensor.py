@@ -150,7 +150,7 @@ class HubitatBatterySensor(HubitatSensor):
             except ValueError:
                 # Some devices don't follow the spec
                 # See https://github.com/jason0x43/hacs-hubitat/issues/252#issuecomment-1896327401
-                match = re.match(r"Battery (\d.*)%", value)
+                match = re.match(r"Battery (\d.*)%", str(value))
                 if match:
                     value = float(match.group(1))
         return value

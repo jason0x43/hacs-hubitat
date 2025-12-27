@@ -10,9 +10,9 @@ repos:
     files: ^(custom_components|tests)/.+\.py$
 - repo: local
   hooks:
-  - id: pyright
-    name: pyright
-    entry: uv run basedpyright
+  - id: ty
+    name: ty
+    entry: uv run ty check
     language: system
     types: [python]
     require_serial: true
