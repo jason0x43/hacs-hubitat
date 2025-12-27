@@ -26,7 +26,7 @@ def create_and_add_entities(
     EntityClass: type[E],
     is_type: Callable[[Device, dict[str, str] | None], bool],
 ) -> list[E]:
-    """Create entites and add them to the entity registry."""
+    """Create entities and add them to the entity registry."""
     hub = get_hub(hass, config_entry.entry_id)
     devices = hub.devices
     overrides = get_device_overrides(config_entry)

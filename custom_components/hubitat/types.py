@@ -26,7 +26,7 @@ class UpdateableEntity(ABC):
 class Removable(ABC):
     async def async_will_remove_from_hass(self) -> None:
         """Remove the entity from HA"""
-        raise Exception("Must be implemented in a sublcass")
+        raise Exception("Must be implemented in a subclass")
 
 
 class HasToken(Protocol):

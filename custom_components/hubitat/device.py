@@ -164,7 +164,8 @@ class HubitatEntity(HubitatBase, UpdateableEntity, ABC):
     def name(self) -> str | UndefinedType | None: ...
 
     @property
-    def enabled(self) -> bool: ...
+    def enabled(self) -> bool:  # ty: ignore[invalid-return-type]
+        ...
 
     async def async_added_to_hass(self) -> None:
         _LOGGER.debug("Added %s with hass=%s", self, self.hass)
@@ -179,7 +180,7 @@ class HubitatEntity(HubitatBase, UpdateableEntity, ABC):
         await self._hub.send_command(self.device_id, command, arg)
         _LOGGER.debug("sent %s to %s", command, self.device_id)
 
-    def handle_event(self, _event: Event) -> None:
+    def handle_event(self, event: Event) -> None:
         """
         Handle a device event.
 

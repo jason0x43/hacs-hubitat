@@ -2,7 +2,7 @@ from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from json import loads
 from types import MappingProxyType
-from typing import Any, Literal, TypedDict, cast, override
+from typing import Any, Literal, NotRequired, TypedDict, cast, override
 
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 
@@ -20,6 +20,7 @@ class AttributeData(TypedDict):
     ]
     currentValue: str | float | datetime
     unit: str | None
+    values: NotRequired[list[str]]
 
 
 class Attribute:
