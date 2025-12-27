@@ -23,10 +23,10 @@ from .hub import Hub, get_domain_data, get_hub
 _LOGGER = getLogger(__name__)
 
 # Time to attempt initial hub connection during startup
-STARTUP_CONNECT_TIMEOUT = 15  # seconds
+STARTUP_CONNECT_TIMEOUT = 60  # seconds
 
 # Interval for retrying hub connection after startup failure
-RETRY_CONNECT_INTERVAL = timedelta(seconds=60)
+RETRY_CONNECT_INTERVAL = timedelta(seconds=90)
 
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 
