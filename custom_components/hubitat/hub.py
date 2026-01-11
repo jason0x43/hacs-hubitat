@@ -871,7 +871,20 @@ def _migrate_entity_unique_ids(
 
     for entity_id in ereg.entities:
         entity = ereg.entities[entity_id]
-        if entity.unique_id and entity.unique_id.startswith(old_prefix):
+        if not entity.unique_id:
+            _LOGGER.warning("Skipping entity %s with no unique_id", entity.entity_id)
+            continue
+
+        if not isinstance(entity.unique_id, str):
+            _LOGGER.warning(
+                "Skipping entity %s with non-str unique_id %s (%s)",
+                entity.entity_id,
+                entity.unique_id,
+                type(entity.unique_id),
+            )
+            continue
+
+        if entity.unique_id.startswith(old_prefix):
             # Extract device_id from old format
             device_id = entity.unique_id[len(old_prefix) :]
             new_unique_id = f"{hub_id}::{device_id}"
