@@ -872,12 +872,13 @@ def _migrate_entity_unique_ids(
     for entity_id in ereg.entities:
         entity = ereg.entities[entity_id]
         if not entity.unique_id:
-            _LOGGER.warning("Skipping entity with no unique_id")
+            _LOGGER.warning("Skipping entity %s with no unique_id", entity.entity_id)
             continue
 
         if not isinstance(entity.unique_id, str):
             _LOGGER.warning(
-                "Skipping entity with non-str unique_id %s (%s)",
+                "Skipping entity %s with non-str unique_id %s (%s)",
+                entity.entity_id,
                 entity.unique_id,
                 type(entity.unique_id),
             )
