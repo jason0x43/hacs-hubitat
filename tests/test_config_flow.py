@@ -129,10 +129,14 @@ async def test_migrate_entity_unique_ids() -> None:
     mock_entity_other = Mock()
     mock_entity_other.unique_id = "some_other_format"
 
+    mock_entity_int = Mock()
+    mock_entity_int.unique_id = 42
+
     mock_ereg.entities = {
         "sensor.temp": mock_entity_old,
         "switch.light": mock_entity_new,
         "binary_sensor.motion": mock_entity_other,
+        "sensor.int_id": mock_entity_int,
     }
     mock_ereg.async_update_entity = Mock()
 
