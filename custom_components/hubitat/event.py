@@ -33,9 +33,9 @@ class HubitatButtonEventEntity(EventEntity, HubitatEntity):
 
     def __init__(self, button_id: str, **kwargs: Unpack[HubitatEntityArgs]):
         """Initialize a hubitat button event entity"""
-        HubitatEntity.__init__(self, device_class=EventDeviceClass.BUTTON, **kwargs)
+        HubitatEntity.__init__(self, **kwargs)
         EventEntity.__init__(self)
-
+        self._attr_device_class = EventDeviceClass.BUTTON
         self._button_id = button_id
         self._attr_unique_id: str | None = (
             f"{super().unique_id}::button_event::{self._button_id}"

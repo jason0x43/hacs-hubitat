@@ -42,9 +42,9 @@ class HubitatCover(CoverEntity, HubitatEntity):
         device_class: CoverDeviceClass | None = None,
         **kwargs: Unpack[HubitatEntityArgs],
     ):
-        HubitatEntity.__init__(self, device_class=device_class, **kwargs)
+        HubitatEntity.__init__(self, **kwargs)
         CoverEntity.__init__(self)
-
+        self._attr_device_class = device_class
         self._attribute = attribute
         self._attr_supported_features = features
         self._attr_unique_id = f"{super().unique_id}::cover::{attribute}"
