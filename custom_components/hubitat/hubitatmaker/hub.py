@@ -381,22 +381,34 @@ class Hub:
     ) -> None:
         """Update a device attribute value."""
         _LOGGER.debug(
-            "Updating %s of %s to %s (%s)",
+            "Setting %s to %s (%s) for device %s from api %s at hub %s",
             attr_name,
-            device_id,
             value,
             value_unit,
+            device_id,
+            self.app_id,
+            self.host,
         )
         try:
             dev = self._devices[device_id]
         except KeyError:
-            _LOGGER.warning("Tried to update unknown device %s", device_id)
+            _LOGGER.warning(
+                "Tried to update unknown device %s from api %s at hub %s",
+                device_id,
+                self.app_id,
+                self.host,
+            )
             return
 
         try:
             dev.update_attr(attr_name, value, value_unit)
         except KeyError:
-            _LOGGER.warning("Tried to update unknown attribute %s", attr_name)
+            _LOGGER.warning(
+                "Tried to update unknown attribute %s from api %s at hub %s",
+                attr_name,
+                self.app_id,
+                self.host,
+            )
 
     async def _load_device(self, device_id: str, force_refresh: bool = False) -> None:
         """Return full info for a specific device."""
