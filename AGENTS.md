@@ -33,17 +33,20 @@ This is a Home Assistant integration for Hubitat hubs that allows Hubitat device
 ### Core Components
 
 **Integration Entry Point** (`custom_components/hubitat/__init__.py`):
+
 - Manages the lifecycle of the integration
 - Handles config entry setup/unload
 - Registers services and event listeners
 
 **Hub Management** (`custom_components/hubitat/hub.py`):
+
 - Central hub class that manages connection to Hubitat
 - Handles device discovery and registration
 - Manages the event server for real-time updates
 - Coordinates between Home Assistant and Hubitat devices
 
 **Hubitat Maker Library** (`custom_components/hubitat/hubitatmaker/`):
+
 - Low-level communication with Hubitat's Maker API
 - Device modeling and event handling
 - HTTP server for receiving device events from Hubitat
@@ -51,6 +54,7 @@ This is a Home Assistant integration for Hubitat hubs that allows Hubitat device
 ### Device Platforms
 
 The integration supports multiple Home Assistant platforms, each in its own file:
+
 - `binary_sensor.py` - Motion, contact, smoke, etc.
 - `climate.py` - Thermostats and HVAC controls
 - `light.py` - Lights with various capabilities (dimming, color, etc.)
@@ -64,6 +68,7 @@ The integration supports multiple Home Assistant platforms, each in its own file
 ### Configuration Flow
 
 **Config Flow** (`custom_components/hubitat/config_flow.py`):
+
 - Handles initial setup wizard
 - Device discovery and selection
 - SSL configuration for event server
@@ -72,6 +77,7 @@ The integration supports multiple Home Assistant platforms, each in its own file
 ### Event System
 
 The integration uses a bi-directional communication model:
+
 1. **Control**: Home Assistant → Hubitat via Maker API HTTP requests
 2. **Updates**: Hubitat → Home Assistant via HTTP POST to local event server
 
