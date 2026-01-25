@@ -8,6 +8,11 @@ This is a Home Assistant integration for Hubitat hubs that allows Hubitat device
 
 ## Development Commands
 
+### Requirements
+
+- Python >=3.13.2
+- Home Assistant >=2025.4.0
+
 ### Development Setup
 
 - Initialize development environment: `uv sync`
@@ -27,6 +32,16 @@ This is a Home Assistant integration for Hubitat hubs that allows Hubitat device
 
 - Install dependencies: `uv sync`
 - Add development dependency: `uv add --dev <package>`
+
+### Local Development
+
+- Run integration with local Home Assistant: `./home_assistant start`
+- Pre-commit hooks run automatically on commit (ruff + type checking)
+- Install pre-commit manually: `uv run pre-commit install`
+
+### Publishing
+
+- Create new release: `python scripts/publish.py` (prompts for version, creates tag, pushes)
 
 ## Architecture
 
@@ -55,14 +70,16 @@ This is a Home Assistant integration for Hubitat hubs that allows Hubitat device
 
 The integration supports multiple Home Assistant platforms, each in its own file:
 
+- `alarm_control_panel.py` - Home security systems
 - `binary_sensor.py` - Motion, contact, smoke, etc.
 - `climate.py` - Thermostats and HVAC controls
+- `cover.py` - Garage doors, window shades
+- `event.py` - Event entities
+- `fan.py` - Fan controls
 - `light.py` - Lights with various capabilities (dimming, color, etc.)
 - `lock.py` - Door locks and keypads
 - `sensor.py` - Temperature, humidity, battery, etc.
 - `switch.py` - Basic on/off switches
-- `cover.py` - Garage doors, window shades
-- `fan.py` - Fan controls
 - `valve.py` - Water valves
 
 ### Configuration Flow
@@ -98,6 +115,11 @@ The event server is automatically configured in the Maker API instance to push d
 
 ## Development Notes
 
+### Git Workflow
+
+- Main branch: `master` (not `main`)
+- PRs should target `master`
+
 ### Device Capability Mapping
 
 - Devices are mapped to HA platforms based on Hubitat capabilities
@@ -116,6 +138,11 @@ The event server is automatically configured in the Maker API instance to push d
 - Unit tests focus on device mapping and capability detection
 - Mock Hubitat API responses for predictable testing
 - Integration tests validate the full setup flow
+
+### Testing Gotchas
+
+- **Device classes**: Device class assignment is based on capabilities. When adding new device types, verify `device_class` is set correctly (see tests/test_*.py for patterns).
+- **Mock responses**: Mock data in `tests/hubitatmaker/` should match real Hubitat API responses for accuracy.
 
 ### Dependencies
 
