@@ -51,6 +51,7 @@ def test_cover_init():
 
     assert cover.is_closed is True
     assert cover.current_cover_position == 0
+    assert cover.device_class == CoverDeviceClass.DOOR
 
 
 def test_cover_open():
@@ -272,6 +273,7 @@ def test_garage_door_control():
         CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE
     )
     assert cover.is_closed is True
+    assert cover.device_class == CoverDeviceClass.GARAGE
 
 
 def test_window_shade():
@@ -312,6 +314,7 @@ def test_window_shade():
         | CoverEntityFeature.SET_POSITION
     )
     assert cover.is_closed is False
+    assert cover.device_class == CoverDeviceClass.SHADE
 
 
 def test_window_blind():
@@ -344,6 +347,7 @@ def test_window_blind():
         | CoverEntityFeature.SET_POSITION
     )
     assert cover.is_closed is True
+    assert cover.device_class == CoverDeviceClass.BLIND
 
 
 def test_cover_device_attrs():
