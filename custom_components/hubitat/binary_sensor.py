@@ -52,9 +52,9 @@ class HubitatBinarySensor(BinarySensorEntity, HubitatEntity):
         device_class: BinarySensorDeviceClass | None = None,
         **kwargs: Unpack[HubitatEntityArgs],
     ):
-        HubitatEntity.__init__(self, device_class=device_class, **kwargs)
+        HubitatEntity.__init__(self, **kwargs)
         BinarySensorEntity.__init__(self)
-
+        self._attr_device_class = device_class
         self._attribute = attribute
         self._active_state = active_state
         self._attr_unique_id: str | None = (
