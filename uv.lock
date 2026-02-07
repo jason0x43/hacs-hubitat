@@ -1277,7 +1277,7 @@ wheels = [
 
 [[package]]
 name = "hubitat"
-version = "0.10.1"
+version = "0.10.2rc0"
 source = { virtual = "." }
 dependencies = [
     { name = "homeassistant" },
