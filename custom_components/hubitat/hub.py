@@ -9,10 +9,8 @@ from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast, override
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
-    ATTR_HIDDEN,
     CONF_ACCESS_TOKEN,
     CONF_HOST,
-    CONF_ID,
     CONF_TEMPERATURE_UNIT,
     UnitOfTemperature,
 )
@@ -64,6 +62,7 @@ from .util import (
 _LOGGER = getLogger(__name__)
 
 Listener = Callable[[Event], None]
+ConnectionListener = Callable[[bool], None]
 
 HUB_DEVICE_NAME = "Hub"
 HUB_NAME = "Hubitat Elevation"
@@ -93,6 +92,7 @@ class Hub(HasId):
     _device_listeners: dict[str, list[Listener]]
     _hub: HubitatHub
     _is_connected: bool
+    _connection_listeners: list[ConnectionListener]
     _retry_task_unsub: CALLBACK_TYPE | None
     _platforms_setup: bool
 
@@ -136,6 +136,7 @@ class Hub(HasId):
         self._hub = hub
         self.device = device
         self._is_connected = False
+        self._connection_listeners = []
         self._retry_task_unsub = None
         self._platforms_setup = False
 
@@ -253,6 +254,24 @@ class Hub(HasId):
         """Add entities to this hub."""
         self.entities.extend(entities)
 
+    def add_connection_listener(self, listener: ConnectionListener) -> None:
+        """Add a listener for hub connection status changes."""
+        self._connection_listeners.append(listener)
+
+    def remove_connection_listener(self, listener: ConnectionListener) -> None:
+        """Remove a connection status listener."""
+        if listener in self._connection_listeners:
+            self._connection_listeners.remove(listener)
+
+    def set_connected(self, connected: bool) -> None:
+        """Set the connection status and notify listeners on change."""
+        if self._is_connected == connected:
+            return
+
+        self._is_connected = connected
+        for listener in self._connection_listeners:
+            listener(connected)
+
     def add_event_emitters(self, emitters: list[M]) -> None:
         """Add event emitters to this hub."""
         self.event_emitters.extend(emitters)
@@ -283,6 +302,7 @@ class Hub(HasId):
         """Stop the hub."""
         if self._hub:
             self._hub.stop()
+        self.set_connected(False)
         self._device_listeners = {}
         self._hub_device_listeners = []
 
@@ -304,16 +324,6 @@ class Hub(HasId):
 
         # Cancel retry task if it's still running
         self.cancel_retry_task()
-
-    def get_state_attributes(self) -> dict[str, Any]:
-        """Get the state attributes for the hub entity."""
-        attrs = {
-            CONF_ID: f"{self._hub.host}::{self._hub.app_id}",
-            CONF_HOST: self.host,
-            ATTR_HIDDEN: True,
-            CONF_TEMPERATURE_UNIT: self.temperature_unit,
-        }
-        return attrs
 
     @staticmethod
     async def create(hass: HomeAssistant, entry: ConfigEntry, index: int) -> "Hub":
@@ -408,7 +418,7 @@ class Hub(HasId):
         )
 
         hub = Hub(hass, entry, index, hubitat_hub, device)
-        hub._is_connected = True
+        hub.set_connected(True)
         domain_data = get_domain_data(hass)
         domain_data[entry.entry_id] = hub
 
@@ -438,13 +448,6 @@ class Hub(HasId):
         )
         if should_update_rooms:
             _update_device_rooms(hub, hass)
-
-        # Create an entity for the Hubitat hub with basic hub information
-        hass.states.async_set(
-            hub.entity_id,
-            "connected",
-            hub.get_state_attributes(),
-        )
 
         if hub.mode_supported:
 
@@ -552,16 +555,9 @@ class Hub(HasId):
         )
 
         hub = Hub(hass, entry, index, hubitat_hub, device)
-        hub._is_connected = False
+        hub.set_connected(False)
         domain_data = get_domain_data(hass)
         domain_data[entry.entry_id] = hub
-
-        # Create an entity for the Hubitat hub in unavailable state
-        hass.states.async_set(
-            hub.entity_id,
-            "unavailable",
-            hub.get_state_attributes(),
-        )
 
         return hub
 
@@ -666,7 +662,7 @@ class Hub(HasId):
                         DeviceAttribute.HSM_STATUS, self.hsm_status, None
                     )
 
-            self._is_connected = True
+            self.set_connected(True)
             _LOGGER.debug("Hub connection complete")
 
         except Exception:
@@ -681,6 +677,7 @@ class Hub(HasId):
             # Clear mode and HSM listeners
             self._hub.remove_mode_listeners()
             self._hub.remove_hsm_status_listeners()
+            self.set_connected(False)
 
             raise
 
@@ -770,12 +767,6 @@ class Hub(HasId):
             for entity in hub.entities:
                 entity.load_state()
             _LOGGER.debug("Set temperature units to %s", temp_unit)
-
-        hass.states.async_set(
-            hub.entity_id,
-            "connected",
-            {CONF_HOST: hub.host, CONF_TEMPERATURE_UNIT: hub.temperature_unit},
-        )
 
     async def check_config(self) -> None:
         """Verify that the hub is accessible."""

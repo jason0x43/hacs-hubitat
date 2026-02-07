@@ -112,19 +112,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
                         _ = hass.config_entries.async_update_entry(
                             config_entry, title=f"Hubitat ({hub.id})"
                         )
-
-                    hass.states.async_set(
-                        hub.entity_id,
-                        "connected",
-                        hub.get_state_attributes(),
-                    )
                 except (asyncio.TimeoutError, ConnectionError) as e:
                     _LOGGER.debug("Reconnection attempt failed: %s", e)
-                    hass.states.async_set(
-                        hub.entity_id,
-                        "unavailable",
-                        hub.get_state_attributes(),
-                    )
+                    hub.set_connected(False)
 
         # Retry immediately once, then periodically
         _ = hass.async_create_task(retry_connection())

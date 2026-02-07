@@ -3,18 +3,20 @@
 import re
 from dataclasses import dataclass
 from re import Pattern
-from typing import TYPE_CHECKING, Unpack, override
+from typing import TYPE_CHECKING, Callable, Unpack, override
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.const import ATTR_HIDDEN, CONF_HOST, CONF_ID, CONF_TEMPERATURE_UNIT
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
+from .hub import get_hub
 from .hubitatmaker import Device, DeviceAttribute
 
 
@@ -74,6 +76,60 @@ class HubitatBinarySensor(BinarySensorEntity, HubitatEntity):
     def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
         """Return this entity's associated attributes"""
         return (self._attribute,)
+
+
+class HubitatHubConnectionBinarySensor(BinarySensorEntity, HubitatEntity):
+    """A binary sensor for Hubitat hub connection status."""
+
+    _connection_listener: Callable[[bool], None] | None
+
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        HubitatEntity.__init__(self, **kwargs)
+        BinarySensorEntity.__init__(self)
+
+        self._attr_unique_id = f"{self._hub.id}::binary_sensor::hub_status"
+        self._attr_name = f"{super().name} Status".title()
+        self._attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+        self._connection_listener = None
+        self.load_state()
+
+    @override
+    def load_state(self) -> None:
+        """Load current connection state from the hub."""
+        self._attr_is_on = self._hub.is_connected
+
+    @override
+    async def async_added_to_hass(self) -> None:
+        """Listen for hub connection status changes."""
+        await super().async_added_to_hass()
+
+        @callback
+        def handle_connection_change(connected: bool) -> None:
+            self._attr_is_on = connected
+            self.async_schedule_update_ha_state()
+
+        self._connection_listener = handle_connection_change
+        self._hub.add_connection_listener(handle_connection_change)
+
+    @override
+    async def async_will_remove_from_hass(self) -> None:
+        """Stop listening for hub connection changes."""
+        if self._connection_listener is not None:
+            self._hub.remove_connection_listener(self._connection_listener)
+            self._connection_listener = None
+        await super().async_will_remove_from_hass()
+
+    @property
+    @override
+    def extra_state_attributes(self) -> dict[str, str | bool] | None:
+        """Return hub metadata that was previously in the legacy hub state."""
+        return {
+            CONF_ID: f"{self._hub.host}::{self._hub.app_id}",
+            CONF_HOST: self._hub.host,
+            ATTR_HIDDEN: True,
+            CONF_TEMPERATURE_UNIT: self._hub.temperature_unit,
+            "connection_state": "connected" if self.is_on else "unavailable",
+        }
 
 
 class HubitatAccelerationSensor(HubitatBinarySensor):
@@ -271,6 +327,11 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize binary sensor entities."""
+
+    hub = get_hub(hass, config_entry.entry_id)
+    hub_entities = [HubitatHubConnectionBinarySensor(hub=hub, device=hub.device)]
+    hub.add_entities(hub_entities)
+    async_add_entities(hub_entities)
 
     for attr in _SENSOR_ATTRS:
 

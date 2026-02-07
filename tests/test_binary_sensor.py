@@ -8,6 +8,7 @@ from custom_components.hubitat.binary_sensor import (
     HubitatContactSensor,
     HubitatCoSensor,
     HubitatHeatSensor,
+    HubitatHubConnectionBinarySensor,
     HubitatMoistureSensor,
     HubitatMotionSensor,
     HubitatNaturalGasSensor,
@@ -124,6 +125,42 @@ def test_binary_sensor_device_attrs():
     )
 
     assert sensor.device_attrs == (DeviceAttribute.MOTION,)
+
+
+def test_hub_connection_binary_sensor_has_unique_id():
+    """Test that hub connection sensor has a stable unique ID."""
+    hub = Mock()
+    hub.configure_mock(
+        id="hub12345",
+        is_connected=True,
+        host="192.168.1.10",
+        app_id="123",
+        temperature_unit="F",
+        add_device_listener=Mock(),
+        add_connection_listener=Mock(),
+    )
+
+    device = Mock()
+    device.configure_mock(
+        id="hub12345",
+        name="Hub",
+        label="Hub",
+        attributes={},
+    )
+
+    sensor = HubitatHubConnectionBinarySensor(hub=hub, device=device)
+
+    assert sensor.unique_id == "hub12345::binary_sensor::hub_status"
+    assert sensor.name == "Hub Status"
+    assert sensor.is_on is True
+    assert sensor.device_class == BinarySensorDeviceClass.CONNECTIVITY
+    assert sensor.extra_state_attributes == {
+        "id": "192.168.1.10::123",
+        "host": "192.168.1.10",
+        "hidden": True,
+        "temperature_unit": "F",
+        "connection_state": "connected",
+    }
 
 
 def test_acceleration_sensor():
