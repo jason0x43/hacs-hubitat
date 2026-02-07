@@ -44,7 +44,7 @@ class HubitatFan(FanEntity, HubitatEntity):
         # HomeAssistant
         if "TURN_ON" in FanEntityFeature.__members__:
             self._attr_supported_features |= (
-                FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF  # type: ignore
+                FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF
             )
             self._enable_turn_on_off_backwards_compatibility: bool = False
 
@@ -141,7 +141,7 @@ class HubitatFan(FanEntity, HubitatEntity):
         self,
         percentage: int | None = None,
         preset_mode: str | None = None,
-        **kwargs: Any,  # pyright: ignore[reportAny]
+        **kwargs: Any,
     ) -> None:
         """Turn on the switch."""
         _LOGGER.debug(
@@ -160,7 +160,7 @@ class HubitatFan(FanEntity, HubitatEntity):
             await self.send_command(DeviceCommand.SET_SPEED, DeviceState.ON)
 
     @override
-    async def async_turn_off(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
+    async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the switch."""
         _LOGGER.debug("Turning off %s", self.name)
         if DeviceCapability.SWITCH in self._device.capabilities:

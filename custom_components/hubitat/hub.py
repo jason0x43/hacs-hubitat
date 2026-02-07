@@ -20,7 +20,7 @@ from homeassistant.helpers.device_registry import DeviceEntry
 
 try:
     from homeassistant.helpers.discovery_flow import (
-        DiscoveryKey,  # pyright: ignore[reportAssignmentType]
+        DiscoveryKey,
     )
 except Exception:
 
@@ -1041,8 +1041,8 @@ if TYPE_CHECKING:
         title="Hubitat",
         data={},
         source="",
-        minor_version=0,  # type: ignore
-        discovery_keys=test_discovery_keys,  # pyright: ignore[reportArgumentType]
+        minor_version=0,
+        discovery_keys=test_discovery_keys,
         options=None,
         unique_id=None,
         subentries_data=None,

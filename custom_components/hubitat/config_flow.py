@@ -72,7 +72,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
+class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Hubitat."""
 
     VERSION: int = 2
@@ -90,7 +90,7 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
     # TODO: remove the 'type: ignore' when were not falling back on
     # FlowResult
     @override
-    async def async_step_user(  # type: ignore
+    async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the user step."""
