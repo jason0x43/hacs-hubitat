@@ -191,6 +191,8 @@ def test_hub_connection_binary_sensor_disconnected_state_attribute():
 def test_hub_status_del_safe_when_uninitialized():
     """__del__ should be safe for partially initialized entities."""
     sensor = HubitatHubConnectionBinarySensor.__new__(HubitatHubConnectionBinarySensor)
+    # __del__ is called explicitly to ensure the cleanup path is exercised in
+    # the test
     sensor.__del__()
 
 
