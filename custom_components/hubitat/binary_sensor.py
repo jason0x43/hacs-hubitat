@@ -3,7 +3,7 @@
 import re
 from dataclasses import dataclass
 from re import Pattern
-from typing import TYPE_CHECKING, Callable, Unpack, override
+from typing import TYPE_CHECKING, Any, Callable, Unpack, override
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -121,14 +121,14 @@ class HubitatHubConnectionBinarySensor(BinarySensorEntity, HubitatEntity):
 
     @property
     @override
-    def extra_state_attributes(self) -> dict[str, str | bool] | None:
+    def extra_state_attributes(self) -> dict[str, Any] | None:
         """Return hub metadata that was previously in the legacy hub state."""
         return {
             CONF_ID: f"{self._hub.host}::{self._hub.app_id}",
             CONF_HOST: self._hub.host,
             ATTR_HIDDEN: True,
             CONF_TEMPERATURE_UNIT: self._hub.temperature_unit,
-            "connection_state": "connected" if self.is_on else "unavailable",
+            "connection_state": "connected" if self.is_on else "disconnected",
         }
 
 

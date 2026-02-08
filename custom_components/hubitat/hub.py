@@ -270,8 +270,14 @@ class Hub(HasId):
             return
 
         self._is_connected = connected
-        for listener in self._connection_listeners:
-            listener(connected)
+        for listener in self._connection_listeners.copy():
+            try:
+                listener(connected)
+            except Exception:
+                _LOGGER.exception(
+                    "Error notifying connection listener for hub %s",
+                    self.id,
+                )
 
     def add_event_emitters(self, emitters: list[M]) -> None:
         """Add event emitters to this hub."""

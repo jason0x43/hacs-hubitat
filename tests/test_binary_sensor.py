@@ -167,6 +167,27 @@ def test_hub_connection_binary_sensor_has_unique_id():
     }
 
 
+def test_hub_connection_binary_sensor_disconnected_state_attribute():
+    """Disconnected hub status should use a non-HA-state string."""
+    hub = Mock()
+    hub.configure_mock(
+        id="hub12345",
+        is_connected=False,
+        host="192.168.1.10",
+        app_id="123",
+        temperature_unit="F",
+        add_device_listener=Mock(),
+        add_connection_listener=Mock(),
+    )
+
+    device = Mock()
+    device.configure_mock(id="hub12345", name="Hub", label="Hub", attributes={})
+
+    sensor = HubitatHubConnectionBinarySensor(hub=hub, device=device)
+    assert sensor.extra_state_attributes is not None
+    assert sensor.extra_state_attributes["connection_state"] == "disconnected"
+
+
 def test_hub_status_del_safe_when_uninitialized():
     """__del__ should be safe for partially initialized entities."""
     sensor = HubitatHubConnectionBinarySensor.__new__(HubitatHubConnectionBinarySensor)
