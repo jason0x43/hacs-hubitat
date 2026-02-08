@@ -44,6 +44,7 @@ from .const import (
     PLATFORMS,
     TEMP_F,
     TRIGGER_CAPABILITIES,
+    Platform,
 )
 from .hubitatmaker import (
     Device,
@@ -94,7 +95,7 @@ class Hub(HasId):
     _is_connected: bool
     _connection_listeners: list[ConnectionListener]
     _retry_task_unsub: CALLBACK_TYPE | None
-    _platforms_setup: bool
+    _setup_platforms: set[Platform]
 
     def __init__(
         self,
@@ -138,7 +139,7 @@ class Hub(HasId):
         self._is_connected = False
         self._connection_listeners = []
         self._retry_task_unsub = None
-        self._platforms_setup = False
+        self._setup_platforms = set()
 
     @property
     def app_id(self) -> str:
@@ -275,6 +276,16 @@ class Hub(HasId):
     def add_event_emitters(self, emitters: list[M]) -> None:
         """Add event emitters to this hub."""
         self.event_emitters.extend(emitters)
+
+    def mark_platforms_setup(self, platforms: tuple[Platform, ...]) -> None:
+        """Record that the listed platforms have been set up."""
+        self._setup_platforms.update(platforms)
+
+    def get_unsetup_platforms(
+        self, platforms: tuple[Platform, ...] = PLATFORMS
+    ) -> tuple[Platform, ...]:
+        """Return platforms that have not been set up yet."""
+        return tuple(p for p in platforms if p not in self._setup_platforms)
 
     def remove_device_listeners(self, device_id: str) -> None:
         """Remove all listeners for a specific device."""
@@ -439,6 +450,7 @@ class Hub(HasId):
 
         # Initialize entities
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        hub.mark_platforms_setup(PLATFORMS)
 
         _LOGGER.debug("Registered platforms")
 
@@ -616,12 +628,13 @@ class Hub(HasId):
             # Migrate entity unique IDs from old token-hash format to new hub-id format
             _migrate_entity_unique_ids(self.hass, self.id, self.token)
 
-            # Initialize entities (only once - this is not idempotent)
-            if not self._platforms_setup:
+            # Initialize entities only for platforms that are not set up yet.
+            platforms_to_setup = self.get_unsetup_platforms()
+            if len(platforms_to_setup) > 0:
                 await self.hass.config_entries.async_forward_entry_setups(
-                    self.config_entry, PLATFORMS
+                    self.config_entry, platforms_to_setup
                 )
-                self._platforms_setup = True
+                self.mark_platforms_setup(platforms_to_setup)
 
             _LOGGER.debug("Registered platforms")
 

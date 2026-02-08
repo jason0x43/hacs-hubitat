@@ -333,19 +333,41 @@ async def async_setup_entry(
     hub.add_entities(hub_entities)
     async_add_entities(hub_entities)
 
-    for attr in _SENSOR_ATTRS:
+    sensors_added = False
 
-        def is_sensor(device: Device, _overrides: dict[str, str] | None = None) -> bool:
-            return attr[0] in device.attributes
+    def add_device_sensors() -> None:
+        nonlocal sensors_added
+        if sensors_added:
+            return
+        sensors_added = True
 
-        _ = create_and_add_entities(
-            hass,
-            config_entry,
-            async_add_entities,
-            "binary_sensor",
-            attr[1],
-            is_sensor,
-        )
+        for attr in _SENSOR_ATTRS:
+
+            def is_sensor(
+                device: Device, _overrides: dict[str, str] | None = None
+            ) -> bool:
+                return attr[0] in device.attributes
+
+            _ = create_and_add_entities(
+                hass,
+                config_entry,
+                async_add_entities,
+                "binary_sensor",
+                attr[1],
+                is_sensor,
+            )
+
+    if hub.is_connected:
+        add_device_sensors()
+    else:
+
+        @callback
+        def handle_connection_change(connected: bool) -> None:
+            if connected:
+                add_device_sensors()
+                hub.remove_connection_listener(handle_connection_change)
+
+        hub.add_connection_listener(handle_connection_change)
 
 
 def _get_contact_info(device: Device) -> ContactInfo:

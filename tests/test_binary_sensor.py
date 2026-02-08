@@ -1,6 +1,8 @@
 # pyright: reportAny=false, reportPrivateUsage=false
 
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
+
+import pytest
 
 from custom_components.hubitat.binary_sensor import (
     HubitatAccelerationSensor,
@@ -19,6 +21,7 @@ from custom_components.hubitat.binary_sensor import (
     HubitatSoundSensor,
     HubitatTamperSensor,
     HubitatValveSensor,
+    async_setup_entry,
 )
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 from custom_components.hubitat.hubitatmaker.types import Attribute
@@ -161,6 +164,33 @@ def test_hub_connection_binary_sensor_has_unique_id():
         "temperature_unit": "F",
         "connection_state": "connected",
     }
+
+
+@pytest.mark.asyncio
+async def test_binary_sensor_setup_offline_adds_connection_listener():
+    """When hub starts offline, binary sensor setup listens for reconnect."""
+    hub = Mock()
+    hub.configure_mock(
+        id="hub12345",
+        is_connected=False,
+        host="192.168.1.10",
+        app_id="123",
+        temperature_unit="F",
+        device=Mock(id="hub12345", name="Hub", label="Hub", attributes={}),
+        devices={},
+        add_device_listener=Mock(),
+        add_connection_listener=Mock(),
+        add_entities=Mock(),
+    )
+
+    hass = Mock()
+    config_entry = Mock(entry_id="entry")
+    async_add_entities = Mock()
+
+    with patch("custom_components.hubitat.binary_sensor.get_hub", return_value=hub):
+        await async_setup_entry(hass, config_entry, async_add_entities)
+
+    hub.add_connection_listener.assert_called_once()
 
 
 def test_acceleration_sensor():

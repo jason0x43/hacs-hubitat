@@ -17,10 +17,11 @@ from homeassistant.const import CONF_ACCESS_TOKEN, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant
 from homeassistant.helpers.event import async_track_time_interval
 
-from .const import DOMAIN, H_CONF_HUB_ID, H_CONF_HUBITAT_EVENT, PLATFORMS
+from .const import DOMAIN, H_CONF_HUB_ID, H_CONF_HUBITAT_EVENT, PLATFORMS, Platform
 from .hub import Hub, get_domain_data, get_hub
 
 _LOGGER = getLogger(__name__)
+_HUB_STATUS_PLATFORMS: tuple[Platform, ...] = ("binary_sensor",)
 
 # Time to attempt initial hub connection during startup
 STARTUP_CONNECT_TIMEOUT = 60  # seconds
@@ -75,6 +76,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     # First create an offline hub to get a HubitatHub instance we can cleanup
     # if the connection attempt times out
     hub = await Hub.create_offline(hass, config_entry, len(domain_data) + 1)
+    await hass.config_entries.async_forward_entry_setups(
+        config_entry, _HUB_STATUS_PLATFORMS
+    )
+    hub.mark_platforms_setup(_HUB_STATUS_PLATFORMS)
 
     try:
         # Try to connect with timeout
@@ -151,16 +156,19 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
 
     async_remove_services(hass, config_entry)
 
+    hub = get_hub(hass, config_entry.entry_id)
+    platforms_to_unload = tuple(
+        p for p in PLATFORMS if p not in hub.get_unsetup_platforms()
+    )
+
     unload_ok = all(
         await asyncio.gather(
             *[
                 hass.config_entries.async_forward_entry_unload(config_entry, component)
-                for component in PLATFORMS
+                for component in platforms_to_unload
             ]
         )
     )
-
-    hub = get_hub(hass, config_entry.entry_id)
 
     hub.stop()
     _LOGGER.debug(f"Stopped event server for {config_entry.entry_id}")
