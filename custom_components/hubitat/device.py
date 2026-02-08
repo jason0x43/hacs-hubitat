@@ -108,11 +108,13 @@ class HubitatEntity(HubitatBase, UpdateableEntity, ABC):
     """An entity related to a Hubitat device."""
 
     hass: HomeAssistant
+    _listens_for_device_events: bool
 
     def __init__(
         self,
         device_class: str | None = None,
         temp: bool = False,
+        listen_for_device_events: bool = True,
         **kwargs: Unpack[HubitatEntityArgs],
     ):
         """
@@ -124,6 +126,8 @@ class HubitatEntity(HubitatBase, UpdateableEntity, ABC):
             The device class for this entity; default is None.
         temp : bool
             If true, this is a temporary entity; default is False
+        listen_for_device_events : bool
+            If true, register a Hubitat device event listener.
         """
         HubitatBase.__init__(self, **kwargs)
         UpdateableEntity.__init__(self)
@@ -134,7 +138,8 @@ class HubitatEntity(HubitatBase, UpdateableEntity, ABC):
         self._attr_device_info: device_registry.DeviceInfo | None = get_device_info(
             self._hub, self._device
         )
-        if not temp:
+        self._listens_for_device_events = listen_for_device_events and not temp
+        if self._listens_for_device_events:
             self._hub.add_device_listener(self._device.id, self.handle_event)
             _LOGGER.debug(
                 "Added device listener for %s (%s)",
@@ -143,12 +148,13 @@ class HubitatEntity(HubitatBase, UpdateableEntity, ABC):
             )
 
     def __del__(self):
-        self._hub.remove_device_listener(self._device.id, self.handle_event)
-        _LOGGER.debug(
-            "Removed device listener for %s (%s)",
-            self._device.id,
-            self.__class__,
-        )
+        if self._listens_for_device_events:
+            self._hub.remove_device_listener(self._device.id, self.handle_event)
+            _LOGGER.debug(
+                "Removed device listener for %s (%s)",
+                self._device.id,
+                self.__class__,
+            )
 
     @property
     @override

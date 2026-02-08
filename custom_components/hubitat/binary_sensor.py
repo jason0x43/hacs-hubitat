@@ -84,7 +84,7 @@ class HubitatHubConnectionBinarySensor(BinarySensorEntity, HubitatEntity):
     _connection_listener: Callable[[bool], None] | None
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
-        HubitatEntity.__init__(self, **kwargs)
+        HubitatEntity.__init__(self, listen_for_device_events=False, **kwargs)
         BinarySensorEntity.__init__(self)
 
         self._attr_unique_id = f"{self._hub.id}::binary_sensor::hub_status"

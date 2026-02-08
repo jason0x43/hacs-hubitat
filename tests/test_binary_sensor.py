@@ -157,6 +157,7 @@ def test_hub_connection_binary_sensor_has_unique_id():
     assert sensor.name == "Hub Status"
     assert sensor.is_on is True
     assert sensor.device_class == BinarySensorDeviceClass.CONNECTIVITY
+    hub.add_device_listener.assert_not_called()
     assert sensor.extra_state_attributes == {
         "id": "192.168.1.10::123",
         "host": "192.168.1.10",
