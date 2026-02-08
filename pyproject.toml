@@ -24,6 +24,7 @@ testpaths = ["tests"]
 filterwarnings = [
     "ignore::DeprecationWarning:pkg_resources",
     "ignore:Inheritance class HomeAssistantApplication:DeprecationWarning",
+    "ignore:.*asyncio\\.iscoroutinefunction.*:DeprecationWarning:litellm\\.litellm_core_utils\\.logging_utils",
 ]
 
 [dependency-groups]
