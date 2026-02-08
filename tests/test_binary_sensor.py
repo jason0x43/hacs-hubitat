@@ -167,6 +167,12 @@ def test_hub_connection_binary_sensor_has_unique_id():
     }
 
 
+def test_hub_status_del_safe_when_uninitialized():
+    """__del__ should be safe for partially initialized entities."""
+    sensor = HubitatHubConnectionBinarySensor.__new__(HubitatHubConnectionBinarySensor)
+    sensor.__del__()
+
+
 @pytest.mark.asyncio
 async def test_binary_sensor_setup_offline_adds_connection_listener():
     """When hub starts offline, binary sensor setup listens for reconnect."""

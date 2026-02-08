@@ -108,7 +108,7 @@ class HubitatEntity(HubitatBase, UpdateableEntity, ABC):
     """An entity related to a Hubitat device."""
 
     hass: HomeAssistant
-    _listens_for_device_events: bool
+    _listens_for_device_events: bool = False
 
     def __init__(
         self,
@@ -148,13 +148,20 @@ class HubitatEntity(HubitatBase, UpdateableEntity, ABC):
             )
 
     def __del__(self):
-        if self._listens_for_device_events:
-            self._hub.remove_device_listener(self._device.id, self.handle_event)
-            _LOGGER.debug(
-                "Removed device listener for %s (%s)",
-                self._device.id,
-                self.__class__,
-            )
+        if not getattr(self, "_listens_for_device_events", False):
+            return
+
+        hub = getattr(self, "_hub", None)
+        device = getattr(self, "_device", None)
+        if hub is None or device is None:
+            return
+
+        hub.remove_device_listener(device.id, self.handle_event)
+        _LOGGER.debug(
+            "Removed device listener for %s (%s)",
+            device.id,
+            self.__class__,
+        )
 
     @property
     @override

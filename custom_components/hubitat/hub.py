@@ -404,11 +404,15 @@ class Hub(HasId):
 
         # setup proxy Device representing the hub that can be used for linked
         # entities
+        hub_device_id = cast(str | None, entry.data.get(H_CONF_HUB_ID))
+        if hub_device_id is None:
+            hub_device_id = get_hub_short_id(hubitat_hub)
         device = Device(
             {
-                "id": get_hub_short_id(hubitat_hub),
+                "id": hub_device_id,
                 "name": HUB_DEVICE_NAME,
                 "label": HUB_DEVICE_NAME,
+                "type": HUB_DEVICE_NAME,
                 "model": "Cx",
                 "manufacturer": HUB_NAME,
                 "attributes": [
@@ -553,11 +557,15 @@ class Hub(HasId):
         )
 
         # Create a placeholder device for the hub
+        hub_device_id = cast(str | None, entry.data.get(H_CONF_HUB_ID))
+        if hub_device_id is None:
+            hub_device_id = get_hub_short_id(hubitat_hub)
         device = Device(
             {
-                "id": "unknown",
+                "id": hub_device_id,
                 "name": HUB_DEVICE_NAME,
                 "label": HUB_DEVICE_NAME,
+                "type": HUB_DEVICE_NAME,
                 "model": "Cx",
                 "manufacturer": HUB_NAME,
                 "attributes": [],
@@ -595,9 +603,10 @@ class Hub(HasId):
             # Update the device with hub info
             self.device = Device(
                 {
-                    "id": get_hub_short_id(self._hub),
+                    "id": self.id,
                     "name": HUB_DEVICE_NAME,
                     "label": HUB_DEVICE_NAME,
+                    "type": HUB_DEVICE_NAME,
                     "model": "Cx",
                     "manufacturer": HUB_NAME,
                     "attributes": [
