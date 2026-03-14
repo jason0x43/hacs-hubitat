@@ -106,7 +106,7 @@ def async_register_services(
             code_list = cast(
                 JsonValueType,
                 sorted(
-                    [{ATTR_POSITION: key, **value} for key, value in codes.items()],  # pyright: ignore[reportAny]
+                    [{ATTR_POSITION: key, **value} for key, value in codes.items()],
                     key=lambda x: int(x[ATTR_POSITION]),
                 ),
             )

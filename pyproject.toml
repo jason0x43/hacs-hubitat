@@ -15,7 +15,7 @@ homepage = "https://github.com/jason0x43/hacs-hubitat"
 [project.optional-dependencies]
 
 [tool.taskipy.tasks]
-lint = "pyright custom_components/hubitat"
+lint = "ty check"
 test = "pytest tests"
 pub = "python scripts/publish.py"
 
@@ -38,24 +38,6 @@ dev = [
     "taskipy>=1.14.1",
     "ty>=0.0.7",
 ]
-
-[tool.pyright]
-include = ["custom_components/hubitat"]
-exclude = ["**/__pycache__"]
-venvPath = "."
-venv = ".venv"
-stubPath = "."
-reportDuplicateImport = true
-reportMissingImports = true
-reportOptionalCall = true
-reportOptionalMemberAccess = true
-reportOptionalSubscript = true
-reportUnusedCallResult = false
-reportUnusedClass = true
-reportUnusedFunction = true
-reportUnusedImport = true
-reportUnusedVariable = true
-reportExplicitAny = false
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "PYI", "I"]

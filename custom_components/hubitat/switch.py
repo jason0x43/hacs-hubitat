@@ -46,7 +46,7 @@ class HubitatSwitch(SwitchEntity, HubitatEntity):
         """Initialize a Hubitat switch."""
         HubitatEntity.__init__(self, **kwargs)
         SwitchEntity.__init__(self)
-        self._attr_device_class: SwitchDeviceClass = (  # pyright: ignore[reportIncompatibleVariableOverride]
+        self._attr_device_class: SwitchDeviceClass = (
             SwitchDeviceClass.SWITCH
             if _NAME_TEST.search(self._device.label)
             else SwitchDeviceClass.OUTLET
@@ -72,13 +72,13 @@ class HubitatSwitch(SwitchEntity, HubitatEntity):
         return (DeviceAttribute.SWITCH, DeviceAttribute.POWER)
 
     @override
-    async def async_turn_on(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
+    async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""
         _LOGGER.debug(f"Turning on {self.name} with {kwargs}")
         await self.send_command(DeviceCommand.ON)
 
     @override
-    async def async_turn_off(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
+    async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the switch."""
         _LOGGER.debug(f"Turning off {self.name}")
         await self.send_command("off")
@@ -103,7 +103,7 @@ class HubitatAlarm(HubitatSwitch):
         self._attr_icon: str | None = ICON_ALARM
 
     @override
-    async def async_turn_on(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
+    async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the alarm."""
         _LOGGER.debug("Activating alarm %s", self.name)
         await self.send_command(DeviceCommand.BOTH)

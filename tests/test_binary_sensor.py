@@ -1,5 +1,3 @@
-# pyright: reportAny=false, reportPrivateUsage=false
-
 from unittest.mock import Mock, patch
 
 import pytest

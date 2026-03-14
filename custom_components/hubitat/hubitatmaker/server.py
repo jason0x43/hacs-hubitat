@@ -88,7 +88,7 @@ class Server:
             # Access the protected _server attribute to get socket info
             site_server = cast(
                 AsyncioServer,
-                site._server,  # pyright: ignore[reportPrivateUsage]
+                site._server,
             )
             sockets = list(site_server.sockets or [])
             socket = sockets[0]

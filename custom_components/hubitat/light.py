@@ -20,8 +20,8 @@ try:
         DEFAULT_MIN_KELVIN,
     )
 except Exception:
-    DEFAULT_MIN_KELVIN = 2000  # pyright: ignore[reportConstantRedefinition]
-    DEFAULT_MAX_KELVIN = 6535  # pyright: ignore[reportConstantRedefinition]
+    DEFAULT_MIN_KELVIN = 2000
+    DEFAULT_MAX_KELVIN = 6535
 
 from homeassistant.components.light.const import ColorMode, LightEntityFeature
 from homeassistant.config_entries import ConfigEntry
@@ -184,7 +184,7 @@ class HubitatLight(LightEntity, HubitatEntity):
         return self.get_str_attr(DeviceAttribute.COLOR_NAME)
 
     @override
-    async def async_turn_on(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
+    async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the light."""
         _LOGGER.debug(f"Turning on {self.name} with {kwargs}")
 
@@ -272,7 +272,7 @@ class HubitatLight(LightEntity, HubitatEntity):
             await self.send_command(DeviceCommand.FLASH)
 
     @override
-    async def async_turn_off(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
+    async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the light."""
         _LOGGER.debug(f"Turning off {self.name}")
         if ATTR_TRANSITION in kwargs:

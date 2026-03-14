@@ -59,7 +59,7 @@ TRIGGER_SUBTYPES = set(
     )
 )
 
-TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(  # pyright: ignore[reportUnknownMemberType]
+TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
     {
         vol.Required(CONF_TYPE): vol.In(TRIGGER_TYPES),
         vol.Required(H_CONF_SUBTYPE): str,

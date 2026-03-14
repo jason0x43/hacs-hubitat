@@ -90,19 +90,19 @@ class HubitatCover(CoverEntity, HubitatEntity):
         return self._device_attrs
 
     @override
-    async def async_close_cover(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
+    async def async_close_cover(self, **kwargs: Any) -> None:
         """Close the cover."""
         _LOGGER.debug("Closing %s", self.name)
         await self.send_command(DeviceCommand.CLOSE)
 
     @override
-    async def async_open_cover(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
+    async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""
         _LOGGER.debug("Opening %s", self.name)
         await self.send_command(DeviceCommand.OPEN)
 
     @override
-    async def async_set_cover_position(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
+    async def async_set_cover_position(self, **kwargs: Any) -> None:
         """Move the cover to a specific position."""
         pos = cast(str, kwargs[HA_ATTR_POSITION])
         _LOGGER.debug("Setting cover position to %s", pos)

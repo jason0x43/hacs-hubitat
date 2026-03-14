@@ -271,7 +271,7 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
             await self.send_command(DeviceCommand.ECO)
 
     @override
-    async def async_set_temperature(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
+    async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
         if self.hvac_mode == HVACMode.HEAT_COOL or self.hvac_mode == HVACMode.AUTO:
             temp_low = cast(float | None, kwargs.get(ATTR_TARGET_TEMP_LOW))
@@ -289,7 +289,7 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
                     await self.send_command(DeviceCommand.SET_HEATING_SETPOINT, temp)
 
     @override
-    async def async_turn_off(self, **kwargs: Any) -> None:  # pyright: ignore[reportAny]
+    async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the thermostat."""
         await self.send_command("off")
 
