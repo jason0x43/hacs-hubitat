@@ -1,6 +1,3 @@
-# pyright: reportAny=false, reportPrivateUsage=false
-# pyright: reportUnknownLambdaType=false, reportUnknownArgumentType=false
-
 from asyncio import Future
 from collections.abc import Awaitable
 from unittest.mock import Mock, patch

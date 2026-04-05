@@ -1,5 +1,3 @@
-# pyright: reportPrivateUsage=false
-
 from unittest.mock import Mock
 
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute

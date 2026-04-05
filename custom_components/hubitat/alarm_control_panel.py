@@ -28,7 +28,7 @@ from .hubitatmaker.types import Device
 
 try:
     from homeassistant.components.alarm_control_panel.const import (
-        AlarmControlPanelState,  # pyright: ignore[reportAssignmentType]
+        AlarmControlPanelState,
     )
 except Exception:
     # TODO: Remove this code by 2025.11
@@ -98,7 +98,7 @@ class HubitatSecurityKeypad(AlarmControlPanelEntity, HubitatEntity):
     def load_state(self):
         self._attr_changed_by: str | None = self._get_changed_by()
         self._attr_code_format: CodeFormat | None = self._get_code_format()
-        self._attr_alarm_state: AlarmControlPanelState | None = self._get_alarm_state()  # pyright: ignore[reportIncompatibleVariableOverride]
+        self._attr_alarm_state: AlarmControlPanelState | None = self._get_alarm_state()
 
         # TODO: remove this code by 2025.11; state will be handled by
         # _attr_alarm_state

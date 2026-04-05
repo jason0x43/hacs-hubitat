@@ -16,7 +16,7 @@ def update_pyproject(new_version: str):
     project["version"] = new_version
 
     with open("pyproject.toml", "w") as f:
-        tomlkit.dump(pyproject, f)  # pyright: ignore[reportUnknownMemberType]
+        tomlkit.dump(pyproject, f)
 
 
 def update_manifest(new_version: str):

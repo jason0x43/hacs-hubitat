@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-# pyright: reportAny=false
-
 import argparse
 import os
 import shutil

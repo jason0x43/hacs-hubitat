@@ -437,7 +437,7 @@ class Hub:
         _LOGGER.debug("Loaded modes")
         self._modes = [Mode(m) for m in modes]
 
-    async def _api_request(  # pyright: ignore[reportAny]
+    async def _api_request(
         self, path: str, method: Literal["GET", "POST"] = "GET"
     ) -> Any:
         """Make a Maker API request."""
@@ -480,10 +480,10 @@ class Hub:
                         # sometimes mis-reports the content type as text/html
                         # even though the data is JSON
                         text = await resp.text()
-                        data = json.loads(text)  # pyright: ignore[reportAny]
+                        data = json.loads(text)
                         if "error" in data and data["error"]:
                             raise RequestError(resp)
-                        return data  # pyright: ignore[reportAny]
+                        return data
                     except ContentTypeError as e:
                         text = await resp.text()
                         _LOGGER.warning("Unable to parse as JSON: %s", text)

@@ -1,5 +1,3 @@
-# pyright: reportPrivateUsage=false, reportAny=false
-
 import json
 import re
 from os.path import dirname, join

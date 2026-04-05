@@ -1,5 +1,3 @@
-# pyright: reportAny=false
-
 from typing import Any
 from unittest.mock import Mock
 

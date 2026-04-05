@@ -1,12 +1,12 @@
 [project]
 name = "hubitat"
-version = "0.10.2rc0"
+version = "0.10.2"
 description = "A Hubitat integration for Home Assistant"
 authors = [{ name = "Jason Cheatham", email = "jason@jasoncheatham.com" }]
-requires-python = ">=3.13.2"
+requires-python = ">=3.14.2"
 license = { text = "MIT" }
 dependencies = [
-    "homeassistant>=2025.4.0",
+    "homeassistant>=2025.9.0",
 ]
 
 [project.urls]
@@ -15,7 +15,7 @@ homepage = "https://github.com/jason0x43/hacs-hubitat"
 [project.optional-dependencies]
 
 [tool.taskipy.tasks]
-lint = "pyright custom_components/hubitat"
+lint = "ty check"
 test = "pytest tests"
 pub = "python scripts/publish.py"
 
@@ -31,31 +31,13 @@ filterwarnings = [
 dev = [
     "ruff",
     "pre-commit<3.0.0,>=2.4.0",
-    "homeassistant==2026.1.1",
+    "homeassistant==2026.3.1",
     "pytest-asyncio>=0.16.0",
     "setuptools>=62.2.0",
     "tomlkit>=0.12.3",
     "taskipy>=1.14.1",
     "ty>=0.0.7",
 ]
-
-[tool.pyright]
-include = ["custom_components/hubitat"]
-exclude = ["**/__pycache__"]
-venvPath = "."
-venv = ".venv"
-stubPath = "."
-reportDuplicateImport = true
-reportMissingImports = true
-reportOptionalCall = true
-reportOptionalMemberAccess = true
-reportOptionalSubscript = true
-reportUnusedCallResult = false
-reportUnusedClass = true
-reportUnusedFunction = true
-reportUnusedImport = true
-reportUnusedVariable = true
-reportExplicitAny = false
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "PYI", "I"]
