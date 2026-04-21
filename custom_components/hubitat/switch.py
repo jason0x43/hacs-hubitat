@@ -53,7 +53,7 @@ class HubitatSwitch(SwitchEntity, HubitatEntity):
         )
         self._attr_unique_id: str | None = f"{super().unique_id}::switch"
         if type != SwitchType.SWITCH:
-            self._attr_unique_id += f"::{type}"
+            self._attr_unique_id = (self._attr_unique_id or "") + f"::{type}"
 
         self.load_state()
 

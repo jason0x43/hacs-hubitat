@@ -3,7 +3,9 @@
 import re
 from dataclasses import dataclass
 from re import Pattern
-from typing import TYPE_CHECKING, Any, Callable, Unpack, override
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Unpack, override
+
+from propcache import cached_property
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -119,9 +121,9 @@ class HubitatHubConnectionBinarySensor(BinarySensorEntity, HubitatEntity):
             self._connection_listener = None
         await super().async_will_remove_from_hass()
 
-    @property
+    @cached_property
     @override
-    def extra_state_attributes(self) -> dict[str, Any] | None:
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return hub metadata that was previously in the legacy hub state."""
         return {
             CONF_ID: f"{self._hub.host}::{self._hub.app_id}",

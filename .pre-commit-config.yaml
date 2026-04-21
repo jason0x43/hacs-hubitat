@@ -1,18 +1,18 @@
 repos:
 - repo: local
   hooks:
-  - id: ruff
-    name: ruff
-    entry: uv run ruff check --fix
+  - id: lint
+    name: lint
+    entry: uv run task lint
     language: system
     types: [python]
     require_serial: true
     files: ^(custom_components|tests)/.+\.py$
 - repo: local
   hooks:
-  - id: ty
-    name: ty
-    entry: uv run ty check
+  - id: check
+    name: check
+    entry: uv run task check
     language: system
     types: [python]
     require_serial: true

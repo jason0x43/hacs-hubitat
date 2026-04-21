@@ -56,10 +56,10 @@ class HubitatLight(LightEntity, HubitatEntity):
     """Representation of a Hubitat light."""
 
     _attr_unique_id: str | None
-    _attr_supported_color_modes: set[ColorMode] | set[str] | None
+    _attr_supported_color_modes: set[ColorMode] | None
     _attr_supported_features: LightEntityFeature
-    _attr_min_color_temp_kelvin: int | None
-    _attr_max_color_temp_kelvin: int | None
+    _attr_min_color_temp_kelvin: int
+    _attr_max_color_temp_kelvin: int
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         """Initialize a Hubitat light."""
@@ -74,13 +74,13 @@ class HubitatLight(LightEntity, HubitatEntity):
 
     @override
     def load_state(self):
-        self._attr_color_mode: ColorMode | str | None = self._get_color_mode()
+        self._attr_color_mode: ColorMode | None = self._get_color_mode()
         self._attr_brightness: int | None = self._get_brightness()
         self._attr_color_temp_kelvin: int | None = self._get_color_temp_kelvin()
         self._attr_hs_color: tuple[float, float] | None = self._get_hs_color()
         self._attr_is_on: bool | None = self._get_is_on()
 
-    def _get_color_mode(self) -> ColorMode | str | None:
+    def _get_color_mode(self) -> ColorMode | None:
         """Return this light's color mode.
 
         Hubitat directly reports CT and RGB color modes. Otherwise we can infer
@@ -143,7 +143,7 @@ class HubitatLight(LightEntity, HubitatEntity):
         """Return True if the light is on."""
         return self.get_str_attr(DeviceAttribute.SWITCH) == "on"
 
-    def _get_supported_color_modes(self) -> set[ColorMode] | set[str] | None:
+    def _get_supported_color_modes(self) -> set[ColorMode] | None:
         caps = self._device.capabilities
         supported_modes: set[ColorMode] = set()
 
