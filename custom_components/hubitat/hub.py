@@ -19,10 +19,10 @@ from homeassistant.helpers import area_registry, device_registry, entity_registr
 from homeassistant.helpers.device_registry import DeviceEntry
 
 try:
-    from homeassistant.helpers.discovery_flow import DiscoveryKey as HADiscoveryKey
+    from homeassistant.helpers.discovery_flow import DiscoveryKey
 except Exception:
 
-    class HADiscoveryKey:
+    class DiscoveryKey:
         pass
 
 
@@ -1063,7 +1063,7 @@ def get_domain_data(hass: HomeAssistant) -> dict[str, Hub]:
 
 if TYPE_CHECKING:
     test_hass = HomeAssistant("")
-    test_discovery_keys: MappingProxyType[str, tuple[HADiscoveryKey, ...]] = (
+    test_discovery_keys: MappingProxyType[str, tuple[DiscoveryKey, ...]] = (
         MappingProxyType({})
     )
     test_entry = ConfigEntry(
