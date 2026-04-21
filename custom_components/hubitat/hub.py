@@ -14,7 +14,7 @@ from homeassistant.const import (
     CONF_TEMPERATURE_UNIT,
     UnitOfTemperature,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers import area_registry, device_registry, entity_registry
 from homeassistant.helpers.device_registry import DeviceEntry
 
@@ -22,7 +22,7 @@ try:
     from homeassistant.helpers.discovery_flow import (
         DiscoveryKey,
     )
-except Exception:
+except ImportError:
 
     class DiscoveryKey:
         pass
@@ -270,7 +270,9 @@ class Hub(HasId):
             return
 
         self._is_connected = connected
-        for listener in self._connection_listeners.copy():
+
+        @callback
+        def notify_connection_listener(listener: ConnectionListener) -> None:
             try:
                 listener(connected)
             except Exception:
@@ -278,6 +280,9 @@ class Hub(HasId):
                     "Error notifying connection listener for hub %s",
                     self.id,
                 )
+
+        for listener in self._connection_listeners.copy():
+            self.hass.add_job(notify_connection_listener, listener)
 
     def add_event_emitters(self, emitters: list[M]) -> None:
         """Add event emitters to this hub."""
