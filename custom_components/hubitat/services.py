@@ -96,7 +96,7 @@ def async_register_services(
     async def get_codes(service: ServiceCall) -> ServiceResponse:
         entity = get_entity(service)
         codes_str = entity.get_str_attr(DeviceAttribute.LOCK_CODES)
-        code_list = []
+        code_list: JsonValueType = []
         if codes_str:
             try:
                 codes = cast(dict[str, Any], json.loads(codes_str))

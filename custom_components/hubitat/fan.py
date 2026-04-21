@@ -137,7 +137,7 @@ class HubitatFan(FanEntity, HubitatEntity):
         )
 
     @override
-    async def async_turn_on(
+    async def async_turn_on(  # type: ignore[override]
         self,
         percentage: int | None = None,
         preset_mode: str | None = None,

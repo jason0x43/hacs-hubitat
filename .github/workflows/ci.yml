@@ -52,10 +52,10 @@ jobs:
           fi
 
       - name: Lint
-        run: uv run ruff check
+        run: uv run task lint
 
       - name: Check types
-        run: uv run ty check
+        run: uv run task check
 
       - name: Run tests
-        run: uv run pytest
+        run: uv run task test

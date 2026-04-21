@@ -30,19 +30,19 @@ try:
     from homeassistant.components.alarm_control_panel.const import (
         AlarmControlPanelState,
     )
-except Exception:
+except ImportError:
     # TODO: Remove this code by 2025.11
 
     from enum import StrEnum
 
     from homeassistant.const import (
-        STATE_ALARM_ARMED_AWAY,  # ty: ignore[unresolved-import]
-        STATE_ALARM_ARMED_HOME,  # ty: ignore[unresolved-import]
-        STATE_ALARM_ARMED_NIGHT,  # ty: ignore[unresolved-import]
-        STATE_ALARM_DISARMED,  # ty: ignore[unresolved-import]
+        STATE_ALARM_ARMED_AWAY,  # type: ignore[attr-defined]
+        STATE_ALARM_ARMED_HOME,  # type: ignore[attr-defined]
+        STATE_ALARM_ARMED_NIGHT,  # type: ignore[attr-defined]
+        STATE_ALARM_DISARMED,  # type: ignore[attr-defined]
     )
 
-    class AlarmControlPanelState(StrEnum):
+    class AlarmControlPanelState(StrEnum):  # type: ignore[no-redef]
         ARMED_AWAY = cast(str, STATE_ALARM_ARMED_AWAY)
         ARMED_HOME = cast(str, STATE_ALARM_ARMED_HOME)
         ARMED_NIGHT = cast(str, STATE_ALARM_ARMED_NIGHT)

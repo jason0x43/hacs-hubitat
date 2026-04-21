@@ -177,7 +177,7 @@ class HubitatEntity(HubitatBase, UpdateableEntity, ABC):
     def name(self) -> str | UndefinedType | None: ...
 
     @property
-    def enabled(self) -> bool:  # ty: ignore[invalid-return-type]
+    def enabled(self) -> bool:  # type: ignore[empty-body]
         ...
 
     async def async_added_to_hass(self) -> None:

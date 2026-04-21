@@ -92,7 +92,7 @@ class HubitatSensor(SensorEntity, HubitatEntity):
         self._attr_name: str | None = f"{super().name} {attr_name}".title()
         self._attr_native_unit_of_measurement: str | None = unit
         self._attr_device_class: SensorDeviceClass | None = device_class
-        self._attr_state_class: SensorStateClass | str | None = state_class
+        self._attr_state_class: SensorStateClass | None = state_class
         self._attr_unique_id: str | None = f"{super().unique_id}::sensor::{attribute}"
         self._attr_entity_registry_enabled_default: bool = (
             enabled_default if enabled_default is not None else True

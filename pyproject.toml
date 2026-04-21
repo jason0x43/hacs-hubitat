@@ -15,7 +15,8 @@ homepage = "https://github.com/jason0x43/hacs-hubitat"
 [project.optional-dependencies]
 
 [tool.taskipy.tasks]
-lint = "ty check"
+lint = "ruff check"
+check = "zuban check"
 test = "pytest tests"
 pub = "python scripts/publish.py"
 
@@ -36,7 +37,7 @@ dev = [
     "setuptools>=62.2.0",
     "tomlkit>=0.12.3",
     "taskipy>=1.14.1",
-    "ty>=0.0.7",
+    "zuban>=0.7.0",
 ]
 
 [tool.ruff.lint]

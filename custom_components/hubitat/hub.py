@@ -24,7 +24,7 @@ try:
     )
 except ImportError:
 
-    class DiscoveryKey:
+    class DiscoveryKey:  # type: ignore[no-redef]
         pass
 
 
@@ -84,7 +84,7 @@ class Hub(HasId):
     hass: HomeAssistant
     config_entry: ConfigEntry
     token: str
-    unsub_config_listener: CALLBACK_TYPE
+    unsub_config_listener: Callable[[Any], None]
     device: Device
 
     _temperature_unit: str
@@ -1050,7 +1050,7 @@ def _update_device_rooms(hub: Hub, hass: HomeAssistant) -> None:
                 _ = dreg.async_update_device(hass_device.id, area_id=area.id)
                 _LOGGER.debug("Updated location of %s to %s", device.name, area.id)
         elif hass_device.area_id:
-            _ = dreg.async_clear_area_id(hass_device.id)
+            dreg.async_clear_area_id(hass_device.id)
             _LOGGER.debug("Cleared location of %s", device.name)
 
 

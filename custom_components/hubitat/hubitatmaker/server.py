@@ -14,7 +14,7 @@ class Server:
 
     host: str
     port: int
-    handle_event: EventCallback
+    handle_event: Callable[[Server, dict[str, Any]], None]
     ssl_context: SSLContext | None
     _main_loop: asyncio.AbstractEventLoop
 

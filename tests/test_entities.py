@@ -75,7 +75,7 @@ async def test_add_event_emitters(HubitatEventEmitter: Mock, get_hub: Mock) -> N
     get_hub.return_value = mock_hub
 
     emitter = cast(HEventEmitter, HubitatEventEmitter.return_value)
-    emitter.update_device_registry = Mock(return_value="update_registry") # ty: ignore[invalid-assignment]
+    emitter.update_device_registry = Mock(return_value="update_registry") # type: ignore[method-assign]
 
     from custom_components.hubitat.entities import create_and_add_event_emitters
 
