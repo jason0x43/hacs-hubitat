@@ -19,7 +19,9 @@ from homeassistant.helpers import area_registry, device_registry, entity_registr
 from homeassistant.helpers.device_registry import DeviceEntry
 
 try:
-    from homeassistant.helpers.discovery_flow import DiscoveryKey
+    from homeassistant.helpers.discovery_flow import (
+        DiscoveryKey,
+    )
 except Exception:
 
     class DiscoveryKey:
