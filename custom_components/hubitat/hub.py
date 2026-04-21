@@ -22,7 +22,7 @@ try:
     from homeassistant.helpers.discovery_flow import (
         DiscoveryKey,
     )
-except Exception:
+except ImportError:
 
     class DiscoveryKey:
         pass
