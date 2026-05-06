@@ -71,7 +71,7 @@ method is used.
 
 ### HACS
 
-First, [install HACS](https://hacs.xyz/docs/setup/prerequisites) if you haven't
+First, [install HACS](https://www.hacs.xyz/docs/use/configuration/basic/) if you haven't
 already.
 
 Once HACS has been installed and shows up in the sidebar, open it and go to
