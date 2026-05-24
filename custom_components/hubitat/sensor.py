@@ -721,7 +721,7 @@ class HubitatFreeMemorySensor(HubitatSensor):
         """Initialize a free memory sensor."""
         super().__init__(
             attribute=DeviceAttribute.FREE_MEMORY,
-            unit=UnitOfInformation.BYTES,
+            unit=UnitOfInformation.KILOBYTES,
             device_class=SensorDeviceClass.DATA_SIZE,
             state_class=SensorStateClass.MEASUREMENT,
             **kwargs,
