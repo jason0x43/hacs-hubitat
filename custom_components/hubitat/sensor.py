@@ -700,6 +700,31 @@ class HubitatHubModeSensor(HubitatSensor):
             device_class=SensorDeviceClass.ENUM,
             **kwargs,
         )
+class HubitatCpuSensor(HubitatSensor):
+    """A CPU usage sensor."""
+
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        """Initialize a CPU usage sensor."""
+        super().__init__(
+            attribute=DeviceAttribute.CPU,
+            unit=PERCENTAGE,
+            device_class=None,
+            state_class=SensorStateClass.MEASUREMENT,
+            **kwargs,
+        )
+
+class HubitatFreeMemorySensor(HubitatSensor):
+    """A free memory sensor."""
+
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        """Initialize a free memory sensor."""
+        super().__init__(
+            attribute=DeviceAttribute.FREE_MEMORY,
+            unit=UnitOfInformation.BYTES,
+            device_class=SensorDeviceClass.DATA_SIZE,
+            state_class=SensorStateClass.MEASUREMENT,
+            **kwargs,
+        )
 
 
 _SENSOR_ATTRS: tuple[
@@ -712,6 +737,7 @@ _SENSOR_ATTRS: tuple[
     (DeviceAttribute.CARBON_DIOXIDE, HubitatCarbonDioxide, None),
     (DeviceAttribute.CARBON_DIOXIDE_LEVEL, HubitatCarbonDioxideLevel, None),
     (DeviceAttribute.CARBON_MONOXIDE_LEVEL, HubitatCarbonMonoxideLevel, None),
+    (DeviceAttribute.CPU, HubitatCpuSensor, None),
     (
         DeviceAttribute.CUMULATIVE_CUBIC_METER,
         HubitatWaterCumulativeM3Sensor,
@@ -724,6 +750,7 @@ _SENSOR_ATTRS: tuple[
     (DeviceAttribute.DEW_POINT, HubitatDewPointSensor, None),
     (DeviceAttribute.ENERGY, HubitatEnergySensor, None),
     (DeviceAttribute.ENERGY_SOURCE, HubitatEnergySourceSensor, None),
+    (DeviceAttribute.FREE_MEMORY, HubitatFreeMemorySensor, None),
     (DeviceAttribute.HOME_HEALTH, HubitatHomeHealth, None),
     (DeviceAttribute.HUMIDITY, HubitatHumiditySensor, None),
     (DeviceAttribute.ILLUMINANCE, HubitatIlluminanceSensor, None),
