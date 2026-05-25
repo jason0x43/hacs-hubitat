@@ -808,6 +808,12 @@ class HubitatMaxMemorySensor(HubitatSensor):
             **kwargs,
         )
 
+    @property
+    @override
+    def device_attrs(self) -> tuple[DeviceAttribute, ...] | None:
+        """Watch hubModel attribute for changes."""
+        return (DeviceAttribute.HUB_MODEL,)
+
     @override
     def _get_native_value(self) -> StateType | date | datetime | Decimal:
         model = self.get_attr(DeviceAttribute.HUB_MODEL)
@@ -840,7 +846,6 @@ _SENSOR_ATTRS: tuple[
     (DeviceAttribute.FREE_MEMORY, HubitatFreeMemorySensor, None),
     (DeviceAttribute.HOME_HEALTH, HubitatHomeHealth, None),
     (DeviceAttribute.HUB_MODEL, HubitatHubModelSensor, None),
-    (DeviceAttribute.HUB_MAX_MEMORY, HubitatMaxMemorySensor, None),
     (DeviceAttribute.HUMIDITY, HubitatHumiditySensor, None),
     (DeviceAttribute.ILLUMINANCE, HubitatIlluminanceSensor, None),
     (DeviceAttribute.JAVA_DIRECT, HubitatJavaDirectSensor, None),
@@ -953,6 +958,8 @@ def add_hub_entities(
 
     if hub.mode_supported:
         hub_entities.append(HubitatHubModeSensor(hub=hub, device=hub.device))
+
+    hub_entities.append(HubitatMaxMemorySensor(hub=hub, device=hub.device))
 
     if len(hub_entities) > 0:
         hub.add_entities(hub_entities)
