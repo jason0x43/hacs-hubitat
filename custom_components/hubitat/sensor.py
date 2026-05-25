@@ -27,7 +27,7 @@ from homeassistant.const import (
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
     UnitOfEnergy,
-    UnitOfInformation
+    UnitOfInformation,
     UnitOfPower,
     UnitOfPressure,
     UnitOfSpeed,
@@ -58,8 +58,14 @@ PRESSURE_UNITS: dict[str, UnitOfPressure] = {
     "inhg": UnitOfPressure.INHG,
     "psi": UnitOfPressure.PSI,
 }
-
-
+HUB_MAX_MEMORY_KB = {
+    "C-3": 1048576,   # 1 GB in KB
+    "C-4": 1048576,   # 1 GB in KB
+    "C-5": 1048576,   # 1 GB in KB
+    "C-7": 1048576,   # 1 GB in KB
+    "C-8": 1048576,  # 1 GB in KB
+    "C-8 Pro": 2097152,  # 2 GB in KB
+}
 class HubitatSensor(SensorEntity, HubitatEntity):
     """A generic Hubitat sensor."""
 
@@ -93,7 +99,7 @@ class HubitatSensor(SensorEntity, HubitatEntity):
         self._attr_name: str | None = f"{super().name} {attr_name}".title()
         self._attr_native_unit_of_measurement: str | None = unit
         self._attr_device_class: SensorDeviceClass | None = device_class
-        self._attr_state_class: SensorStateClass | None = state_class
+        self._attr_state_class: SensorStateClass | str | None = state_class
         self._attr_unique_id: str | None = f"{super().unique_id}::sensor::{attribute}"
         self._attr_entity_registry_enabled_default: bool = (
             enabled_default if enabled_default is not None else True
@@ -701,6 +707,7 @@ class HubitatHubModeSensor(HubitatSensor):
             device_class=SensorDeviceClass.ENUM,
             **kwargs,
         )
+
 class HubitatCpuSensor(HubitatSensor):
     """A CPU usage sensor."""
 
@@ -727,6 +734,84 @@ class HubitatFreeMemorySensor(HubitatSensor):
             **kwargs,
         )
 
+class HubitatJvmFreeSensor(HubitatSensor):
+    """A JVM free memory sensor."""
+
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        super().__init__(
+            attribute=DeviceAttribute.JVM_FREE,
+            unit=UnitOfInformation.KILOBYTES,
+            device_class=SensorDeviceClass.DATA_SIZE,
+            state_class=SensorStateClass.MEASUREMENT,
+            **kwargs,
+        )
+
+
+class HubitatJvmSizeSensor(HubitatSensor):
+    """A JVM total size sensor."""
+
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        super().__init__(
+            attribute=DeviceAttribute.JVM_SIZE,
+            unit=UnitOfInformation.KILOBYTES,
+            device_class=SensorDeviceClass.DATA_SIZE,
+            state_class=SensorStateClass.MEASUREMENT,
+            **kwargs,
+        )
+
+
+class HubitatJavaDirectSensor(HubitatSensor):
+    """A Java direct memory sensor."""
+
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        super().__init__(
+            attribute=DeviceAttribute.JAVA_DIRECT,
+            unit=UnitOfInformation.KILOBYTES,
+            device_class=SensorDeviceClass.DATA_SIZE,
+            state_class=SensorStateClass.MEASUREMENT,
+            **kwargs,
+        )
+
+class HubitatDbSizeSensor(HubitatSensor):
+    """A database size sensor."""
+
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        super().__init__(
+            attribute=DeviceAttribute.DB_SIZE,
+            unit=UnitOfInformation.MEGABYTES,
+            device_class=SensorDeviceClass.DATA_SIZE,
+            state_class=SensorStateClass.MEASUREMENT,
+            **kwargs,
+        )
+
+class HubitatHubModelSensor(HubitatSensor):
+    """A hub model sensor."""
+
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        super().__init__(
+            attribute=DeviceAttribute.HUB_MODEL,
+            attribute_name="Hub Model",
+            device_class=SensorDeviceClass.ENUM,
+            **kwargs,
+        )
+
+class HubitatMaxMemorySensor(HubitatSensor):
+    """A max memory sensor derived from hub model."""
+
+    def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
+        super().__init__(
+            attribute=DeviceAttribute.HUB_MAX_MEMORY,
+            attribute_name="Max Memory",
+            unit=UnitOfInformation.KILOBYTES,
+            device_class=SensorDeviceClass.DATA_SIZE,
+            state_class=SensorStateClass.MEASUREMENT,
+            **kwargs,
+        )
+
+    @override
+    def _get_native_value(self) -> StateType | date | datetime | Decimal:
+        model = self.get_attr(DeviceAttribute.HUB_MODEL)
+        return HUB_MAX_MEMORY_KB.get(model)
 
 _SENSOR_ATTRS: tuple[
     tuple[DeviceAttribute, type[HubitatSensor], DeviceCapability | None], ...
@@ -748,13 +833,19 @@ _SENSOR_ATTRS: tuple[
     (DeviceAttribute.DAY_CUBIC_METER, HubitatWaterDayM3Sensor, None),
     (DeviceAttribute.DAY_EURO, HubitatWaterDayPriceSensor, None),
     (DeviceAttribute.DAY_LITER, HubitatWaterDayLiterSensor, None),
+    (DeviceAttribute.DB_SIZE, HubitatDbSizeSensor, None),
     (DeviceAttribute.DEW_POINT, HubitatDewPointSensor, None),
     (DeviceAttribute.ENERGY, HubitatEnergySensor, None),
     (DeviceAttribute.ENERGY_SOURCE, HubitatEnergySourceSensor, None),
     (DeviceAttribute.FREE_MEMORY, HubitatFreeMemorySensor, None),
     (DeviceAttribute.HOME_HEALTH, HubitatHomeHealth, None),
+    (DeviceAttribute.HUB_MODEL, HubitatHubModelSensor, None),
+    (DeviceAttribute.HUB_MAX_MEMORY, HubitatMaxMemorySensor, None),
     (DeviceAttribute.HUMIDITY, HubitatHumiditySensor, None),
     (DeviceAttribute.ILLUMINANCE, HubitatIlluminanceSensor, None),
+    (DeviceAttribute.JAVA_DIRECT, HubitatJavaDirectSensor, None),
+    (DeviceAttribute.JVM_FREE, HubitatJvmFreeSensor, None),
+    (DeviceAttribute.JVM_SIZE, HubitatJvmSizeSensor, None),
     (DeviceAttribute.PM1, HubitatPm1Sensor, None),
     (DeviceAttribute.PM10, HubitatPm10Sensor, None),
     (DeviceAttribute.PM25, HubitatPm25Sensor, None),
