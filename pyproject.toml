@@ -16,6 +16,7 @@ homepage = "https://github.com/jason0x43/hacs-hubitat"
 
 [tool.taskipy.tasks]
 check = "zuban check && ruff format --check && ruff check"
+format = "ruff format"
 test = "pytest tests"
 pub = "python scripts/publish.py"
 
