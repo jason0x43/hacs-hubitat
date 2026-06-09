@@ -1,3 +1,6 @@
+default_install_hook_types:
+  - pre-commit
+  - pre-push
 repos:
 - repo: local
   hooks:
@@ -6,5 +9,14 @@ repos:
     entry: uv run task check
     language: system
     types: [python]
+    stages: ["commit"]
     require_serial: true
-    files: ^(custom_components|tests)/.+\.pyi?$
+    always_run: true
+  - id: test
+    name: test
+    entry: uv run task test
+    language: system
+    types: [python]
+    stages: ["push"]
+    require_serial: true
+    always_run: true
