@@ -15,7 +15,7 @@ homepage = "https://github.com/jason0x43/hacs-hubitat"
 [project.optional-dependencies]
 
 [tool.taskipy.tasks]
-check = "zuban check && ruff format --check && ruff check"
+check = "echo '🔍 Checking types...' && zuban check && echo '🔍 Checking formatting...' && ruff format --check && echo '🔍 Linting...' && ruff check"
 format = "ruff format"
 test = "pytest tests"
 pub = "python scripts/publish.py"
