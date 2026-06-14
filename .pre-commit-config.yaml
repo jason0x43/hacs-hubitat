@@ -28,6 +28,14 @@ repos:
     stages: ["commit"]
     require_serial: false
     always_run: true
+  - id: check-homeassistant-current
+    name: check Home Assistant is current
+    entry: scripts/check_homeassistant_current.sh
+    language: system
+    stages: ["commit"]
+    require_serial: true
+    always_run: true
+    pass_filenames: false
   - id: test
     name: test
     entry: uv run uvtask test

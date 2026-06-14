@@ -7,3 +7,4 @@ __pypackages__
 .pdm-python
 config.*.tar.gz
 .coverage
+.codex
