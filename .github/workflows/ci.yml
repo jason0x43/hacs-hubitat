@@ -91,4 +91,7 @@ jobs:
               prCoverageJson: "${{ runner.temp }}/pr-coverage.json",
               prCoverageMarkdown: "${{ runner.temp }}/pr-coverage.md",
               baseCoverageJson: "${{ runner.temp }}/base-coverage.json",
+              core,
+              context,
+              github
             });

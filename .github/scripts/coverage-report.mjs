@@ -4,6 +4,7 @@ import fs from "node:fs";
 
 /** @param {Config} config */
 export async function updateCoverage(config) {
+  const { context, core, github } = config;
   const marker = "<!-- coverage-delta-report -->";
   const current = JSON.parse(fs.readFileSync(config.prCoverageJson, "utf8"));
   const report = fs.readFileSync(config.prCoverageMarkdown, "utf8");
