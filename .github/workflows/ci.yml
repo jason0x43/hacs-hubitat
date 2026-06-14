@@ -1,19 +1,23 @@
 name: CI
 
 on:
-  push:
-    branches: [main, master]
   pull_request:
     branches: [main, master]
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   test:
     name: Lint, Type Check, and Test
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.2.0
@@ -52,7 +56,39 @@ jobs:
           fi
 
       - name: Code quality checks
-        run: uv run task check
+        run: uv run uvtask check
 
-      - name: Run tests
-        run: uv run task test
+      - name: Run tests with coverage
+        run: |
+          uv run pytest tests \
+            --cov=custom_components/hubitat \
+            --cov-branch \
+            --cov-report=json:"$RUNNER_TEMP/pr-coverage.json" \
+            --cov-report=markdown:"$RUNNER_TEMP/pr-coverage.md" \
+            --cov-report=term-missing
+
+      - name: Compute base branch coverage
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          BASE_DIR="$RUNNER_TEMP/base"
+          git worktree add --detach "$BASE_DIR" "$BASE_SHA"
+          cd "$BASE_DIR"
+          uv sync --frozen
+          uv run --with pytest-cov pytest tests \
+            --cov=custom_components/hubitat \
+            --cov-branch \
+            --cov-report=json:"$RUNNER_TEMP/base-coverage.json" \
+            --cov-report=term
+
+      - name: Publish coverage report
+        uses: actions/github-script@v8
+        env:
+          PR_COVERAGE_JSON: ${{ runner.temp }}/pr-coverage.json
+          PR_COVERAGE_MARKDOWN: ${{ runner.temp }}/pr-coverage.md
+          BASE_COVERAGE_JSON: ${{ runner.temp }}/base-coverage.json
+        with:
+          script: |
+            const { updateCoverage } =
+              await import('${{ github.workspace }}/.github/scripts/coverage-report.mjs');
+            await updateCoverage();
