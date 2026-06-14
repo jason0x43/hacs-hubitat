@@ -4,13 +4,29 @@ default_install_hook_types:
 repos:
 - repo: local
   hooks:
-  - id: check
-    name: check
-    entry: uv run uvtask check
+  - id: check-types
+    name: check types
+    entry: uv run zuban check
     language: system
     types: [python]
     stages: ["commit"]
-    require_serial: true
+    require_serial: false
+    always_run: true
+  - id: check-format
+    name: check format
+    entry: uv run ruff format --check
+    language: system
+    types: [python]
+    stages: ["commit"]
+    require_serial: false
+    always_run: true
+  - id: lint
+    name: lint
+    entry: uv run ruff check
+    language: system
+    types: [python]
+    stages: ["commit"]
+    require_serial: false
     always_run: true
   - id: test
     name: test
