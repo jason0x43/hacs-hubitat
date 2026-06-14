@@ -6,7 +6,7 @@ repos:
   hooks:
   - id: check
     name: check
-    entry: uv run task check
+    entry: uv run uvtask check
     language: system
     types: [python]
     stages: ["commit"]
@@ -14,7 +14,7 @@ repos:
     always_run: true
   - id: test
     name: test
-    entry: uv run task test
+    entry: uv run uvtask test
     language: system
     types: [python]
     stages: ["push"]
