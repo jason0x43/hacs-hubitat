@@ -8,7 +8,7 @@ repos:
     name: check Home Assistant is current
     entry: scripts/check_homeassistant_current.sh
     language: system
-    stages: ["commit"]
+    stages: ["pre-commit"]
     require_serial: true
     always_run: true
     pass_filenames: false
@@ -17,7 +17,7 @@ repos:
     entry: uv run zuban check
     language: system
     types: [python]
-    stages: ["commit"]
+    stages: ["pre-commit"]
     require_serial: false
     always_run: true
   - id: check-format
@@ -25,7 +25,7 @@ repos:
     entry: uv run ruff format --check
     language: system
     types: [python]
-    stages: ["commit"]
+    stages: ["pre-commit"]
     require_serial: false
     always_run: true
   - id: lint
@@ -33,7 +33,7 @@ repos:
     entry: uv run ruff check
     language: system
     types: [python]
-    stages: ["commit"]
+    stages: ["pre-commit"]
     require_serial: false
     always_run: true
   - id: test
@@ -41,6 +41,6 @@ repos:
     entry: uv run uvtask test
     language: system
     types: [python]
-    stages: ["push"]
+    stages: ["pre-push"]
     require_serial: true
     always_run: true

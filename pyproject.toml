@@ -15,7 +15,6 @@ homepage = "https://github.com/jason0x43/hacs-hubitat"
 [project.optional-dependencies]
 
 [tool.run-script]
-check = "echo '🔍 Checking types...' && zuban check && echo '🔍 Checking formatting...' && ruff format --check && echo '🔍 Linting...' && ruff check"
 format = "ruff format"
 test = "pytest tests"
 pub = "python scripts/publish.py"
@@ -31,7 +30,7 @@ filterwarnings = [
 [dependency-groups]
 dev = [
     "ruff",
-    "pre-commit<3.0.0,>=2.4.0",
+    "pre-commit>=3.0.0",
     "homeassistant",
     "pytest-asyncio>=0.16.0",
     "setuptools>=62.2.0",
