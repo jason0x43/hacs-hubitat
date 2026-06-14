@@ -41,12 +41,12 @@ jobs:
             exit 1
           fi
           echo "Current homeassistant dev dependency: $CURRENT_VERSION"
-          
+
           # Get the latest non-beta version from PyPI
           LATEST_VERSION=$(curl -s https://pypi.org/pypi/homeassistant/json | \
             python3 -c "import sys, json; releases = json.load(sys.stdin)['releases']; print(max([v for v in releases.keys() if not any(x in v for x in ['a', 'b', 'rc', 'dev'])], key=lambda x: [int(i) for i in x.split('.')]))")
           echo "Latest homeassistant release: $LATEST_VERSION"
-          
+
           # Compare versions
           if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
             echo "::warning::homeassistant dev dependency ($CURRENT_VERSION) is not the latest release ($LATEST_VERSION)"
@@ -83,12 +83,12 @@ jobs:
 
       - name: Publish coverage report
         uses: actions/github-script@v8
-        env:
-          PR_COVERAGE_JSON: ${{ runner.temp }}/pr-coverage.json
-          PR_COVERAGE_MARKDOWN: ${{ runner.temp }}/pr-coverage.md
-          BASE_COVERAGE_JSON: ${{ runner.temp }}/base-coverage.json
         with:
           script: |
             const { updateCoverage } =
               await import('${{ github.workspace }}/.github/scripts/coverage-report.mjs');
-            await updateCoverage();
+            await updateCoverage({
+              prCoverageJson: "${{ runner.temp }}/pr-coverage.json",
+              prCoverageMarkdown: "${{ runner.temp }}/pr-coverage.md",
+              baseCoverageJson: "${{ runner.temp }}/base-coverage.json",
+            });

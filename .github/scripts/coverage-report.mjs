@@ -1,15 +1,18 @@
-import fs from "fs";
+import fs from "node:fs";
 
-export async function updateCoverage() {
+/** @typedef {import("./types.d.ts").Config} Config */
+
+/** @param {Config} config */
+export async function updateCoverage(config) {
   const marker = "<!-- coverage-delta-report -->";
-  const current = JSON.parse(fs.readFileSync(process.env.PR_COVERAGE_JSON));
-  const report = fs.readFileSync(process.env.PR_COVERAGE_MARKDOWN, "utf8");
+  const current = JSON.parse(fs.readFileSync(config.prCoverageJson, "utf8"));
+  const report = fs.readFileSync(config.prCoverageMarkdown, "utf8");
   const currentPercent = current.totals.percent_covered;
   const currentDisplay = `${currentPercent.toFixed(2)}%`;
 
   let comparison = `| Current coverage | ${currentDisplay} |\n`;
   if (context.eventName === "pull_request") {
-    const base = JSON.parse(fs.readFileSync(process.env.BASE_COVERAGE_JSON));
+    const base = JSON.parse(fs.readFileSync(config.baseCoverageJson, "utf8"));
     const basePercent = base.totals.percent_covered;
     const delta = currentPercent - basePercent;
     const deltaDisplay = `${delta >= 0 ? "+" : ""}${delta.toFixed(2)} pp`;
@@ -64,7 +67,12 @@ export async function updateCoverage() {
         });
       }
     } catch (error) {
-      if (error.status !== 403) {
+      if (
+        error &&
+        typeof error === "object" &&
+        "status" in error &&
+        error.status !== 403
+      ) {
         throw error;
       }
       core.warning(
