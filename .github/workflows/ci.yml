@@ -1,27 +1,31 @@
 name: CI
 
 on:
-  push:
-    branches: [main, master]
   pull_request:
     branches: [main, master]
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   test:
     name: Lint, Type Check, and Test
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v8.2.0
         with:
           enable-cache: true
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version-file: "pyproject.toml"
 
@@ -37,12 +41,12 @@ jobs:
             exit 1
           fi
           echo "Current homeassistant dev dependency: $CURRENT_VERSION"
-          
+
           # Get the latest non-beta version from PyPI
           LATEST_VERSION=$(curl -s https://pypi.org/pypi/homeassistant/json | \
             python3 -c "import sys, json; releases = json.load(sys.stdin)['releases']; print(max([v for v in releases.keys() if not any(x in v for x in ['a', 'b', 'rc', 'dev'])], key=lambda x: [int(i) for i in x.split('.')]))")
           echo "Latest homeassistant release: $LATEST_VERSION"
-          
+
           # Compare versions
           if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
             echo "::warning::homeassistant dev dependency ($CURRENT_VERSION) is not the latest release ($LATEST_VERSION)"
@@ -51,11 +55,43 @@ jobs:
             echo "✓ homeassistant dev dependency is up to date"
           fi
 
-      - name: Lint
-        run: uv run task lint
+      - name: Code quality checks
+        run: uv run uvtask check
 
-      - name: Check types
-        run: uv run task check
+      - name: Run tests with coverage
+        run: |
+          uv run pytest tests \
+            --cov=custom_components/hubitat \
+            --cov-branch \
+            --cov-report=json:"$RUNNER_TEMP/pr-coverage.json" \
+            --cov-report=markdown:"$RUNNER_TEMP/pr-coverage.md" \
+            --cov-report=term-missing
 
-      - name: Run tests
-        run: uv run task test
+      - name: Compute base branch coverage
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          BASE_DIR="$RUNNER_TEMP/base"
+          git worktree add --detach "$BASE_DIR" "$BASE_SHA"
+          cd "$BASE_DIR"
+          uv sync --frozen
+          uv run --with pytest-cov pytest tests \
+            --cov=custom_components/hubitat \
+            --cov-branch \
+            --cov-report=json:"$RUNNER_TEMP/base-coverage.json" \
+            --cov-report=term
+
+      - name: Publish coverage report
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { updateCoverage } =
+              await import('${{ github.workspace }}/.github/scripts/coverage-report.mjs');
+            await updateCoverage({
+              prCoverageJson: "${{ runner.temp }}/pr-coverage.json",
+              prCoverageMarkdown: "${{ runner.temp }}/pr-coverage.md",
+              baseCoverageJson: "${{ runner.temp }}/base-coverage.json",
+              core,
+              context,
+              github
+            });

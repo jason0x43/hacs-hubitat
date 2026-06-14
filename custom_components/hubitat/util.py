@@ -34,8 +34,7 @@ def get_device_overrides(config_entry: ConfigEntry) -> dict[str, str]:
 
 class HasId(Protocol):
     @property
-    def id(self) -> str:
-        ...
+    def id(self) -> str: ...
 
 
 def get_hub_device_id(hub: HasId, device: str | Device) -> str:

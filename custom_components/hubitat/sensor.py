@@ -60,6 +60,7 @@ PRESSURE_UNITS: dict[str, UnitOfPressure] = {
     "psi": UnitOfPressure.PSI,
 }
 
+
 class HubitatSensor(SensorEntity, HubitatEntity):
     """A generic Hubitat sensor."""
 
@@ -93,7 +94,7 @@ class HubitatSensor(SensorEntity, HubitatEntity):
         self._attr_name: str | None = f"{super().name} {attr_name}".title()
         self._attr_native_unit_of_measurement: str | None = unit
         self._attr_device_class: SensorDeviceClass | None = device_class
-        self._attr_state_class: SensorStateClass | str | None = state_class
+        self._attr_state_class: SensorStateClass | None = state_class
         self._attr_unique_id: str | None = f"{super().unique_id}::sensor::{attribute}"
         self._attr_entity_registry_enabled_default: bool = (
             enabled_default if enabled_default is not None else True
@@ -702,10 +703,12 @@ class HubitatHubModeSensor(HubitatSensor):
             **kwargs,
         )
 
+
 class HubitatCpuSensor(HubitatSensor):
     """A CPU usage sensor."""
-    _attr_icon="mdi:cpu-64-bit"
-    _attr_suggested_display_precision=0
+
+    _attr_icon = "mdi:cpu-64-bit"
+    _attr_suggested_display_precision = 0
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         """Initialize a CPU usage sensor."""
@@ -718,10 +721,12 @@ class HubitatCpuSensor(HubitatSensor):
             **kwargs,
         )
 
+
 class HubitatFreeMemorySensor(HubitatSensor):
     """A free memory sensor."""
-    _attr_icon="mdi:memory"
-    _attr_suggested_display_precision=0
+
+    _attr_icon = "mdi:memory"
+    _attr_suggested_display_precision = 0
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         """Initialize a free memory sensor."""
@@ -734,9 +739,11 @@ class HubitatFreeMemorySensor(HubitatSensor):
             **kwargs,
         )
 
+
 class HubitatJvmFreeSensor(HubitatSensor):
     """A JVM free memory sensor."""
-    _attr_suggested_display_precision=0
+
+    _attr_suggested_display_precision = 0
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         super().__init__(
@@ -751,7 +758,8 @@ class HubitatJvmFreeSensor(HubitatSensor):
 
 class HubitatJvmSizeSensor(HubitatSensor):
     """A JVM total size sensor."""
-    _attr_suggested_display_precision=0
+
+    _attr_suggested_display_precision = 0
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         super().__init__(
@@ -763,9 +771,11 @@ class HubitatJvmSizeSensor(HubitatSensor):
             **kwargs,
         )
 
+
 class HubitatJavaDirectSensor(HubitatSensor):
     """A Java direct memory sensor."""
-    _attr_suggested_display_precision=0
+
+    _attr_suggested_display_precision = 0
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         super().__init__(
@@ -777,9 +787,11 @@ class HubitatJavaDirectSensor(HubitatSensor):
             **kwargs,
         )
 
+
 class HubitatDbSizeSensor(HubitatSensor):
     """A database size sensor."""
-    _attr_suggested_display_precision=0
+
+    _attr_suggested_display_precision = 0
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         super().__init__(
@@ -791,9 +803,11 @@ class HubitatDbSizeSensor(HubitatSensor):
             **kwargs,
         )
 
+
 class HubitatHubModelSensor(HubitatSensor):
     """A hub model sensor."""
-    _attr_icon="mdi:set-top-box"
+
+    _attr_icon = "mdi:set-top-box"
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         super().__init__(
@@ -803,9 +817,11 @@ class HubitatHubModelSensor(HubitatSensor):
             **kwargs,
         )
 
+
 class HubitatUptimeSensor(HubitatSensor):
     """An uptime sensor."""
-    _attr_suggested_display_precision=0
+
+    _attr_suggested_display_precision = 0
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         super().__init__(
@@ -815,6 +831,7 @@ class HubitatUptimeSensor(HubitatSensor):
             state_class=SensorStateClass.TOTAL_INCREASING,
             **kwargs,
         )
+
 
 _SENSOR_ATTRS: tuple[
     tuple[DeviceAttribute, type[HubitatSensor], DeviceCapability | None], ...
