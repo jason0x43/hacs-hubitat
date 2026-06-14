@@ -1,14 +1,29 @@
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock, call, patch
+
+import pytest
 
 from custom_components.hubitat.cover import (
     HubitatCover,
+    HubitatDoorControl,
     HubitatGarageDoorControl,
     HubitatWindowBlind,
+    HubitatWindowControl,
     HubitatWindowShade,
+    _is_cover_type,
+    async_setup_entry,
+    is_cover,
 )
-from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
+from custom_components.hubitat.hubitatmaker.const import (
+    DeviceAttribute,
+    DeviceCapability,
+    DeviceCommand,
+)
 from custom_components.hubitat.hubitatmaker.types import Attribute
-from homeassistant.components.cover import CoverDeviceClass, CoverEntityFeature
+from homeassistant.components.cover import (
+    ATTR_POSITION,
+    CoverDeviceClass,
+    CoverEntityFeature,
+)
 
 
 def test_cover_init():
@@ -350,6 +365,48 @@ def test_window_blind():
     assert cover.device_class == CoverDeviceClass.BLIND
 
 
+def test_door_and_window_controls() -> None:
+    hub = Mock(token="test-token")
+    door = Mock(
+        id="door",
+        name="Door",
+        label="Door",
+        attributes={
+            DeviceAttribute.DOOR: Attribute(
+                {
+                    "name": DeviceAttribute.DOOR,
+                    "currentValue": "closed",
+                    "dataType": "STRING",
+                    "unit": None,
+                }
+            )
+        },
+    )
+    window = Mock(
+        id="window",
+        name="Window",
+        label="Window",
+        attributes={
+            DeviceAttribute.WINDOW_SHADE: Attribute(
+                {
+                    "name": DeviceAttribute.WINDOW_SHADE,
+                    "currentValue": "open",
+                    "dataType": "STRING",
+                    "unit": None,
+                }
+            )
+        },
+    )
+
+    assert (
+        HubitatDoorControl(hub=hub, device=door).device_class == CoverDeviceClass.DOOR
+    )
+    assert (
+        HubitatWindowControl(hub=hub, device=window).device_class
+        == CoverDeviceClass.WINDOW
+    )
+
+
 def test_cover_device_attrs():
     """Test that device_attrs returns the correct attributes."""
     hub = Mock()
@@ -382,3 +439,74 @@ def test_cover_device_attrs():
     assert DeviceAttribute.DOOR in attrs
     assert DeviceAttribute.LEVEL in attrs
     assert DeviceAttribute.POSITION in attrs
+
+
+@pytest.mark.asyncio
+async def test_cover_commands() -> None:
+    hub = Mock(token="test-token")
+    device = Mock(
+        id="test-id",
+        name="Test Cover",
+        label="Test Cover",
+        attributes={},
+    )
+    cover = HubitatCover(
+        hub=hub,
+        device=device,
+        attribute=DeviceAttribute.DOOR,
+        features=CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE,
+    )
+    cover.send_command = AsyncMock()  # type: ignore[method-assign]
+
+    await cover.async_close_cover()
+    await cover.async_open_cover()
+    await cover.async_set_cover_position(**{ATTR_POSITION: 42})
+
+    cover.send_command.assert_has_awaits(
+        [
+            call(DeviceCommand.CLOSE),
+            call(DeviceCommand.OPEN),
+            call(DeviceCommand.SET_POSITION, 42),
+        ]
+    )
+
+
+@pytest.mark.parametrize(
+    ("capabilities", "expected_type"),
+    [
+        ({DeviceCapability.WINDOW_SHADE}, DeviceCapability.WINDOW_SHADE),
+        ({DeviceCapability.WINDOW_BLIND}, DeviceCapability.WINDOW_BLIND),
+        ({DeviceCapability.GARAGE_DOOR_CONTROL}, DeviceCapability.GARAGE_DOOR_CONTROL),
+        ({DeviceCapability.DOOR_CONTROL}, DeviceCapability.DOOR_CONTROL),
+        (set(), None),
+    ],
+)
+def test_cover_detection(
+    capabilities: set[DeviceCapability],
+    expected_type: DeviceCapability | None,
+) -> None:
+    device = Mock(capabilities=capabilities)
+    assert is_cover(device) is (expected_type is not None)
+
+    for capability in (
+        DeviceCapability.WINDOW_SHADE,
+        DeviceCapability.WINDOW_BLIND,
+        DeviceCapability.GARAGE_DOOR_CONTROL,
+        DeviceCapability.DOOR_CONTROL,
+    ):
+        assert _is_cover_type(device, capability) is (capability == expected_type)
+
+
+@pytest.mark.asyncio
+async def test_cover_setup_entry() -> None:
+    with patch("custom_components.hubitat.cover.create_and_add_entities") as create:
+        await async_setup_entry(Mock(), Mock(), Mock())
+
+    assert create.call_count == 4
+    matchers = [item.args[-1] for item in create.call_args_list]
+    devices = [
+        Mock(capabilities={DeviceCapability.GARAGE_DOOR_CONTROL}),
+        Mock(capabilities={DeviceCapability.WINDOW_BLIND}),
+        Mock(capabilities={DeviceCapability.WINDOW_SHADE}),
+    ]
+    assert sum(matcher(device) for matcher in matchers for device in devices) == 3
