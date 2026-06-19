@@ -6,7 +6,7 @@ authors = [{ name = "Jason Cheatham", email = "jason@jasoncheatham.com" }]
 requires-python = ">=3.14.2"
 license = { text = "MIT" }
 dependencies = [
-    "homeassistant>=2025.9.0",
+    "homeassistant>=2026.6.0",
 ]
 
 [project.urls]
@@ -32,7 +32,7 @@ filterwarnings = [
 dev = [
     "ruff",
     "pre-commit<3.0.0,>=2.4.0",
-    "homeassistant==2026.4.2",
+    "homeassistant==2026.6.0",
     "pytest-asyncio>=0.16.0",
     "setuptools>=62.2.0",
     "tomlkit>=0.12.3",
