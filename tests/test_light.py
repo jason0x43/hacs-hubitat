@@ -1,11 +1,21 @@
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 from custom_components.hubitat.hubitatmaker.const import (
     DeviceAttribute,
     DeviceCapability,
+    DeviceCommand,
 )
 from custom_components.hubitat.hubitatmaker.types import Attribute
 from custom_components.hubitat.light import HubitatLight
+from homeassistant.components.light import (
+    ATTR_BRIGHTNESS,
+    ATTR_COLOR_TEMP_KELVIN,
+    ATTR_FLASH,
+    ATTR_HS_COLOR,
+    ATTR_TRANSITION,
+)
 from homeassistant.components.light.const import ColorMode
 
 
@@ -471,3 +481,49 @@ def test_light_device_attrs():
     assert DeviceAttribute.SWITCH in attrs
     assert DeviceAttribute.LEVEL in attrs
     assert DeviceAttribute.COLOR_MODE in attrs
+
+
+@pytest.mark.asyncio
+async def test_light_commands():
+    hub = Mock(token="test-token")
+    device = Mock(
+        id="test-id",
+        name="Test Light",
+        label="Test Light",
+        capabilities={
+            DeviceCapability.SWITCH,
+            DeviceCapability.SWITCH_LEVEL,
+            DeviceCapability.COLOR_CONTROL,
+            DeviceCapability.COLOR_TEMP,
+        },
+        commands=[DeviceCommand.FLASH],
+        attributes={
+            DeviceAttribute.SWITCH: Attribute(
+                {
+                    "name": DeviceAttribute.SWITCH,
+                    "currentValue": "on",
+                    "dataType": "STRING",
+                    "unit": None,
+                }
+            ),
+            DeviceAttribute.LEVEL: Attribute(
+                {
+                    "name": DeviceAttribute.LEVEL,
+                    "currentValue": "50",
+                    "dataType": "NUMBER",
+                    "unit": None,
+                }
+            ),
+        },
+    )
+    light = HubitatLight(hub=hub, device=device)
+    light.send_command = AsyncMock()  # type: ignore[method-assign]
+
+    await light.async_turn_on(**{ATTR_BRIGHTNESS: 128})
+    await light.async_turn_on(**{ATTR_HS_COLOR: (180, 50), ATTR_TRANSITION: 2})
+    await light.async_turn_on(**{ATTR_COLOR_TEMP_KELVIN: 3000, ATTR_BRIGHTNESS: 255})
+    await light.async_turn_on(**{ATTR_FLASH: "short"})
+    await light.async_turn_off()
+    await light.async_turn_off(**{ATTR_TRANSITION: 3})
+
+    assert light.send_command.await_count == 7

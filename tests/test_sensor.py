@@ -1,8 +1,14 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
-from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
+import pytest
+
+from custom_components.hubitat.hubitatmaker.const import (
+    DeviceAttribute,
+    DeviceCapability,
+)
 from custom_components.hubitat.hubitatmaker.types import Attribute
 from custom_components.hubitat.sensor import (
+    _SENSOR_ATTRS,
     HubitatBatterySensor,
     HubitatCurrentSensor,
     HubitatDewPointSensor,
@@ -13,7 +19,11 @@ from custom_components.hubitat.sensor import (
     HubitatPressureSensor,
     HubitatSensor,
     HubitatTemperatureSensor,
+    HubitatUpdateSensor,
     HubitatVoltageSensor,
+    add_hub_entities,
+    async_setup_entry,
+    is_update_sensor,
 )
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import (
@@ -503,3 +513,248 @@ def test_sensor_enabled_default():
     )
 
     assert sensor.entity_registry_enabled_default is False
+
+
+def test_battery_sensor_unparseable_string() -> None:
+    device = Mock(
+        id="test-id",
+        name="Test Battery",
+        label="Test Battery",
+        attributes={
+            DeviceAttribute.BATTERY: Attribute(
+                {
+                    "name": DeviceAttribute.BATTERY,
+                    "currentValue": "unknown",
+                    "dataType": "STRING",
+                    "unit": None,
+                }
+            )
+        },
+    )
+    sensor = HubitatBatterySensor(hub=Mock(token="token"), device=device)
+    assert sensor.native_value == "unknown"
+
+
+def test_temperature_sensor_uses_hub_unit_without_attribute_unit() -> None:
+    device = Mock(
+        id="test-id",
+        name="Test Temp",
+        label="Test Temp",
+        attributes={
+            DeviceAttribute.TEMPERATURE: Attribute(
+                {
+                    "name": DeviceAttribute.TEMPERATURE,
+                    "currentValue": "20",
+                    "dataType": "NUMBER",
+                    "unit": None,
+                }
+            )
+        },
+    )
+    sensor = HubitatTemperatureSensor(
+        hub=Mock(token="token", temperature_unit=UnitOfTemperature.CELSIUS),
+        device=device,
+    )
+    assert sensor.native_unit_of_measurement == UnitOfTemperature.CELSIUS
+
+
+def test_pressure_sensor_unknown_unit_uses_default() -> None:
+    device = Mock(
+        id="test-id",
+        name="Test Pressure",
+        label="Test Pressure",
+        attributes={
+            DeviceAttribute.PRESSURE: Attribute(
+                {
+                    "name": DeviceAttribute.PRESSURE,
+                    "currentValue": "10",
+                    "dataType": "NUMBER",
+                    "unit": "unknown",
+                }
+            )
+        },
+    )
+    sensor = HubitatPressureSensor(hub=Mock(token="token"), device=device)
+    assert sensor.native_unit_of_measurement == UnitOfPressure.MBAR
+
+
+@pytest.mark.parametrize(("attribute", "sensor_type", "capability"), _SENSOR_ATTRS)
+def test_all_known_sensor_types_can_be_initialized(
+    attribute: DeviceAttribute,
+    sensor_type: type[HubitatSensor],
+    capability: DeviceCapability | None,
+) -> None:
+    capabilities = {capability} if capability is not None else set()
+    device = Mock(
+        id="test-id",
+        name="Test Sensor",
+        label="Test Sensor",
+        capabilities=capabilities,
+        attributes={
+            attribute: Attribute(
+                {
+                    "name": attribute,
+                    "currentValue": "1",
+                    "dataType": "NUMBER",
+                    "unit": None,
+                }
+            )
+        },
+    )
+    sensor = sensor_type(  # type: ignore[call-arg]
+        hub=Mock(token="token", temperature_unit=UnitOfTemperature.FAHRENHEIT),
+        device=device,
+    )
+    assert sensor.device_attrs == (attribute,)
+
+
+def test_is_update_sensor() -> None:
+    assert is_update_sensor(Mock())
+
+
+def test_update_sensor() -> None:
+    device = Mock(
+        id="test-id",
+        name="Test Sensor",
+        label="Test Sensor",
+        attributes={
+            DeviceAttribute.LAST_UPDATE: Attribute(
+                {
+                    "name": DeviceAttribute.LAST_UPDATE,
+                    "currentValue": "2026-01-01",
+                    "dataType": "STRING",
+                    "unit": None,
+                }
+            )
+        },
+    )
+    sensor = HubitatUpdateSensor(hub=Mock(token="token"), device=device)
+    assert sensor.entity_registry_enabled_default is False
+
+
+def test_add_hub_entities() -> None:
+    hub = Mock(
+        token="token",
+        hsm_supported=True,
+        mode_supported=True,
+        add_entities=Mock(),
+    )
+    hub.device = Mock(
+        id="hub",
+        name="Hub",
+        label="Hub",
+        attributes={
+            DeviceAttribute.HSM_STATUS: Attribute(
+                {
+                    "name": DeviceAttribute.HSM_STATUS,
+                    "currentValue": "disarmed",
+                    "dataType": "STRING",
+                    "unit": None,
+                }
+            ),
+            DeviceAttribute.MODE: Attribute(
+                {
+                    "name": DeviceAttribute.MODE,
+                    "currentValue": "Day",
+                    "dataType": "STRING",
+                    "unit": None,
+                }
+            ),
+        },
+    )
+    add_entities = Mock()
+
+    with patch("custom_components.hubitat.sensor.get_hub", return_value=hub):
+        add_hub_entities(Mock(), Mock(entry_id="entry"), add_entities)
+
+    entities = add_entities.call_args.args[0]
+    assert len(entities) == 2
+    hub.add_entities.assert_called_once_with(entities)
+
+
+@pytest.mark.asyncio
+async def test_sensor_setup_adds_unknown_attributes() -> None:
+    known_entity = Mock(
+        device_id="device",
+        device_attrs=(DeviceAttribute.TEMPERATURE,),
+    )
+    device = Mock(
+        id="device",
+        name="Device",
+        label="Device",
+        attributes={
+            DeviceAttribute.TEMPERATURE: Attribute(
+                {
+                    "name": DeviceAttribute.TEMPERATURE,
+                    "currentValue": "20",
+                    "dataType": "NUMBER",
+                    "unit": None,
+                }
+            ),
+            DeviceAttribute.MODE: Attribute(
+                {
+                    "name": DeviceAttribute.MODE,
+                    "currentValue": "Day",
+                    "dataType": "STRING",
+                    "unit": None,
+                }
+            ),
+        },
+    )
+    hub = Mock(
+        token="token",
+        devices={"device": device},
+        entities=[known_entity],
+        hsm_supported=False,
+        mode_supported=False,
+        add_entities=Mock(),
+    )
+    add_entities = Mock()
+    matcher_results: dict[str, bool] = {}
+
+    def run_matchers(
+        _hass: Mock,
+        _entry: Mock,
+        _add_entities: Mock,
+        _platform: str,
+        sensor_type: type[HubitatSensor],
+        matcher: Mock,
+    ) -> list[HubitatSensor]:
+        if sensor_type is HubitatTemperatureSensor:
+            matcher_results["temperature_present"] = matcher(device)
+            matcher_results["temperature_absent"] = matcher(
+                Mock(attributes={}, capabilities=set())
+            )
+        if sensor_type is HubitatPowerSensor:
+            matcher_results["power_without_capability"] = matcher(
+                Mock(attributes={DeviceAttribute.POWER: Mock()}, capabilities=set())
+            )
+            matcher_results["power_with_capability"] = matcher(
+                Mock(
+                    attributes={DeviceAttribute.POWER: Mock()},
+                    capabilities={DeviceCapability.POWER_METER},
+                )
+            )
+        return []
+
+    with (
+        patch("custom_components.hubitat.sensor.get_hub", return_value=hub),
+        patch(
+            "custom_components.hubitat.sensor.create_and_add_entities",
+            side_effect=run_matchers,
+        ),
+    ):
+        await async_setup_entry(Mock(), Mock(entry_id="entry"), add_entities)
+
+    assert matcher_results == {
+        "temperature_present": True,
+        "temperature_absent": False,
+        "power_without_capability": False,
+        "power_with_capability": True,
+    }
+
+    unknown_entities = add_entities.call_args.args[0]
+    assert len(unknown_entities) == 1
+    assert unknown_entities[0].device_attrs == (DeviceAttribute.MODE,)
+    assert unknown_entities[0].entity_registry_enabled_default is False
+    hub.add_entities.assert_called_once_with(unknown_entities)

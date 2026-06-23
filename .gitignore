@@ -6,3 +6,5 @@ __pypackages__
 .pdm.toml
 .pdm-python
 config.*.tar.gz
+.coverage
+.codex

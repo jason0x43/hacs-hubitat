@@ -227,6 +227,7 @@ class Hub:
         """Remove all listeners and stop the event server (if running)."""
         if self._server:
             self._server.stop()
+            self._server = None
             _LOGGER.debug("Stopped event server")
         self._listeners = {}
 

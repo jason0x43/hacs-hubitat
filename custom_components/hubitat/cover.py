@@ -202,8 +202,12 @@ async def async_setup_entry(
     """Initialize cover devices."""
     for cap in _COVER_CAPS:
 
-        def is_cover(device: Device, _overrides: dict[str, str] | None = None) -> bool:
-            return _is_cover_type(device, cap[0])
+        def is_cover(
+            device: Device,
+            _overrides: dict[str, str] | None = None,
+            capability: DeviceCapability = cap[0],
+        ) -> bool:
+            return _is_cover_type(device, capability)
 
         _ = create_and_add_entities(
             hass, entry, async_add_entities, "cover", cap[1], is_cover

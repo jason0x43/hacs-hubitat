@@ -1,9 +1,12 @@
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 from custom_components.hubitat.fan import HubitatFan
 from custom_components.hubitat.hubitatmaker.const import (
     DeviceAttribute,
     DeviceCapability,
+    DeviceCommand,
 )
 from custom_components.hubitat.hubitatmaker.types import Attribute
 
@@ -353,3 +356,44 @@ def test_fan_device_attrs():
     assert attrs is not None
     assert DeviceAttribute.SWITCH in attrs
     assert DeviceAttribute.SPEED in attrs
+
+
+@pytest.mark.asyncio
+async def test_fan_commands():
+    hub = Mock(token="test-token")
+    device = Mock(
+        id="test-id",
+        name="Test Fan",
+        label="Test Fan",
+        capabilities={DeviceCapability.FAN_CONTROL, DeviceCapability.SWITCH},
+        attributes={
+            DeviceAttribute.SWITCH: Attribute(
+                {
+                    "name": DeviceAttribute.SWITCH,
+                    "currentValue": "on",
+                    "dataType": "STRING",
+                    "unit": None,
+                }
+            ),
+            DeviceAttribute.SPEED: Attribute(
+                {
+                    "name": DeviceAttribute.SPEED,
+                    "currentValue": "medium",
+                    "dataType": "STRING",
+                    "unit": None,
+                }
+            ),
+        },
+    )
+    fan = HubitatFan(hub=hub, device=device)
+    fan.send_command = AsyncMock()  # type: ignore[method-assign]
+
+    await fan.async_turn_on(preset_mode="auto")
+    await fan.async_turn_on(percentage=50)
+    await fan.async_turn_on()
+    await fan.async_turn_off()
+    await fan.async_set_percentage(0)
+
+    assert fan.send_command.await_count == 5
+    fan.send_command.assert_any_await(DeviceCommand.ON)
+    fan.send_command.assert_any_await(DeviceCommand.OFF)

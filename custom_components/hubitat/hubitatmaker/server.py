@@ -34,6 +34,7 @@ class Server:
         self._runner: web.AppRunner
         self._startup_event: threading.Event
         self._server_loop: asyncio.AbstractEventLoop
+        self._stopped = True
 
     @property
     def url(self) -> str:
@@ -48,6 +49,7 @@ class Server:
 
         self._startup_event = threading.Event()
         self._server_loop = asyncio.new_event_loop()
+        self._stopped = False
         t = threading.Thread(target=self._run)
         t.start()
 
@@ -56,6 +58,10 @@ class Server:
 
     def stop(self) -> None:
         """Gracefully stop a running server."""
+        if self._stopped:
+            return
+        self._stopped = True
+
         # Call the server shutdown functions and wait for them to finish. These
         # must be called on the server thread's event loop.
         future = asyncio.run_coroutine_threadsafe(self._stop(), self._server_loop)
