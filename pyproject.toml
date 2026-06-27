@@ -18,6 +18,7 @@ homepage = "https://github.com/jason0x43/hacs-hubitat"
 lint = "zuban check"
 format = "ruff format"
 test = "pytest tests"
+smoke = "python scripts/smoke_test.py"
 pub = "python scripts/publish.py"
 
 [tool.pytest.ini_options]

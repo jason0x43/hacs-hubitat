@@ -507,6 +507,18 @@ To run the type checker and unit tests, run
 $ ./dev test
 ```
 
+To run a real Home Assistant smoke test against one or more container versions,
+run
+
+```sh
+uv run uvtask smoke --ha-version 2026.2.3 --ha-version 2026.6.4
+```
+
+This starts a temporary Home Assistant container with a generated minimal
+config entry for Hubitat and a sibling mock Maker API container, then waits
+up to 30 seconds after container startup begins for Home Assistant to report
+that Hubitat is ready.
+
 ---
 
 <a href="https://www.buymeacoffee.com/jason0x43" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
