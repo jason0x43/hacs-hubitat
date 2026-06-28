@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import threading
 from asyncio.base_events import Server as AsyncioServer

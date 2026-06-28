@@ -2,8 +2,13 @@
 
 This is a Home Assistant integration for Hubitat hubs that allows Hubitat devices to be controlled through Home Assistant. The integration uses Hubitat's Maker API to communicate with the hub and includes a local event server to receive real-time device updates.
 
+
+## Developing
+
 - The app uses `uv`. Use `uv` to run all tools
-- Run integration with local Home Assistant: `./home_assistant start`
+- Project tasks use `poethepoet`; run with `uv run poe <task>`
+- Test integration with local Home Assistant: `./home_assistant start`
+- Always run code quality checks (`uv run poe check`) after making updates, and fix any issues
 
 ## Device Capability Mapping
 

@@ -14,11 +14,23 @@ homepage = "https://github.com/jason0x43/hacs-hubitat"
 
 [project.optional-dependencies]
 
-[tool.run-script]
-lint = "zuban check"
+[tool.poe]
+verbosity = -1
+
+[tool.poe.tasks]
+_typecheck.shell = "zuban check"
+_typecheck.env = { CLICOLOR_FORCE = '1' }
+_lint.shell = "ruff check"
+_lint.env = { CLICOLOR_FORCE = '1' }
+_formatting.shell = "ruff format --check"
+_formatting.env = { CLICOLOR_FORCE = '1' }
+check.parallel = ["_typecheck", "_lint", "_formatting"]
+check.ignore_fail = 'return_non_zero'
 format = "ruff format"
 test = "pytest tests"
+smoke = "python scripts/smoke_test.py"
 pub = "python scripts/publish.py"
+version = "python scripts/version.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -40,7 +52,7 @@ dev = [
     "tomlkit>=0.12.3",
     "zuban>=0.7.0",
     "pytest-cov>=7.1.0",
-    "uvtask>=0.9.0",
+    "poethepoet>=0.47.0",
 ]
 
 [tool.ruff.lint]

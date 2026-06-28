@@ -12,33 +12,19 @@ repos:
     require_serial: true
     always_run: true
     pass_filenames: false
-  - id: check-types
-    name: check types
-    entry: uv run zuban check
+
+  - id: check-quality
+    name: check code quality
+    entry: uv run poe check
     language: system
     types: [python]
     stages: ["pre-commit"]
     require_serial: false
     always_run: true
-  - id: check-format
-    name: check format
-    entry: uv run ruff format --check
-    language: system
-    types: [python]
-    stages: ["pre-commit"]
-    require_serial: false
-    always_run: true
-  - id: lint
-    name: lint
-    entry: uv run ruff check
-    language: system
-    types: [python]
-    stages: ["pre-commit"]
-    require_serial: false
-    always_run: true
+
   - id: test
-    name: test
-    entry: uv run uvtask test
+    name: run unit tests
+    entry: uv run poe test
     language: system
     types: [python]
     stages: ["pre-push"]
