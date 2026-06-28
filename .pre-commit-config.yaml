@@ -12,6 +12,7 @@ repos:
     require_serial: true
     always_run: true
     pass_filenames: false
+
   - id: check-types
     name: check types
     entry: uv run zuban check
@@ -20,6 +21,7 @@ repos:
     stages: ["pre-commit"]
     require_serial: false
     always_run: true
+
   - id: check-format
     name: check format
     entry: uv run ruff format --check
@@ -28,6 +30,7 @@ repos:
     stages: ["pre-commit"]
     require_serial: false
     always_run: true
+
   - id: lint
     name: lint
     entry: uv run ruff check
@@ -36,6 +39,7 @@ repos:
     stages: ["pre-commit"]
     require_serial: false
     always_run: true
+
   - id: test
     name: test
     entry: uv run uvtask test

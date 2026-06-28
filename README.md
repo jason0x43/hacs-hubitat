@@ -504,18 +504,24 @@ Whenever you make a commit to the repo, validators will be automatically run.
 Project tasks are run with [Poe the Poet](https://poethepoet.natn.io/) via
 `uv run poe <task>`.
 
-To run the type checker and unit tests, run
+To run code quality checks and unit tests, run
 
 ```
-$ uv run poe lint
+$ uv run poe check
 $ uv run poe test
 ```
 
-To run a real Home Assistant smoke test against one or more container versions,
-run
+To run a real Home Assistant smoke test against the latest stable Home
+Assistant release, run
 
 ```sh
 uv run poe smoke
+```
+
+To run it against one or more specific container versions, use
+
+```sh
+uv run poe smoke --ha-version 2026.2.3 --ha-version 2026.6.4
 ```
 
 This starts a temporary Home Assistant container with a generated minimal

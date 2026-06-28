@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
+from homeassistant_versions import latest_stable_homeassistant_version
+
 APP_ID = "123"
 ACCESS_TOKEN = "token"
 HUB_ID = "hub12345"
@@ -52,8 +54,10 @@ def parse_args() -> argparse.Namespace:
         "--ha-version",
         dest="ha_versions",
         action="append",
-        required=True,
-        help="Home Assistant version to test (repeatable)",
+        help=(
+            "Home Assistant version to test (repeatable). Defaults to the latest "
+            "stable release."
+        ),
     )
     parser.add_argument(
         "--timeout",
@@ -355,8 +359,9 @@ def main() -> int:
     args = parse_args()
     repo_root = Path(__file__).resolve().parent.parent
     results: list[SmokeResult] = []
+    versions = args.ha_versions or [latest_stable_homeassistant_version()]
 
-    for version in args.ha_versions:
+    for version in versions:
         print(f"Running Hubitat smoke test against Home Assistant {version}...")
         result = run_smoke_test(
             repo_root=repo_root,

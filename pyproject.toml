@@ -18,7 +18,14 @@ homepage = "https://github.com/jason0x43/hacs-hubitat"
 verbosity = -1
 
 [tool.poe.tasks]
-lint = "zuban check"
+_typecheck.shell = "zuban check"
+_typecheck.env = { CLICOLOR_FORCE = '1' }
+_lint.shell = "ruff check"
+_lint.env = { CLICOLOR_FORCE = '1' }
+_formatting.shell = "ruff format --check"
+_formatting.env = { CLICOLOR_FORCE = '1' }
+check.parallel = ["_typecheck", "_lint", "_formatting"]
+check.ignore_fail = 'return_non_zero'
 format = "ruff format"
 test = "pytest tests"
 smoke = "python scripts/smoke_test.py"
