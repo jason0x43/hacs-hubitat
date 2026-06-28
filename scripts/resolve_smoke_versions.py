@@ -70,7 +70,7 @@ def smoke_matrix() -> dict[str, list[dict[str, str]]]:
                 "ha_version": current_homeassistant_version(),
             },
             {
-                "label": "six_months_ago",
+                "label": "6 months ago",
                 "ha_version": six_month_old_homeassistant_version(),
             },
         ]
