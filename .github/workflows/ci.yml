@@ -94,7 +94,7 @@ jobs:
         run: scripts/check_homeassistant_current.sh
 
       - name: Code quality checks
-        run: uv run uvtask lint
+        run: uv run poe check
 
       - name: Run tests with coverage
         run: |
