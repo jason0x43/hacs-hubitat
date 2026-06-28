@@ -33,7 +33,9 @@ def current_homeassistant_version() -> str:
 def six_month_old_homeassistant_version() -> str:
     cutoff = subtract_months(datetime.now(timezone.utc), 6)
 
-    with urllib.request.urlopen("https://pypi.org/pypi/homeassistant/json") as response:
+    with urllib.request.urlopen(
+        "https://pypi.org/pypi/homeassistant/json", timeout=15
+    ) as response:
         data = json.load(response)
 
     older_candidates: list[tuple[tuple[int, ...], str]] = []

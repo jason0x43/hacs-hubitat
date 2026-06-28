@@ -166,7 +166,7 @@ class MockHubitatServer(ThreadingHTTPServer):
     ) -> None:
         body = json.dumps(payload).encode()
         handler.send_response(status)
-        handler.send_header("Content-Type", "text/html")
+        handler.send_header("Content-Type", "application/json")
         handler.send_header("Content-Length", str(len(body)))
         handler.end_headers()
         handler.wfile.write(body)
