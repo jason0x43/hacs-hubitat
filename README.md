@@ -501,17 +501,21 @@ $ ./dev init
 This script will setup the tools needed to validate typings and code style.
 Whenever you make a commit to the repo, validators will be automatically run.
 
+Project tasks are run with [Poe the Poet](https://poethepoet.natn.io/) via
+`uv run poe <task>`.
+
 To run the type checker and unit tests, run
 
 ```
-$ ./dev test
+$ uv run poe lint
+$ uv run poe test
 ```
 
 To run a real Home Assistant smoke test against one or more container versions,
 run
 
 ```sh
-uv run uvtask smoke --ha-version 2026.2.3 --ha-version 2026.6.4
+uv run poe smoke
 ```
 
 This starts a temporary Home Assistant container with a generated minimal

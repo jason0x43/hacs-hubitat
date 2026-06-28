@@ -14,7 +14,10 @@ homepage = "https://github.com/jason0x43/hacs-hubitat"
 
 [project.optional-dependencies]
 
-[tool.run-script]
+[tool.poe]
+verbosity = -1
+
+[tool.poe.tasks]
 lint = "zuban check"
 format = "ruff format"
 test = "pytest tests"
@@ -42,7 +45,7 @@ dev = [
     "tomlkit>=0.12.3",
     "zuban>=0.7.0",
     "pytest-cov>=7.1.0",
-    "uvtask>=0.9.0",
+    "poethepoet>=0.47.0",
 ]
 
 [tool.ruff.lint]
