@@ -65,7 +65,7 @@ jobs:
         run: uv sync --frozen
 
       - name: Run Hubitat smoke test
-        run: uv run uvtask smoke --ha-version "${{ matrix.ha_version }}"
+        run: uv run poe smoke --ha-version "${{ matrix.ha_version }}"
 
   test:
     name: Lint, Type Check, and Test
