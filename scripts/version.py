@@ -88,7 +88,6 @@ def main() -> None:
         print(read_pyproject_version())
         return
 
-    load_uv_lock_package()
     update_pyproject(args.version)
     update_manifest(args.version)
     update_uv_lock(args.version)
