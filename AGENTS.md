@@ -24,7 +24,7 @@ This is a Home Assistant integration for Hubitat hubs that allows Hubitat device
 
 ## Live Testing
 
-- Start a local instance with `./home_assistant start <version>`, like
-`./home_assistant start 2026.3.1`.
+- Start a local instance with `./home_assistant start` for the latest stable
+  release, or pass an explicit version like `./home_assistant start 2026.3.1`.
 - Start a remote tunnel with ssh to forward event server messages:
   `ssh -R 0.0.0.0:12345:localhost:12345 hass`

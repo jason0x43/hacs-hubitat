@@ -6,7 +6,7 @@ repos:
   hooks:
   - id: check-homeassistant-current
     name: check Home Assistant is current
-    entry: scripts/check_homeassistant_current.sh
+    entry: uv run scripts/check_homeassistant_current.py
     language: system
     stages: ["pre-commit"]
     require_serial: true

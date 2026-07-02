@@ -511,6 +511,15 @@ $ uv run poe check
 $ uv run poe test
 ```
 
+To start a local Home Assistant instance for manual testing, run
+
+```sh
+./home_assistant start
+```
+
+That defaults to the latest stable Home Assistant release. To pin a specific
+container version instead, run `./home_assistant start 2026.6.4`.
+
 To run a real Home Assistant smoke test against the latest stable Home
 Assistant release, run
 
