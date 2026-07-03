@@ -342,6 +342,23 @@ async def test_process_event() -> None:
 @patch("aiohttp.request", new=create_fake_request())
 @patch("custom_components.hubitat.hubitatmaker.server.Server", new=MagicMock())
 @pytest.mark.asyncio
+async def test_process_top_level_event() -> None:
+    """Started hub should process an event without a content wrapper."""
+    hub = Hub("1.2.3.4", "1234", "token")
+    await hub.start()
+    device = hub.devices["176"]
+    attr = device.attributes[DeviceAttribute.SWITCH]
+    assert attr.value == "off"
+
+    hub._process_event(events["device"]["content"])
+
+    attr = device.attributes[DeviceAttribute.SWITCH]
+    assert attr.value == "on"
+
+
+@patch("aiohttp.request", new=create_fake_request())
+@patch("custom_components.hubitat.hubitatmaker.server.Server", new=MagicMock())
+@pytest.mark.asyncio
 async def test_process_mode_event() -> None:
     """Started hub should emit mode events."""
     hub = Hub("1.2.3.4", "1234", "token")
@@ -364,6 +381,25 @@ async def test_process_mode_event() -> None:
 @patch("aiohttp.request", new=create_fake_request())
 @patch("custom_components.hubitat.hubitatmaker.server.Server", new=MagicMock())
 @pytest.mark.asyncio
+async def test_process_top_level_mode_event() -> None:
+    """Started hub should emit top-level mode events."""
+    hub = Hub("1.2.3.4", "1234", "token")
+    await hub.start()
+
+    handler_called = False
+
+    def listener(_: Any):
+        nonlocal handler_called
+        handler_called = True
+
+    hub.add_mode_listener(listener)
+    hub._process_event(events["mode"]["content"])
+    assert handler_called is True
+
+
+@patch("aiohttp.request", new=create_fake_request())
+@patch("custom_components.hubitat.hubitatmaker.server.Server", new=MagicMock())
+@pytest.mark.asyncio
 async def test_process_hsm_event() -> None:
     """Started hub should emit HSM events."""
     hub = Hub("1.2.3.4", "1234", "token")
@@ -380,6 +416,25 @@ async def test_process_hsm_event() -> None:
 
     hub.add_hsm_listener(listener)
     hub._process_event(events["hsmArmedAway"])
+    assert handler_called is True
+
+
+@patch("aiohttp.request", new=create_fake_request())
+@patch("custom_components.hubitat.hubitatmaker.server.Server", new=MagicMock())
+@pytest.mark.asyncio
+async def test_process_top_level_hsm_event() -> None:
+    """Started hub should emit top-level HSM events."""
+    hub = Hub("1.2.3.4", "1234", "token")
+    await hub.start()
+
+    handler_called = False
+
+    def listener(_: Any):
+        nonlocal handler_called
+        handler_called = True
+
+    hub.add_hsm_listener(listener)
+    hub._process_event(events["hsmArmedAway"]["content"])
     assert handler_called is True
 
 
