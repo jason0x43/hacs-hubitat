@@ -30,3 +30,4 @@ repos:
     stages: ["pre-push"]
     require_serial: true
     always_run: true
+    pass_filenames: false
