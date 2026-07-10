@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""Helper commands for running a local Home Assistant container."""
+
 import argparse
 import os
 import shutil
@@ -11,8 +13,11 @@ from pathlib import Path
 from subprocess import call, getoutput
 from sys import argv
 
+from scripts.homeassistant_versions import latest_stable_homeassistant_version
+
 
 def get_config_path() -> Path:
+    """Return the Home Assistant config directory for local testing."""
     scriptdir = Path(dirname(__file__))
     return (
         Path(os.getenv("HASS_CONFIG_PATH") or (f"{scriptdir}/config"))
@@ -22,12 +27,21 @@ def get_config_path() -> Path:
 
 
 def get_scriptdir() -> Path:
+    """Return the directory that contains this helper script."""
     return Path(dirname(__file__))
+
+
+def resolve_homeassistant_version(version: str | None) -> str:
+    """Resolve the requested Home Assistant version for container startup."""
+    if version is not None:
+        return version
+
+    return latest_stable_homeassistant_version()
 
 
 def cmd_start(args: argparse.Namespace) -> None:
     """Start a Home Assistant container."""
-    version = args.version
+    version = resolve_homeassistant_version(args.version)
     name = f"homeassistant-{version}"
     scriptdir = get_scriptdir()
     config_path = get_config_path()
@@ -162,7 +176,8 @@ def parse_args() -> argparse.Namespace:
     )
     start_parser.add_argument(
         "version",
-        help="Home Assistant version (e.g., 2023.12.0)",
+        nargs="?",
+        help="Home Assistant version (defaults to the latest stable release)",
     )
     start_parser.set_defaults(func=cmd_start)
 

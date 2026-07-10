@@ -33,7 +33,7 @@ jobs:
         run: uv sync
 
       - name: Check Home Assistant dependency is latest non-beta
-        run: scripts/check_homeassistant_current.sh
+        run: uv run python scripts/check_homeassistant_current.py
 
       - name: Code quality checks
         run: uv run poe check

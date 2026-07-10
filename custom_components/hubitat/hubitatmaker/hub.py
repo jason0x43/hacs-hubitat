@@ -327,18 +327,26 @@ class Hub:
 
     def _process_event(self, event: dict[str, Any]) -> None:
         """Process an event received from the hub."""
+        content = event.get("content", event)
+        if not isinstance(content, dict):
+            _LOGGER.warning("Received invalid event: %s", event)
+            return
+
+        _LOGGER.debug("Received event: %s", content)
+
         try:
-            content = cast(dict[str, Any], event["content"])
-            _LOGGER.debug("Received event: %s", content)
+            device_id = content["deviceId"]
+            event_name = content["name"]
+            event_value = content["value"]
         except KeyError:
             _LOGGER.warning("Received invalid event: %s", event)
             return
 
-        if content["deviceId"] is not None:
-            device_id = cast(str, content["deviceId"])
-            name = cast(DeviceAttribute, content["name"])
-            value = cast(int | str, content["value"])
-            unit = cast(str, content["unit"])
+        if device_id is not None:
+            device_id = cast(str, device_id)
+            name = cast(DeviceAttribute, event_name)
+            value = cast(int | str, event_value)
+            unit = cast(str, content.get("unit"))
             self._update_device_attr(device_id, name, value, unit)
 
             evt = Event(content)
@@ -346,8 +354,8 @@ class Hub:
             if device_id in self._listeners:
                 for listener in self._listeners[device_id]:
                     listener(evt)
-        elif content["name"] == "mode":
-            name = cast(str, content["value"])
+        elif event_name == "mode":
+            name = cast(str, event_value)
             mode_set = False
             for mode in self._modes:
                 if mode.name == name:
@@ -367,8 +375,8 @@ class Hub:
             for listener in self._listeners.get(ID_MODE, []):
                 listener(evt)
 
-        elif content["name"] == "hsmStatus":
-            self._hsm_status = content["value"]
+        elif event_name == "hsmStatus":
+            self._hsm_status = event_value
             evt = Event(content)
             for listener in self._listeners.get(ID_HSM_STATUS, []):
                 listener(evt)
