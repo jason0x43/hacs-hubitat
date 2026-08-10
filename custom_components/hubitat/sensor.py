@@ -266,13 +266,6 @@ class HubitatTemperatureSensor(HubitatSensor):
             **kwargs,
         )
 
-    @override
-    def load_state(self):
-        super().load_state()
-        self._attr_native_unit_of_measurement: str | None = (
-            self._get_native_unit_of_measurement()
-        )
-
     def _get_native_unit_of_measurement(self) -> str | None:
         return super()._get_native_unit_of_measurement() or self._hub.temperature_unit
 
