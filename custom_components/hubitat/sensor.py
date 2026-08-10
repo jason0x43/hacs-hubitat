@@ -12,6 +12,7 @@ from homeassistant.components.sensor import (
     SensorEntity,
 )
 from homeassistant.components.sensor.const import (
+    DEVICE_CLASS_UNITS,
     SensorDeviceClass,
     SensorStateClass,
 )
@@ -48,16 +49,11 @@ from .hubitatmaker.types import Device
 
 _LOGGER = getLogger(__name__)
 
-PRESSURE_UNITS: dict[str, UnitOfPressure] = {
-    "pa": UnitOfPressure.PA,
-    "hpa": UnitOfPressure.HPA,
-    "kpa": UnitOfPressure.KPA,
-    "bar": UnitOfPressure.BAR,
-    "cbar": UnitOfPressure.CBAR,
-    "mbar": UnitOfPressure.MBAR,
-    "mmhg": UnitOfPressure.MMHG,
-    "inhg": UnitOfPressure.INHG,
-    "psi": UnitOfPressure.PSI,
+HUBITAT_UNIT_ALIASES: dict[SensorDeviceClass, dict[str, str]] = {
+    SensorDeviceClass.TEMPERATURE: {
+        "c": UnitOfTemperature.CELSIUS,
+        "f": UnitOfTemperature.FAHRENHEIT,
+    },
 }
 
 
@@ -107,9 +103,11 @@ class HubitatSensor(SensorEntity, HubitatEntity):
 
     @override
     def load_state(self):
+        """Load the current value and a supported native unit from Hubitat."""
         self._attr_native_value: StateType | date | datetime | Decimal = (
             self._get_native_value()
         )
+        self._attr_native_unit_of_measurement = self._get_native_unit_of_measurement()
 
     @property
     @override
@@ -120,6 +118,20 @@ class HubitatSensor(SensorEntity, HubitatEntity):
     def _get_native_value(self) -> StateType | date | datetime | Decimal:
         """Return this sensor's current value."""
         return self.get_attr(self._attribute)
+
+    def _get_native_unit_of_measurement(self) -> str | None:
+        """Return the Hubitat unit when Home Assistant supports it for this sensor."""
+        attr_unit = self.get_attr_unit(self._attribute)
+        device_class = self.device_class
+        if attr_unit is not None and device_class is not None:
+            attr_unit = HUBITAT_UNIT_ALIASES.get(device_class, {}).get(
+                attr_unit.casefold(), attr_unit
+            )
+            for unit in DEVICE_CLASS_UNITS.get(device_class, set()):
+                if unit is not None and attr_unit.casefold() == str(unit).casefold():
+                    return str(unit)
+
+        return self._attr_native_unit_of_measurement
 
 
 class HubitatBatterySensor(HubitatSensor):
@@ -262,13 +274,7 @@ class HubitatTemperatureSensor(HubitatSensor):
         )
 
     def _get_native_unit_of_measurement(self) -> str | None:
-        unit: UnitOfTemperature = self._hub.temperature_unit
-        attr_unit: str | None = self.get_attr_unit(self._attribute)
-        if attr_unit is not None:
-            if "F" in attr_unit:
-                return UnitOfTemperature.FAHRENHEIT
-            return UnitOfTemperature.CELSIUS
-        return unit
+        return super()._get_native_unit_of_measurement() or self._hub.temperature_unit
 
 
 class HubitatDewPointSensor(HubitatTemperatureSensor):
@@ -298,9 +304,6 @@ class HubitatPressureSensor(HubitatSensor):
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         """Initialize a pressure sensor."""
-        # Maker API does not expose pressure unit
-        # Override if necessary through customization.py
-        # https://www.home-assistant.io/docs/configuration/customizing-devices/
         super().__init__(
             attribute=DeviceAttribute.PRESSURE,
             unit=UnitOfPressure.MBAR,
@@ -308,24 +311,6 @@ class HubitatPressureSensor(HubitatSensor):
             state_class=SensorStateClass.MEASUREMENT,
             **kwargs,
         )
-
-    @override
-    def load_state(self):
-        super().load_state()
-        self._attr_native_unit_of_measurement: str | None = (
-            self._get_native_unit_of_measurement()
-        )
-
-    def _get_native_unit_of_measurement(self) -> str | None:
-        """Return this sensor's current value."""
-        attr_unit = self.get_attr_unit(self._attribute)
-        if attr_unit is not None:
-            lower_unit = attr_unit.lower()
-            if lower_unit in PRESSURE_UNITS:
-                _LOGGER.debug(f"Using Hubitat unit {attr_unit} for {self.unique_id}")
-                return PRESSURE_UNITS[lower_unit]
-        _LOGGER.debug(f"Using default unit mbar for {self.unique_id}")
-        return UnitOfPressure.MBAR
 
 
 class HubitatCarbonDioxide(HubitatSensor):
