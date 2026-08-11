@@ -519,7 +519,7 @@ class HubitatRainDailySensor(HubitatSensor):
             attribute=DeviceAttribute.RAIN_DAILY,
             unit=UnitOfPrecipitationDepth.MILLIMETERS,
             device_class=SensorDeviceClass.PRECIPITATION,
-            state_class=SensorStateClass.MEASUREMENT,
+            state_class=SensorStateClass.TOTAL_INCREASING,
             **kwargs,
         )
 

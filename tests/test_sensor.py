@@ -390,6 +390,7 @@ def test_rain_daily_sensor_uses_precipitation_depth() -> None:
 
     assert sensor.device_class == SensorDeviceClass.PRECIPITATION
     assert sensor.native_unit_of_measurement == UnitOfPrecipitationDepth.MILLIMETERS
+    assert sensor.state_class == SensorStateClass.TOTAL_INCREASING
 
 
 def test_sensor_ignores_unsupported_hubitat_unit() -> None:
