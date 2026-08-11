@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -15,7 +16,7 @@ from homeassistant_versions import latest_stable_homeassistant_version
 
 APP_ID = "123"
 ACCESS_TOKEN = "token"
-HUB_ID = "hub12345"
+HUB_ID = "1"
 EVENT_PORT = 12345
 MOCK_ALIAS = "hubitat-mock"
 
@@ -30,6 +31,19 @@ REQUIRED_MOCK_REQUESTS = (
     f"/apps/api/{APP_ID}/devices/176",
     f"/apps/api/{APP_ID}/modes",
     f"/apps/api/{APP_ID}/hsm",
+)
+HUBITAT_LOGGER = "custom_components.hubitat"
+HOME_ASSISTANT_CONST_LOGGER = "homeassistant.const"
+HUBITAT_WARNING_PATTERNS = (
+    re.compile(
+        rf"(?:^|\s)warning(?:\s+\([^)]*\))?\s+\[{re.escape(HUBITAT_LOGGER)}(?:[.\]])",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        rf"(?:^|\s)warning(?:\s+\([^)]*\))?\s+\[{re.escape(HOME_ASSISTANT_CONST_LOGGER)}\].*"
+        r"The deprecated .* was used from hubitat\b",
+        re.IGNORECASE,
+    ),
 )
 
 
@@ -117,6 +131,15 @@ def docker_state(name: str) -> tuple[str, int]:
         return ("missing", -1)
     status, exit_code = output.split()
     return (status, int(exit_code))
+
+
+def hubitat_warnings(logs: str) -> list[str]:
+    """Return warnings emitted by Hubitat or attributed to it by Home Assistant."""
+    return [
+        line
+        for line in logs.splitlines()
+        if any(pattern.search(line) for pattern in HUBITAT_WARNING_PATTERNS)
+    ]
 
 
 def create_config(config_dir: Path) -> None:
@@ -218,7 +241,9 @@ def create_config(config_dir: Path) -> None:
     )
 
 
-def wait_for_result(ha_name: str, mock_name: str, timeout: int) -> tuple[bool, str]:
+def wait_for_result(
+    ha_name: str, mock_name: str, timeout: int
+) -> tuple[bool, str, list[str] | None]:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         ha_logs = docker_logs(ha_name)
@@ -226,17 +251,24 @@ def wait_for_result(ha_name: str, mock_name: str, timeout: int) -> tuple[bool, s
         if SUCCESS_MARKER in ha_logs and all(
             marker in mock_logs for marker in REQUIRED_MOCK_REQUESTS
         ):
-            return True, "Hubitat loaded and contacted the mock Maker API"
+            warnings = hubitat_warnings(ha_logs)
+            if warnings:
+                return (
+                    False,
+                    "\n".join(["Hubitat startup emitted warnings:", *warnings]),
+                    warnings,
+                )
+            return True, "Hubitat loaded and contacted the mock Maker API", None
         if any(marker in ha_logs for marker in FAILURE_MARKERS):
-            return False, "Home Assistant reported a Hubitat setup failure"
+            return False, "Home Assistant reported a Hubitat setup failure", None
 
         status, exit_code = docker_state(ha_name)
         if status == "exited":
-            return False, f"Home Assistant container exited with code {exit_code}"
+            return False, f"Home Assistant container exited with code {exit_code}", None
 
         time.sleep(2)
 
-    return False, f"Timed out after {timeout}s waiting for Hubitat startup"
+    return False, f"Timed out after {timeout}s waiting for Hubitat startup", None
 
 
 def run_smoke_test(
@@ -314,9 +346,9 @@ def run_smoke_test(
             "homeassistant/home-assistant:" + version,
         )
 
-        success, message = wait_for_result(ha_name, mock_name, timeout)
-        if success:
-            return SmokeResult(version=version, success=True, message=message)
+        success, message, warnings = wait_for_result(ha_name, mock_name, timeout)
+        if success or warnings is not None:
+            return SmokeResult(version=version, success=success, message=message)
 
         ha_logs = docker_logs(ha_name)
         mock_logs = docker_logs(mock_name)
