@@ -18,9 +18,6 @@ from homeassistant.components.sensor.const import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
-    CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
-    CONCENTRATION_PARTS_PER_BILLION,
-    CONCENTRATION_PARTS_PER_MILLION,
     CURRENCY_EURO,
     DEGREE,
     LIGHT_LUX,
@@ -46,6 +43,20 @@ from .entities import create_and_add_entities
 from .hub import get_hub
 from .hubitatmaker import DeviceAttribute
 from .hubitatmaker.types import Device
+
+try:
+    from homeassistant.const import UnitOfDensity, UnitOfRatio
+
+    CONCENTRATION_MICROGRAMS_PER_CUBIC_METER = UnitOfDensity.MICROGRAMS_PER_CUBIC_METER
+    CONCENTRATION_PARTS_PER_BILLION = UnitOfRatio.PARTS_PER_BILLION
+    CONCENTRATION_PARTS_PER_MILLION = UnitOfRatio.PARTS_PER_MILLION
+except ImportError:
+    # Home Assistant versions before 2026.8 do not expose the replacement units.
+    from homeassistant.const import (
+        CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        CONCENTRATION_PARTS_PER_BILLION,
+        CONCENTRATION_PARTS_PER_MILLION,
+    )
 
 _LOGGER = getLogger(__name__)
 
