@@ -17,6 +17,7 @@ from custom_components.hubitat.sensor import (
     HubitatIlluminanceSensor,
     HubitatPowerSensor,
     HubitatPressureSensor,
+    HubitatRainRateSensor,
     HubitatSensor,
     HubitatTemperatureSensor,
     HubitatUpdateSensor,
@@ -34,6 +35,7 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfPressure,
     UnitOfTemperature,
+    UnitOfVolumetricFlux,
 )
 
 
@@ -127,7 +129,8 @@ def test_battery_sensor_string_value():
     assert sensor.native_value == 90.0
 
 
-def test_temperature_sensor():
+@pytest.mark.parametrize("unit", ["F", "°F"])
+def test_temperature_sensor(unit: str):
     """Test that a temperature sensor can be initialized."""
     hub = Mock()
     hub.configure_mock(
@@ -145,7 +148,7 @@ def test_temperature_sensor():
                     "name": DeviceAttribute.TEMPERATURE,
                     "currentValue": "72.5",
                     "dataType": "NUMBER",
-                    "unit": "°F",
+                    "unit": unit,
                 }
             )
         },
@@ -159,7 +162,8 @@ def test_temperature_sensor():
     assert sensor.native_unit_of_measurement == UnitOfTemperature.FAHRENHEIT
 
 
-def test_temperature_sensor_celsius():
+@pytest.mark.parametrize("unit", ["C", "°C"])
+def test_temperature_sensor_celsius(unit: str):
     """Test that temperature sensor handles Celsius."""
     hub = Mock()
     hub.configure_mock(token="test-token", temperature_unit=UnitOfTemperature.CELSIUS)
@@ -175,7 +179,7 @@ def test_temperature_sensor_celsius():
                     "name": DeviceAttribute.TEMPERATURE,
                     "currentValue": "22.5",
                     "dataType": "NUMBER",
-                    "unit": "°C",
+                    "unit": unit,
                 }
             )
         },
@@ -301,6 +305,82 @@ def test_energy_sensor():
     assert sensor.device_class == SensorDeviceClass.ENERGY
     assert sensor.native_unit_of_measurement == UnitOfEnergy.KILO_WATT_HOUR
     assert sensor.state_class == SensorStateClass.TOTAL
+
+
+@pytest.mark.parametrize(
+    ("sensor_type", "attribute", "hubitat_unit", "expected_unit"),
+    [
+        (
+            HubitatEnergySensor,
+            DeviceAttribute.ENERGY,
+            "Wh",
+            UnitOfEnergy.WATT_HOUR,
+        ),
+        (
+            HubitatPowerSensor,
+            DeviceAttribute.POWER,
+            "kw",
+            UnitOfPower.KILO_WATT,
+        ),
+        (
+            HubitatRainRateSensor,
+            DeviceAttribute.RAIN_RATE,
+            "in/h",
+            UnitOfVolumetricFlux.INCHES_PER_HOUR,
+        ),
+    ],
+)
+def test_sensor_uses_supported_hubitat_unit(
+    sensor_type: type[HubitatSensor],
+    attribute: DeviceAttribute,
+    hubitat_unit: str,
+    expected_unit: str,
+) -> None:
+    """Use Hubitat units that Home Assistant supports for the device class."""
+    device = Mock(
+        id="test-id",
+        name="Test Sensor",
+        label="Test Sensor",
+        attributes={
+            attribute: Attribute(
+                {
+                    "name": attribute,
+                    "currentValue": "1",
+                    "dataType": "NUMBER",
+                    "unit": hubitat_unit,
+                }
+            )
+        },
+    )
+
+    sensor = sensor_type(  # type: ignore[call-arg]
+        hub=Mock(token="token"), device=device
+    )
+
+    assert sensor.native_unit_of_measurement == expected_unit
+
+
+def test_sensor_ignores_unsupported_hubitat_unit() -> None:
+    """Retain the sensor default when Hubitat sends an unsupported unit."""
+    device = Mock(
+        id="test-id",
+        name="Test Energy",
+        label="Test Energy",
+        attributes={
+            DeviceAttribute.ENERGY: Attribute(
+                {
+                    "name": DeviceAttribute.ENERGY,
+                    "currentValue": "1",
+                    "dataType": "NUMBER",
+                    "unit": "not an energy unit",
+                }
+            )
+        },
+    )
+
+    sensor = HubitatEnergySensor(hub=Mock(token="token"), device=device)
+
+    assert sensor.native_unit_of_measurement == UnitOfEnergy.KILO_WATT_HOUR
 
 
 def test_voltage_sensor():

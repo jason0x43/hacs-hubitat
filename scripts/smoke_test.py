@@ -257,7 +257,9 @@ def run_smoke_test(
     ]
 
     temp_dir = Path(
-        tempfile.mkdtemp(prefix=f"hubitat-smoke-{version.replace('.', '-')}-")
+        tempfile.mkdtemp(
+            prefix=f"hubitat-smoke-{version.replace('.', '-')}-", dir=repo_root
+        )
     )
     config_dir = temp_dir / "config"
     config_dir.mkdir(parents=True, exist_ok=True)
