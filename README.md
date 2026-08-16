@@ -21,38 +21,40 @@ make Hubitat devices available for use with Home Assistant.
 
 ## Features
 
-The following device types are currently supported. The first level bullets are
-Home Assistant platforms, while the sub-bullets are specific device classes.
+The integration creates Home Assistant entities from the devices exposed by a
+Hubitat Maker API app. Entity types are selected from the capabilities and
+attributes reported by each Hubitat device; a single Hubitat device can create
+multiple entities.
 
-- binary_sensor
-  - acceleration
-  - carbon monoxide
-  - connectivity
-  - contact
-  - moisture
-  - motion
-  - presence
-  - smoke
-- climate
-  - thermostat
-  - fan
-- cover
-  - door controller
-  - garage door controller
-  - window shade
-- fan
-- light
-- lock
-- sensor
-  - battery
-  - humidity
-  - illuminance
-  - power (watts)
-  - temperature
-  - voltage
-  - pressure
-- switch
-- valve
+Supported Home Assistant platforms include:
+
+- **Alarm control panel**: security keypads, including arm/disarm, optional
+  night arming, alarm triggering, code management, and entry/exit delays
+- **Binary sensor**: acceleration, carbon monoxide, contact, connectivity,
+  heat, moisture, motion, natural gas, network status, presence, shock, smoke,
+  sound, tamper, and valve status
+- **Climate**: thermostats with heating, cooling, setpoints, fan modes, and
+  supported preset modes
+- **Cover**: door controllers, garage doors, window blinds, window shades, and
+  window controls
+- **Event**: button event entities for pushed, held, double-tapped, and released
+  events
+- **Fan**: fan control, speed, and auto mode where reported by the device
+- **Light**: on/off, dimming, color temperature, and color control when
+  supported
+- **Lock**: lock and unlock control, including code-related attributes where
+  reported
+- **Select**: a select entity for Hubitat location modes when the hub supports
+  modes
+- **Sensor**: battery, energy, power, current, voltage, temperature, humidity,
+  illuminance, pressure, air quality, gas/VOC, rain, wind, water flow, hub
+  status, HSM status, Hubitat mode, and other reported attributes
+- **Switch**: switches, outlets, power-meter switches, and alarms
+- **Valve**: valve position and open/close control
+
+Hubitat button and lock-code events can also be used as Home Assistant device
+automation triggers. Devices with attributes that do not map to a built-in
+sensor type are exposed as disabled-by-default generic sensors.
 
 ## Installation
 
@@ -96,24 +98,26 @@ First, create a Maker API instance in the Hubitat UI. Add whatever devices you�
 like to make available to Home Assistant. If you plan to use the integration
 over SSL, you‘ll probably want to enable the “Ignore SSL Certificates” toggle.
 
-To configure the Hubitat integration, go to Configuration -> Integrations in the
-Home Assistant UI and click the “+” button to add a new integration. Pick
-“Hubitat”, then provide:
+To configure the Hubitat integration, go to **Settings → Devices & services**
+in Home Assistant and click **Add integration**. Select **Hubitat**, then
+provide:
 
-- The address of the hub (e.g., `http://10.0.1.99` or just `10.0.1.99` if you’re
-  not using https)
-- The app ID of the Maker API instance (the 2, 3 or 4 digit number after
-  `/apps/api/` in any of the Maker API URLs)
-- The API access token
-- Optional: An address for the event server to listen on (more about this
-  below); this will be chosen automatically by default
-- Optional: A port for the event server to listen on (more about this below);
-  this will be chosen automatically by default
-- Optional: Provide the relative paths to an SSL private key and certificate
-  (e.g., `ssl/localhost-key.pem` and `ssl/localhost.pem`). These are files that
-  you will need to generate using a tool such as `mkcert` or `openssl` If these
-  paths are provided, the event server (described below) will serve over SSL
-  (and _only_ over SSL).
+- The address of the hub (for example, `http://10.0.1.99` or `10.0.1.99` when
+  not using HTTPS)
+- The app ID of the Maker API instance (the number after `/apps/api/` in the
+  Maker API URLs)
+- The Maker API access token
+- Optional: an event server URL containing only a protocol and host. This is
+  useful when Home Assistant runs in a VM or container and Hubitat cannot reach
+  the automatically selected address.
+- Optional: an event server port. The port is selected automatically when it is
+  omitted.
+- Optional: relative paths to an SSL private key and certificate (for example,
+  `ssl/localhost-key.pem` and `ssl/localhost.pem`). When both are provided, the
+  event server serves HTTPS only.
+- Optional: the temperature unit (`F` by default, or `C`)
+- Optional: **Synchronize rooms**, which assigns Home Assistant device areas to
+  the Hubitat rooms reported by Maker API.
 
 ### Event server
 
@@ -143,17 +147,21 @@ for lights and switches.
 
 ### Adding new devices
 
-After adding new devices to the Maker API instance in Hubitat, **you will not be
-able to control them through Home Assistant until the you reload the device list
-in the integration.** There are two ways to reload the device list:
+After adding new devices to the Maker API instance in Hubitat, **reload the
+integration before expecting the devices to be controllable from Home
+Assistant**. You can reload the device list by either:
 
-1. Restart Home Assistant
-2. Open the Hubitat integration settings in Home Assistant and go through the
-   config flow. During this process the integration will reload the device list
-   from Hubitat.
+1. Restarting Home Assistant, or
+2. Opening the Hubitat integration options and completing the configuration
+   flow. The integration reloads the device list during this process.
 
-Once the integration has loaded the new device list, any new devices added to
-the Maker API instance should show up in Home Assistant.
+Once the integration has loaded the new device list, devices added to the Maker
+API instance should show up in Home Assistant.
+
+If a switch or light was classified incorrectly, the same options flow provides
+**Switches → Lights** and **Lights → Switches** override steps. The overrides
+are useful for devices whose Maker API capabilities do not distinguish their
+intended use.
 
 ### Removing devices
 
@@ -235,19 +243,45 @@ This integration adds several service calls to Home Assistant.
     command: setLevel
     args: [50, 3]
   ```
+- Activate the siren or strobe on an alarm switch
+  ```yaml
+  service: hubitat.alarm_siren_on
+  data:
+    entity_id: switch.some_alarm
+  ```
+  Use `hubitat.alarm_strobe_on` for the strobe.
+- Set a hub's Hubitat Safety Monitor status. The `command` must be one of
+  `armAway`, `armHome`, `armNight`, `disarm`, or `disarmAll`.
+  ```yaml
+  service: hubitat.set_hsm
+  data:
+    command: armAway
+  ```
+- Set a hub's location mode. The mode must exist on the target Hubitat hub.
+  ```yaml
+  service: hubitat.set_hub_mode
+  data:
+    mode: Night
+  ```
+
+The `set_hsm` and `set_hub_mode` services act on all configured Hubitat hubs by
+default. To target one hub, add `hub` with the first eight characters of its
+Maker API token (the hub ID shown in the integration).
 
 ## Event-emitting devices
 
 Some devices, such as pushable buttons, emit events rather than having state.
-Other devices such as locks both emit events and have state. Devices that _only_
-contain event emitters and have no stateful components won’t have any associated
-entities in Home Assistant.
+The integration creates Home Assistant `event` entities for button devices, with
+an entity for each button and event types such as `pushed`, `held`,
+`double_tapped`, and `released`. Locks can also expose unlock-with-code device
+triggers. Devices that only emit events and have no stateful components may not
+have any other associated entities in Home Assistant.
 
-Event emitting devices can be used as triggers in Home Assistant automations, or
-in Node Red. In Home Assistant, you can use event emitters as “Device” triggers.
-Whenever a device emits an event, such as a button press, the automation will be
-triggered. In Node Red, a workflow can listen for `hubitat_event` events and
-filter them based on properties in `payload.event`.
+Event entities can be used directly as triggers in Home Assistant automations.
+The integration also provides Home Assistant device triggers for button events
+and lock code names. For Node-RED or event-based automations, listen for
+`hubitat_event` and filter the fields in the event data, such as `device_id`,
+`attribute`, and `value`.
 
 ## Updating
 
@@ -299,12 +333,12 @@ You can display the capabilities for a particular device, along with other
 information, by making a request to the Maker API:
 
 ```
-$ curl 'http://HUBITAT_ADDRESS/apps/api/MAKER_API_ID/devices/DEVICE_ID?access_token=TOKEN&prettyPrint=true
+$ curl 'http://HUBITAT_ADDRESS/apps/api/MAKER_API_ID/devices/DEVICE_ID?access_token=TOKEN&prettyPrint=true'
 ```
 
 If you open your Maker API instance in Hubitat, example URLs are shown at the
-bottom of the page. You can query these URLs using a command like command like
-`curl`, as show above, or in a browser. You should see output like:
+bottom of the page. You can query these URLs with `curl`, as shown above, or
+in a browser. You should see output like:
 
 <details>
   <summary>(Expand for sample output)</summary>
@@ -492,51 +526,43 @@ in Hubitat.
 
 ## Developing
 
-To get setup for development, clone this repo and run
+The project uses `uv` for its Python environment and Poe the Poet for common
+tasks. After cloning the repository, install the development dependencies with
+`uv sync`.
 
-```
-$ ./dev init
-```
-
-This script will setup the tools needed to validate typings and code style.
-Whenever you make a commit to the repo, validators will be automatically run.
-
-Project tasks are run with [Poe the Poet](https://poethepoet.natn.io/) via
-`uv run poe <task>`.
-
-To run code quality checks and unit tests, run
+Run code quality checks and unit tests with:
 
 ```
 $ uv run poe check
 $ uv run poe test
 ```
 
-To start a local Home Assistant instance for manual testing, run
+To start a local Home Assistant container for manual testing, run:
 
 ```sh
 ./home_assistant start
 ```
 
-That defaults to the latest stable Home Assistant release. To pin a specific
-container version instead, run `./home_assistant start 2026.6.4`.
+This uses the latest stable Home Assistant release. To pin a specific container
+version, pass it as an argument, for example `./home_assistant start 2026.6.4`.
+The helper requires Docker.
 
-To run a real Home Assistant smoke test against the latest stable Home
-Assistant release, run
+To run a Home Assistant smoke test against the latest stable release, run:
 
 ```sh
 uv run poe smoke
 ```
 
-To run it against one or more specific container versions, use
+To test one or more specific Home Assistant container versions, repeat
+`--ha-version`:
 
 ```sh
 uv run poe smoke --ha-version 2026.2.3 --ha-version 2026.6.4
 ```
 
-This starts a temporary Home Assistant container with a generated minimal
-config entry for Hubitat and a sibling mock Maker API container, then waits
-up to 30 seconds after container startup begins for Home Assistant to report
-that Hubitat is ready.
+The smoke test starts a temporary Home Assistant container with a generated
+minimal Hubitat config entry and a sibling mock Maker API container, then waits
+for Home Assistant to report that Hubitat is ready.
 
 ---
 
