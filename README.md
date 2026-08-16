@@ -2,7 +2,7 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration) [![CI](https://github.com/jason0x43/hacs-hubitat/actions/workflows/ci.yml/badge.svg)](https://github.com/jason0x43/hacs-hubitat/actions/workflows/ci.yml)
 
-This integration uses [Hubitat’s](hubitat.com) [Maker API](https://docs.hubitat.com/index.php?title=Hubitat™_Maker_API) to make Hubitat devices available for use with Home Assistant.
+This integration uses [Hubitat’s](https://hubitat.com) [Maker API](https://docs.hubitat.com/index.php?title=Hubitat™_Maker_API) to make Hubitat devices available for use with Home Assistant.
 
 ## Quick Start
 
@@ -69,7 +69,7 @@ To configure the Hubitat integration, go to **Settings** › **Devices & service
 - The app ID of the Maker API instance (the number after `/apps/api/` in the Maker API URLs)
 - The Maker API access token
 - Optional event server config (more details are below)
-    - Event server URL containing only a protocol and host. This is useful when Home Assistant runs in a VM or container and Hubitat cannot reach the automatically selected address. More details are below.
+    - Event server URL. This is useful when Home Assistant runs in a VM or container and Hubitat cannot reach the automatically selected address. More details are below.
     - Event server port. The port is selected automatically when it is omitted. More details are below.
     - Relative paths to an SSL private key and certificate (for example, `ssl/localhost-key.pem` and `ssl/localhost.pem`). When both are provided, the event server serves HTTPS only.
 - Optional: the temperature unit (default is `F`)
@@ -180,7 +180,7 @@ This integration adds several service calls to Home Assistant.
   data:
     entity_id: switch.some_alarm
   ```
-Use `hubitat.alarm_strobe_on` for the strobe.
+  Use `hubitat.alarm_strobe_on` for the strobe.
 - Set a hub's Hubitat Safety Monitor status. The `command` must be one of `armAway`, `armHome`, `armNight`, `disarm`, or `disarmAll`.
   ```yaml
   service: hubitat.set_hsm
