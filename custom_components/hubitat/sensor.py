@@ -27,6 +27,7 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfInformation,
     UnitOfPower,
+    UnitOfPrecipitationDepth,
     UnitOfPressure,
     UnitOfSpeed,
     UnitOfTemperature,
@@ -516,9 +517,9 @@ class HubitatRainDailySensor(HubitatSensor):
         """Initialize a rain daily sensor."""
         super().__init__(
             attribute=DeviceAttribute.RAIN_DAILY,
-            unit=(UnitOfVolumetricFlux.MILLIMETERS_PER_HOUR),
-            device_class=SensorDeviceClass.PRECIPITATION_INTENSITY,
-            state_class=SensorStateClass.MEASUREMENT,
+            unit=UnitOfPrecipitationDepth.MILLIMETERS,
+            device_class=SensorDeviceClass.PRECIPITATION,
+            state_class=SensorStateClass.TOTAL_INCREASING,
             **kwargs,
         )
 

@@ -17,6 +17,7 @@ from custom_components.hubitat.sensor import (
     HubitatIlluminanceSensor,
     HubitatPowerSensor,
     HubitatPressureSensor,
+    HubitatRainDailySensor,
     HubitatRainRateSensor,
     HubitatSensor,
     HubitatTemperatureSensor,
@@ -33,6 +34,7 @@ from homeassistant.const import (
     UnitOfElectricPotential,
     UnitOfEnergy,
     UnitOfPower,
+    UnitOfPrecipitationDepth,
     UnitOfPressure,
     UnitOfTemperature,
     UnitOfVolumetricFlux,
@@ -328,6 +330,12 @@ def test_energy_sensor():
             "in/h",
             UnitOfVolumetricFlux.INCHES_PER_HOUR,
         ),
+        (
+            HubitatRainDailySensor,
+            DeviceAttribute.RAIN_DAILY,
+            "in",
+            UnitOfPrecipitationDepth.INCHES,
+        ),
     ],
 )
 def test_sensor_uses_supported_hubitat_unit(
@@ -358,6 +366,31 @@ def test_sensor_uses_supported_hubitat_unit(
     )
 
     assert sensor.native_unit_of_measurement == expected_unit
+
+
+def test_rain_daily_sensor_uses_precipitation_depth() -> None:
+    """Expose daily rain as accumulated precipitation."""
+    device = Mock(
+        id="test-id",
+        name="Test Sensor",
+        label="Test Sensor",
+        attributes={
+            DeviceAttribute.RAIN_DAILY: Attribute(
+                {
+                    "name": DeviceAttribute.RAIN_DAILY,
+                    "currentValue": "1",
+                    "dataType": "NUMBER",
+                    "unit": None,
+                }
+            )
+        },
+    )
+
+    sensor = HubitatRainDailySensor(hub=Mock(token="token"), device=device)
+
+    assert sensor.device_class == SensorDeviceClass.PRECIPITATION
+    assert sensor.native_unit_of_measurement == UnitOfPrecipitationDepth.MILLIMETERS
+    assert sensor.state_class == SensorStateClass.TOTAL_INCREASING
 
 
 def test_sensor_ignores_unsupported_hubitat_unit() -> None:
