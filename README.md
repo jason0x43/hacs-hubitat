@@ -63,7 +63,7 @@ The basic setup process is:
 
 If you plan to use the integration over SSL, you‘ll probably want to enable the “Ignore SSL Certificates” toggle.
 
-To configure the Hubitat integration, go to **Settings → Devices & services** in Home Assistant and click **Add integration**. Select **Hubitat**, then provide:
+To configure the Hubitat integration, go to **Settings** › **Devices & services** in Home Assistant and click **Add integration**. Select **Hubitat**, then provide:
 
 - The address of the hub, like `http://10.0.1.99`. You can also just provide a hostname or address `10.0.1.99` (uses HTTP by default)
 - The app ID of the Maker API instance (the number after `/apps/api/` in the Maker API URLs)
@@ -371,37 +371,39 @@ If you run into problems, one of the first steps to take is to enable debug logg
    logger:
      default: info
      logs:
-       hubitatmaker: debug
        custom_components.hubitat: debug
    ```
 3. Restart Home Assistant
 
-If you open Home Assistant's log file (`config/home-assistant.log`) after HA restarts, you should see quite a few messages related to Hubitat (mixed in with messages for other components), like:
+If you open Home Assistant's log file in **Settings** › **System** › **Logs** after HA restarts, and show the raw logs, you should see quite a few messages related to Hubitat (mixed in with messages for other components), like:
 
 ```
-2020-05-19 08:28:07 DEBUG (MainThread) [hubitatmaker.hub] Setting host to 10.0.1.99
-2020-05-19 08:28:07 DEBUG (MainThread) [hubitatmaker.hub] Set mac to ab:cd:ef:12:34:56
-2020-05-19 08:28:07 INFO (MainThread) [hubitatmaker.hub] Created hub <Hub host=10.0.1.99 app_id=2269>
-2020-05-19 08:28:07 DEBUG (MainThread) [hubitatmaker.hub] Listening on 10.0.1.206:39513
-2020-05-19 08:28:07 INFO (MainThread) [hubitatmaker.hub] Setting event update URL to http://10.0.1.206:39513
+2026-08-16 13:49:31.282 WARNING (SyncWorker_0) [homeassistant.loader] We found a custom integration hubitat which has not been tested by Home Assistant. This component might cause stability problems, be sure to disable it if you experience issues with Home Assistant
+2026-08-16 13:49:32.752 INFO (MainThread) [homeassistant.bootstrap] Setting up stage 2: {..., 'hubitat', ...}
+2026-08-16 13:49:34.128 INFO (MainThread) [homeassistant.setup] Setting up hubitat
+2026-08-16 13:49:34.128 INFO (MainThread) [homeassistant.setup] Setup of domain hubitat took 0.00 seconds
+2026-08-16 13:49:34.128 DEBUG (MainThread) [custom_components.hubitat] Setting up Hubitat for 56b5611d03ee759672b4511a920c320c
+2026-08-16 13:49:34.129 DEBUG (MainThread) [custom_components.hubitat.hub] Creating offline Hubitat hub instance
+2026-08-16 13:49:34.129 DEBUG (MainThread) [custom_components.hubitat.hubitatmaker.hub] Setting host to http://10.0.0.57
+2026-08-16 13:49:34.129 INFO (MainThread) [custom_components.hubitat.hubitatmaker.hub] Created hub <Hub host=10.0.0.57 app_id=7>
+2026-08-16 13:49:34.165 INFO (MainThread) [homeassistant.components.binary_sensor] Setting up hubitat.binary_sensor
+2026-08-16 13:49:34.165 DEBUG (MainThread) [custom_components.hubitat.hub] Connecting to Hubitat hub...
+2026-08-16 13:49:35.929 DEBUG (MainThread) [custom_components.hubitat.hubitatmaker.hub] Loaded device list
+2026-08-16 13:49:35.929 DEBUG (MainThread) [custom_components.hubitat.hubitatmaker.hub] Loading device 1
 ...
-2020-05-19 08:28:08 DEBUG (MainThread) [hubitatmaker.hub] Loaded device list
-2020-05-19 08:28:08 DEBUG (MainThread) [hubitatmaker.hub] Loading device 6
-2020-05-19 08:28:08 DEBUG (MainThread) [hubitatmaker.hub] Loaded device 6
-2020-05-19 08:28:08 DEBUG (MainThread) [hubitatmaker.hub] Loading device 14
+2026-08-16 13:49:37.875 INFO (MainThread) [homeassistant.components.valve] Setting up hubitat.valve
+2026-08-16 13:49:37.875 DEBUG (MainThread) [custom_components.hubitat.device] Added device listener for 22 (<class 'custom_components.hubitat.valve.HubitatValve'>)
+2026-08-16 13:49:37.875 DEBUG (MainThread) [custom_components.hubitat.hub] Registered platforms
+2026-08-16 13:49:37.875 DEBUG (MainThread) [custom_components.hubitat.hub] Synchronizing device rooms...
+2026-08-16 13:49:37.876 DEBUG (MainThread) [custom_components.hubitat.hub] Hub connection complete
+2026-08-16 13:49:37.876 INFO (MainThread) [custom_components.hubitat] Successfully connected to Hubitat hub
+2026-08-16 13:49:37.876 INFO (MainThread) [custom_components.hubitat] Hubitat is ready
 ...
-2020-05-19 08:28:14 DEBUG (MainThread) [custom_components.hubitat.entities] Migrating unique_ids for binary_sensor...
-2020-05-19 08:28:14 DEBUG (MainThread) [custom_components.hubitat.entities] Checking for existence of entity 10.0.1.99::2269::14::acceleration...
-2020-05-19 08:28:14 DEBUG (MainThread) [custom_components.hubitat.entities] Checking for existence of entity 10.0.1.99::2269::1122::acceleration...
-2020-05-19 08:28:14 DEBUG (MainThread) [custom_components.hubitat.entities] Checking for existence of entity 10.0.1.99::2269::1890::acceleration...
-2020-05-19 08:28:14 DEBUG (MainThread) [custom_components.hubitat.entities] Checking for existence of entity 10.0.1.99::2269::1954::acceleration...
-2020-05-19 08:28:14 DEBUG (MainThread) [custom_components.hubitat.entities] Added HubitatAccelerationSensor entities: [<Entity Barn Sensor acceleration: off>, <Entity Garage Sensor acceleration: off>, <Entity Garage Door Sensor acceleration: off>, <Entity Breezeway Sensor acceleration: off>]
-...
-2020-05-19 08:28:15 DEBUG (MainThread) [custom_components.hubitat.device_trigger] Attaching trigger {'platform': 'event', 'event_type': 'hubitat_event', 'event_data': {'device_id': '180', 'name': 'pushed', 'value': '1'}}
-...
-2020-05-19 08:28:18 DEBUG (MainThread) [custom_components.hubitat.light] Turning off Basement Hearth Lights
-2020-05-19 08:28:18 DEBUG (MainThread) [hubitatmaker.hub] Sending command off() to 1510
-...
+2026-08-16 14:43:43.584 DEBUG (MainThread) [custom_components.hubitat.light] Turning off Virtual RGB Light
+2026-08-16 14:43:43.585 DEBUG (MainThread) [custom_components.hubitat.hubitatmaker.hub] Sending command off(None) to 6
+2026-08-16 14:43:43.678 DEBUG (MainThread) [custom_components.hubitat.device] sent off to 6
+2026-08-16 14:43:43.758 DEBUG (MainThread) [custom_components.hubitat.hubitatmaker.hub] Received event: {'name': 'switch', 'value': 'off', 'displayName': 'Virtual RGB Light', 'deviceId': '6', 'descriptionText': 'Virtual RGB Light switch was turned off', 'unit': None, 'type': None, 'data': None}
+2026-08-16 14:43:43.758 DEBUG (MainThread) [custom_components.hubitat.hubitatmaker.hub] Setting switch to off (None) for device 6 from api 7 at hub 10.0.0.57
 ```
 
 ### HSM status or modes not updating
