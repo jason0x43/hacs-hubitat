@@ -259,6 +259,7 @@ class DeviceCommand(StrEnum):
     START_LEVEL_CHANGE = "startLevelChange"
     STOP = "stop"
     STOP_LEVEL_CHANGE = "stopLevelChange"
+    STOP_POSITION_CHANGE = "stopPositionChange"
     STROBE = "strobe"
     UNLOCK = "unlock"
 
