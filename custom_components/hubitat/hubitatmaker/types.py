@@ -1,3 +1,4 @@
+import re
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from json import loads
@@ -5,6 +6,8 @@ from types import MappingProxyType
 from typing import Any, Literal, NotRequired, TypedDict, cast, override
 
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
+
+HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
 
 
 class AttributeData(TypedDict):
@@ -28,6 +31,26 @@ class Attribute:
 
     def __init__(self, properties: AttributeData):
         self._properties = properties
+        self._properties["currentValue"] = self._sanitize_enum_value(
+            self._properties["currentValue"]
+        )
+
+    def _sanitize_enum_value(
+        self, value: str | float | datetime
+    ) -> str | float | datetime:
+        """Strip HTML from malformed enum values when it reveals a valid value."""
+        values = self.values
+        if (
+            self.type not in ("ENUM", "DYNAMIC_ENUM")
+            or not isinstance(value, str)
+            or values is None
+            or value in values
+            or HTML_TAG_PATTERN.search(value) is None
+        ):
+            return value
+
+        sanitized_value = HTML_TAG_PATTERN.sub("", value)
+        return sanitized_value if sanitized_value in values else value
 
     @property
     def name(self) -> str:
@@ -87,7 +110,7 @@ class Attribute:
     def update_value(
         self, value: str | float | datetime, unit: str | None = None
     ) -> None:
-        self._properties["currentValue"] = value
+        self._properties["currentValue"] = self._sanitize_enum_value(value)
         self._properties["unit"] = unit
 
     @property
