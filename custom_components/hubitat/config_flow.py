@@ -509,16 +509,9 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
 def _get_devices(hass: HomeAssistant, config_entry: ConfigEntry) -> list[DeviceEntry]:
     """Return the devices associated with a given config entry."""
     dreg = device_registry.async_get(hass)
-    all_devices = dreg.devices
-    devices: list[DeviceEntry] = []
-
-    for id in all_devices:
-        dev = all_devices[id]
-        for entry_id in dev.config_entries:
-            if entry_id == config_entry.entry_id:
-                devices.append(dev)
-                break
-
+    devices = device_registry.async_entries_for_config_entry(
+        dreg, config_entry.entry_id
+    )
     devices.sort(key=lambda e: e.name or "")
     return devices
 
