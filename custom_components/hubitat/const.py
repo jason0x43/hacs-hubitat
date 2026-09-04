@@ -81,13 +81,16 @@ Platform = Literal[
     "binary_sensor",
     "climate",
     "cover",
+    "datetime",
     "event",
     "fan",
     "light",
     "lock",
+    "number",
     "select",
     "sensor",
     "switch",
+    "text",
     "valve",
 ]
 
