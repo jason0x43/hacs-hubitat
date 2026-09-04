@@ -80,4 +80,4 @@ def test_main_fails_when_newer_compatible_version_is_available(
 
     captured = capsys.readouterr()
     assert result == 1
-    assert "Run: uv lock --upgrade" in captured.out
+    assert "Run: uv run poe update-homeassistant" in captured.out

@@ -648,6 +648,10 @@ class Hub(HasId):
             # Migrate entity unique IDs from old token-hash format to new hub-id format
             _migrate_entity_unique_ids(self.hass, self.id, self.token)
 
+            # Register the hub before creating its devices so their via_device_id links
+            # can reference an existing device-registry entry.
+            self.async_update_device_registry()
+
             # Initialize entities only for platforms that are not set up yet.
             platforms_to_setup = self.get_unsetup_platforms()
             if len(platforms_to_setup) > 0:

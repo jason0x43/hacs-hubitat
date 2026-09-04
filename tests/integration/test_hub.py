@@ -71,10 +71,11 @@ async def test_hub_setup_uses_real_hass_registries_and_maker_api(
         assert hass.states.get("binary_sensor.hub_status").state == STATE_ON
 
         dreg = device_registry.async_get(hass)
-        assert dreg.async_get_device({(DOMAIN, fake_hubitat.hub_id)}) is not None
-        assert (
-            dreg.async_get_device({(DOMAIN, f"{fake_hubitat.hub_id}:176")}) is not None
-        )
+        hub_device = dreg.async_get_device({(DOMAIN, fake_hubitat.hub_id)})
+        device = dreg.async_get_device({(DOMAIN, f"{fake_hubitat.hub_id}:176")})
+        assert hub_device is not None
+        assert device is not None
+        assert device.via_device_id == hub_device.id
 
         areg = area_registry.async_get(hass)
         assert areg.async_get_area_by_name("Loft") is not None

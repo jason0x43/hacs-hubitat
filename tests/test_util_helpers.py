@@ -65,6 +65,9 @@ def test_helpers_find_devices_and_hubs() -> None:
         return_value=registry,
     ):
         assert get_device_entry_by_device_id(hass, "device") is device
+        registry.async_get.assert_called_once_with(
+            "device", include_child_devices=False
+        )
         assert are_config_entries_loaded(hass, "device") is False
 
         registry.async_get.return_value = None

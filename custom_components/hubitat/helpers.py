@@ -1,3 +1,5 @@
+from typing import cast
+
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry
@@ -20,10 +22,13 @@ def are_config_entries_loaded(hass: HomeAssistant, device_id: str) -> bool:
 def get_device_entry_by_device_id(hass: HomeAssistant, device_id: str) -> DeviceEntry:
     """Get the device entry for a given device ID."""
     dreg = device_registry.async_get(hass)
-    device = dreg.async_get(device_id)
+    if hasattr(device_registry, "ChildDeviceEntry"):
+        device = dreg.async_get(device_id, include_child_devices=False)
+    else:
+        device = dreg.async_get(device_id)
     if device is None:
         raise DeviceError(f"Device {device_id} is not a valid device.")
-    return device
+    return cast(DeviceEntry, device)
 
 
 def get_hub_for_device(hass: HomeAssistant, device: DeviceEntry) -> Hub | None:

@@ -5,25 +5,46 @@ from __future__ import annotations
 import argparse
 import json
 
-from homeassistant_versions import (
-    latest_stable_homeassistant_version,
-    six_month_old_homeassistant_version,
-)
+if __package__:
+    from scripts.homeassistant_versions import (
+        fetch_homeassistant_releases,
+        latest_stable_homeassistant_version,
+        next_beta_homeassistant_version,
+        six_month_old_homeassistant_version,
+    )
+else:
+    from homeassistant_versions import (
+        fetch_homeassistant_releases,
+        latest_stable_homeassistant_version,
+        next_beta_homeassistant_version,
+        six_month_old_homeassistant_version,
+    )
 
 
 def smoke_matrix() -> dict[str, list[dict[str, str]]]:
-    return {
-        "include": [
+    releases = fetch_homeassistant_releases()
+    current_version = latest_stable_homeassistant_version(releases)
+    next_beta_version = next_beta_homeassistant_version(current_version, releases)
+    include = [
+        {
+            "label": "current",
+            "ha_version": current_version,
+        },
+        {
+            "label": "6 months ago",
+            "ha_version": six_month_old_homeassistant_version(releases=releases),
+        },
+    ]
+
+    if next_beta_version:
+        include.append(
             {
-                "label": "current",
-                "ha_version": latest_stable_homeassistant_version(),
-            },
-            {
-                "label": "6 months ago",
-                "ha_version": six_month_old_homeassistant_version(),
-            },
-        ]
-    }
+                "label": "next (latest beta)",
+                "ha_version": next_beta_version,
+            }
+        )
+
+    return {"include": include}
 
 
 def parse_args() -> argparse.Namespace:
