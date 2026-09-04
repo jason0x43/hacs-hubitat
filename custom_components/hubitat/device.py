@@ -246,9 +246,10 @@ def get_device_info(hub: Hub, device: Device) -> device_registry.DeviceInfo:
                         config_entry_id=hub.config_entry.entry_id,
                     )
                 )
-            except ValueError:
+            except TypeError, ValueError:
                 pass
-        else:
+
+        if "via_device_id" not in info:
             cast(dict[str, Any], info)["via_device"] = (DOMAIN, hub.id)
         info["model"] = device.type
         info["manufacturer"] = "Hubitat"

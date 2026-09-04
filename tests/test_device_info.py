@@ -33,4 +33,4 @@ def test_get_device_info_omits_via_device_when_hub_is_not_registered() -> None:
     ):
         info = get_device_info(hub, device)
 
-    assert "via_device_id" not in info
+    assert dict(info)["via_device"] == ("hubitat", "hub")

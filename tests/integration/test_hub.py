@@ -10,7 +10,7 @@ from custom_components.hubitat.hub import Hub, get_hub
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import SERVICE_TURN_ON, STATE_OFF, STATE_ON
-from homeassistant.helpers import area_registry, device_registry
+from homeassistant.helpers import area_registry, device_registry, entity_registry
 
 from tests.conftest import FakeHubitat, get_state_entity_id
 
@@ -47,6 +47,16 @@ def _assert_connection_state(hub: Hub, expected: bool) -> None:
     assert hub.is_connected is expected
 
 
+def _get_hub_status_entity_id(hass, hub_id: str) -> str:
+    entity_id = entity_registry.async_get(hass).async_get_entity_id(
+        "binary_sensor",
+        DOMAIN,
+        f"{hub_id}::binary_sensor::hub_status",
+    )
+    assert entity_id is not None
+    return entity_id
+
+
 async def test_hub_setup_uses_real_hass_registries_and_maker_api(
     hass, fake_hubitat: FakeHubitat
 ) -> None:
@@ -68,11 +78,16 @@ async def test_hub_setup_uses_real_hass_registries_and_maker_api(
         switch_entity_id = get_state_entity_id(hass, "switch", "Loft Fan")
         assert hass.states.get(switch_entity_id).state == STATE_OFF
 
-        assert hass.states.get("binary_sensor.hub_status").state == STATE_ON
+        hub_status_entity_id = _get_hub_status_entity_id(hass, hub.id)
+        assert hass.states.get(hub_status_entity_id).state == STATE_ON
 
         dreg = device_registry.async_get(hass)
-        hub_device = dreg.async_get_device({(DOMAIN, fake_hubitat.hub_id)})
-        device = dreg.async_get_device({(DOMAIN, f"{fake_hubitat.hub_id}:176")})
+        hub_device = dreg.async_get_device_by_identifier(
+            (DOMAIN, fake_hubitat.hub_id), entry.entry_id
+        )
+        device = dreg.async_get_device_by_identifier(
+            (DOMAIN, f"{fake_hubitat.hub_id}:176"), entry.entry_id
+        )
         assert hub_device is not None
         assert device is not None
         assert device.via_device_id == hub_device.id
@@ -162,7 +177,7 @@ async def test_offline_hub_can_connect_later_without_duplicate_platform_setup(
 
         hub = get_hub(hass, entry.entry_id)
         _assert_connection_state(hub, False)
-        assert get_state_entity_id(hass, "binary_sensor", "Hub Status")
+        assert _get_hub_status_entity_id(hass, hub.id)
 
         fake_hubitat.online = True
         await hub.async_connect()
