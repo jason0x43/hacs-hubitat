@@ -1,7 +1,9 @@
 from datetime import datetime, timezone
 
 from scripts.homeassistant_versions import (
+    latest_beta_homeassistant_version,
     latest_stable_homeassistant_version,
+    next_beta_homeassistant_version,
     six_month_old_homeassistant_version,
 )
 
@@ -15,6 +17,37 @@ def test_latest_stable_homeassistant_version_ignores_prereleases() -> None:
     }
 
     assert latest_stable_homeassistant_version(releases) == "2026.6.4"
+
+
+def test_latest_beta_homeassistant_version_ignores_other_prereleases() -> None:
+    releases: dict[str, list[dict]] = {
+        "2026.6.4": [],
+        "2026.7.0b2": [],
+        "2026.7.0b10": [],
+        "2026.7.0rc1": [],
+        "2026.8.0.dev0": [],
+    }
+
+    assert latest_beta_homeassistant_version(releases) == "2026.7.0b10"
+
+
+def test_next_beta_homeassistant_version_ignores_betas_for_current_release() -> None:
+    releases: dict[str, list[dict]] = {
+        "2026.9.0": [],
+        "2026.9.0b9": [],
+        "2026.10.0b0": [],
+    }
+
+    assert next_beta_homeassistant_version("2026.9.0", releases) == "2026.10.0b0"
+
+
+def test_next_beta_homeassistant_version_returns_none_without_next_beta() -> None:
+    releases: dict[str, list[dict]] = {
+        "2026.9.0": [],
+        "2026.9.0b9": [],
+    }
+
+    assert next_beta_homeassistant_version("2026.9.0", releases) is None
 
 
 def test_six_month_old_homeassistant_version_uses_latest_release_before_cutoff() -> (

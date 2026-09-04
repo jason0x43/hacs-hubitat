@@ -85,8 +85,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         # Try to connect with timeout
         await asyncio.wait_for(hub.async_connect(), timeout=STARTUP_CONNECT_TIMEOUT)
 
-        hub.async_update_device_registry()
-
         _LOGGER.info("Successfully connected to Hubitat hub")
 
     except (asyncio.TimeoutError, ConnectionError) as e:
@@ -104,7 +102,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
                         hub.async_connect(), timeout=STARTUP_CONNECT_TIMEOUT
                     )
                     _LOGGER.info("Successfully reconnected to Hubitat hub")
-                    hub.async_update_device_registry()
 
                     # Cancel the retry task now that we're connected
                     hub.cancel_retry_task()

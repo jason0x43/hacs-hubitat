@@ -4,7 +4,7 @@ from abc import ABC
 from datetime import datetime
 from functools import cached_property
 from logging import getLogger
-from typing import Any, TypedDict, Unpack
+from typing import Any, TypedDict, Unpack, cast
 
 from typing_extensions import override
 
@@ -237,7 +237,22 @@ def get_device_info(hub: Hub, device: Device) -> device_registry.DeviceInfo:
     if device.id != hub.id:
         info["name"] = device.label
         info["suggested_area"] = device.room
-        info["via_device"] = (DOMAIN, hub.id)
+        if hasattr(device_registry, "async_get_device_id_by_identifier"):
+            try:
+                info["via_device_id"] = (
+                    device_registry.async_get_device_id_by_identifier(
+                        hub.hass,
+                        (DOMAIN, hub.id),
+                        config_entry_id=hub.config_entry.entry_id,
+                    )
+                )
+            except TypeError:
+                pass
+            except ValueError:
+                pass
+
+        if "via_device_id" not in info:
+            cast(dict[str, Any], info)["via_device"] = (DOMAIN, hub.id)
         info["model"] = device.type
         info["manufacturer"] = "Hubitat"
 

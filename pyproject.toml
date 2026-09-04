@@ -29,6 +29,7 @@ check.ignore_fail = 'return_non_zero'
 format = "ruff format"
 test = "pytest tests"
 smoke = "python scripts/smoke_test.py"
+update-homeassistant = "python scripts/update_homeassistant.py"
 pub = "python scripts/publish.py"
 version = "python scripts/version.py"
 

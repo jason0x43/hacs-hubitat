@@ -40,7 +40,7 @@ async def test_setup_entry_connected() -> None:
         assert await async_setup_entry(hass, entry) is True
 
     hub.async_connect.assert_awaited_once()
-    hub.async_update_device_registry.assert_called_once()
+    hub.async_update_device_registry.assert_not_called()
     hub.mark_platforms_setup.assert_called_once()
     register.assert_called_once_with(hass, entry)
     hass.bus.fire.assert_called_once_with(H_CONF_HUBITAT_EVENT, {"name": "ready"})
