@@ -36,6 +36,7 @@ def test_cover_init():
         id="test-id",
         name="Test Cover",
         label="Test Cover",
+        commands=(),
         attributes={
             DeviceAttribute.DOOR: Attribute(
                 {
@@ -79,6 +80,7 @@ def test_cover_open():
         id="test-id",
         name="Test Cover",
         label="Test Cover",
+        commands=(),
         attributes={
             DeviceAttribute.DOOR: Attribute(
                 {
@@ -120,6 +122,7 @@ def test_cover_partial_position():
         id="test-id",
         name="Test Cover",
         label="Test Cover",
+        commands=(),
         attributes={
             DeviceAttribute.WINDOW_SHADE: Attribute(
                 {
@@ -162,6 +165,7 @@ def test_cover_level_fallback():
         id="test-id",
         name="Test Cover",
         label="Test Cover",
+        commands=(),
         attributes={
             DeviceAttribute.WINDOW_SHADE: Attribute(
                 {
@@ -204,6 +208,7 @@ def test_cover_opening_state():
         id="test-id",
         name="Test Cover",
         label="Test Cover",
+        commands=(),
         attributes={
             DeviceAttribute.DOOR: Attribute(
                 {
@@ -237,6 +242,7 @@ def test_cover_closing_state():
         id="test-id",
         name="Test Cover",
         label="Test Cover",
+        commands=(),
         attributes={
             DeviceAttribute.DOOR: Attribute(
                 {
@@ -270,6 +276,7 @@ def test_garage_door_control():
         id="test-id",
         name="Garage Door",
         label="Garage Door",
+        commands=(),
         attributes={
             DeviceAttribute.DOOR: Attribute(
                 {
@@ -301,6 +308,7 @@ def test_window_shade():
         id="test-id",
         name="Window Shade",
         label="Window Shade",
+        commands=(DeviceCommand.STOP_POSITION_CHANGE, DeviceCommand.STOP),
         attributes={
             DeviceAttribute.WINDOW_SHADE: Attribute(
                 {
@@ -327,6 +335,7 @@ def test_window_shade():
         CoverEntityFeature.OPEN
         | CoverEntityFeature.CLOSE
         | CoverEntityFeature.SET_POSITION
+        | CoverEntityFeature.STOP
     )
     assert cover.is_closed is False
     assert cover.device_class == CoverDeviceClass.SHADE
@@ -342,6 +351,7 @@ def test_window_blind():
         id="test-id",
         name="Window Blind",
         label="Window Blind",
+        commands=(),
         attributes={
             DeviceAttribute.WINDOW_BLIND: Attribute(
                 {
@@ -371,6 +381,7 @@ def test_door_and_window_controls() -> None:
         id="door",
         name="Door",
         label="Door",
+        commands=(),
         attributes={
             DeviceAttribute.DOOR: Attribute(
                 {
@@ -386,6 +397,7 @@ def test_door_and_window_controls() -> None:
         id="window",
         name="Window",
         label="Window",
+        commands=(),
         attributes={
             DeviceAttribute.WINDOW_SHADE: Attribute(
                 {
@@ -415,6 +427,7 @@ def test_cover_device_attrs():
     device = Mock()
     device.configure_mock(
         id="test-id",
+        commands=(),
         attributes={
             DeviceAttribute.DOOR: Attribute(
                 {
@@ -442,12 +455,26 @@ def test_cover_device_attrs():
 
 
 @pytest.mark.asyncio
-async def test_cover_commands() -> None:
+@pytest.mark.parametrize(
+    ("commands", "stop_command"),
+    [
+        ((DeviceCommand.STOP_POSITION_CHANGE,), DeviceCommand.STOP_POSITION_CHANGE),
+        ((DeviceCommand.STOP,), DeviceCommand.STOP),
+        (
+            (DeviceCommand.STOP_POSITION_CHANGE, DeviceCommand.STOP),
+            DeviceCommand.STOP_POSITION_CHANGE,
+        ),
+    ],
+)
+async def test_cover_commands(
+    commands: tuple[DeviceCommand, ...], stop_command: DeviceCommand
+) -> None:
     hub = Mock(token="test-token")
     device = Mock(
         id="test-id",
         name="Test Cover",
         label="Test Cover",
+        commands=commands,
         attributes={},
     )
     cover = HubitatCover(
@@ -461,12 +488,14 @@ async def test_cover_commands() -> None:
     await cover.async_close_cover()
     await cover.async_open_cover()
     await cover.async_set_cover_position(**{ATTR_POSITION: 42})
+    await cover.async_stop_cover()
 
     cover.send_command.assert_has_awaits(
         [
             call(DeviceCommand.CLOSE),
             call(DeviceCommand.OPEN),
             call(DeviceCommand.SET_POSITION, 42),
+            call(stop_command),
         ]
     )
 

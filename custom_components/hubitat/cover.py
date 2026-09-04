@@ -29,6 +29,7 @@ class HubitatCover(CoverEntity, HubitatEntity):
 
     _attribute: DeviceAttribute
     _features: CoverEntityFeature
+    _stop_command: DeviceCommand | None
     _attr_supported_features: CoverEntityFeature | None
     _attr_unique_id: str | None
     _attr_name: str | None
@@ -46,6 +47,16 @@ class HubitatCover(CoverEntity, HubitatEntity):
         CoverEntity.__init__(self)
         self._attr_device_class = device_class
         self._attribute = attribute
+        self._stop_command = next(
+            (
+                command
+                for command in (DeviceCommand.STOP_POSITION_CHANGE, DeviceCommand.STOP)
+                if command in self._device.commands
+            ),
+            None,
+        )
+        if self._stop_command is not None:
+            features |= CoverEntityFeature.STOP
         self._attr_supported_features = features
         self._attr_unique_id = f"{super().unique_id}::cover::{attribute}"
         self._attr_name = f"{super().name} {self._attribute}".title()
@@ -107,6 +118,14 @@ class HubitatCover(CoverEntity, HubitatEntity):
         pos = cast(str, kwargs[HA_ATTR_POSITION])
         _LOGGER.debug("Setting cover position to %s", pos)
         await self.send_command(DeviceCommand.SET_POSITION, pos)
+
+    @override
+    async def async_stop_cover(self, **kwargs: Any) -> None:
+        """Stop the cover."""
+        if self._stop_command is None:
+            return
+        _LOGGER.debug("Stopping %s", self.name)
+        await self.send_command(self._stop_command)
 
 
 class HubitatDoorControl(HubitatCover):
