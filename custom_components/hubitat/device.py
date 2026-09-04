@@ -246,7 +246,9 @@ def get_device_info(hub: Hub, device: Device) -> device_registry.DeviceInfo:
                         config_entry_id=hub.config_entry.entry_id,
                     )
                 )
-            except TypeError, ValueError:
+            except TypeError:
+                pass
+            except ValueError:
                 pass
 
         if "via_device_id" not in info:
