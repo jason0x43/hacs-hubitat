@@ -19,8 +19,10 @@ from .const import DOMAIN, ICON_ALARM, ServiceName
 from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities, create_and_add_event_emitters
 from .fan import is_fan
-from .hubitatmaker import Device, DeviceCapability, DeviceCommand
+from .hub import get_hub
+from .hubitatmaker import Device, DeviceCapability, DeviceCommand, HubVariable
 from .light import is_light
+from .variable import HubitatVariableEntity
 
 _LOGGER = getLogger(__name__)
 
@@ -117,6 +119,30 @@ class HubitatAlarm(HubitatSwitch):
         """Turn on the strobe."""
         _LOGGER.debug("Turning on strobe for %s", self.name)
         await self.send_command(DeviceCommand.STROBE)
+
+
+class HubitatVariableSwitch(HubitatVariableEntity, SwitchEntity):
+    """A boolean Hubitat Hub Variable."""
+
+    def __init__(self, hub, variable: HubVariable) -> None:
+        HubitatVariableEntity.__init__(self, hub, variable, "switch")
+
+    @property
+    def is_on(self) -> bool:
+        value = self._variable.value
+        return value is True or (isinstance(value, str) and value.lower() == "true")
+
+    @is_on.setter
+    def is_on(self, _value: bool | None) -> None:
+        """Switch state is maintained by Hubitat."""
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        await self._set_value("true")
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self._set_value("false")
+        self.async_write_ha_state()
 
 
 def is_switch(device: Device, overrides: dict[str, str] | None = None) -> bool:
@@ -216,6 +242,15 @@ async def async_setup_entry(
         hass.services.async_register(
             DOMAIN, ServiceName.ALARM_STROBE_ON, strobe_on, schema=ENTITY_SCHEMA
         )
+
+    hub = get_hub(hass, config_entry.entry_id)
+    async_add_entities(
+        [
+            HubitatVariableSwitch(hub, variable)
+            for variable in hub.hub_variables.values()
+            if variable.type == "boolean"
+        ]
+    )
 
 
 if TYPE_CHECKING:

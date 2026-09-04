@@ -173,6 +173,43 @@ def test_initial_values() -> None:
     assert list(hub.devices) == []
 
 
+@pytest.mark.asyncio
+async def test_hub_variables_are_loaded_written_and_updated_from_location_events() -> (
+    None
+):
+    """Hub Variables retain their identities across writes and location events."""
+    hub = Hub("1.2.3.4", "1234", "token")
+    hub._api_request = mock.AsyncMock(  # type: ignore[method-assign]
+        side_effect=[
+            [
+                {"name": "number with spaces", "type": "integer", "value": 1},
+                {"name": "enabled", "type": "boolean", "value": True},
+            ],
+            {"name": "number with spaces", "type": "integer", "value": 2},
+        ]
+    )
+
+    await hub.load_hub_variables()
+    variable = hub.hub_variables["number with spaces"]
+    listener = mock.Mock()
+    hub.add_hub_variable_listener("number with spaces", listener)
+
+    await hub.set_hub_variable("number with spaces", 2)
+    assert hub.hub_variables["number with spaces"] is variable
+    assert variable.value == 2
+    hub._api_request.assert_awaited_with("hubvariables/number%20with%20spaces/2")
+
+    boolean_event = {"deviceId": None, "name": "variable:enabled", "value": "false"}
+    hub._process_event(boolean_event)
+    assert hub.hub_variables["enabled"].value == "false"
+
+    hub._process_event(
+        {"deviceId": None, "name": "variable:number with spaces", "value": "3"}
+    )
+    listener.assert_called_once()
+    assert variable.value == "3"
+
+
 @patch("aiohttp.request", new=create_fake_request())
 @patch("custom_components.hubitat.hubitatmaker.server.Server")
 @pytest.mark.asyncio
@@ -190,13 +227,13 @@ async def test_start() -> None:
     """start() should request data from the Hubitat hub."""
     hub = Hub("1.2.3.4", "1234", "token")
     await hub.start()
-    # 13 requests:
+    # 14 requests:
     #   0: request devices
     #   1...: request device details
     #   -3: request modes
     #   -2: request hsm status
     #   -1: set event URL
-    assert len(requests) == 13
+    assert len(requests) == 14
     assert re.search("devices$", requests[0]["url"]) is not None
     assert re.search(r"devices/\d+$", requests[1]["url"]) is not None
     assert re.search(r"devices/\d+$", requests[2]["url"]) is not None
