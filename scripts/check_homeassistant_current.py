@@ -70,7 +70,7 @@ def main() -> int:
 
     if current_version != latest_compatible_version:
         print("Home Assistant is not at the newest compatible locked version.")
-        print("Run: uv lock --upgrade")
+        print("Run: uv run poe update-homeassistant")
         return 1
 
     print("Home Assistant is current under the project's constraints.")

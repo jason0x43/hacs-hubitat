@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import calendar
 import json
+import re
 import urllib.request
 from datetime import datetime, timezone
 
 PYPI_URL = "https://pypi.org/pypi/homeassistant/json"
+BETA_VERSION_PATTERN = re.compile(r"^\d+(?:\.\d+)*b\d+$")
 
 
 def subtract_months(dt: datetime, months: int) -> datetime:
@@ -32,12 +34,49 @@ def _version_key(version: str) -> tuple[int, ...]:
     return tuple(int(part) for part in version.split("."))
 
 
+def _beta_version_key(version: str) -> tuple[int, ...]:
+    stable_version, beta_number = version.split("b", maxsplit=1)
+    return (*_version_key(stable_version), int(beta_number))
+
+
 def latest_stable_homeassistant_version(
     releases: dict[str, list[dict]] | None = None,
 ) -> str:
     release_map = releases if releases is not None else fetch_homeassistant_releases()
     candidates = [version for version in release_map if is_stable_version(version)]
     candidates.sort(key=_version_key)
+    return candidates[-1]
+
+
+def latest_beta_homeassistant_version(
+    releases: dict[str, list[dict]] | None = None,
+) -> str:
+    """Return the newest Home Assistant beta release."""
+    release_map = releases if releases is not None else fetch_homeassistant_releases()
+    candidates = [
+        version for version in release_map if BETA_VERSION_PATTERN.fullmatch(version)
+    ]
+    candidates.sort(key=_beta_version_key)
+    return candidates[-1]
+
+
+def next_beta_homeassistant_version(
+    current_version: str,
+    releases: dict[str, list[dict]] | None = None,
+) -> str | None:
+    """Return the newest beta for a release newer than ``current_version``."""
+    release_map = releases if releases is not None else fetch_homeassistant_releases()
+    current_version_key = _version_key(current_version)
+    candidates = [
+        version
+        for version in release_map
+        if BETA_VERSION_PATTERN.fullmatch(version)
+        and _beta_version_key(version)[:-1] > current_version_key
+    ]
+    if not candidates:
+        return None
+
+    candidates.sort(key=_beta_version_key)
     return candidates[-1]
 
 

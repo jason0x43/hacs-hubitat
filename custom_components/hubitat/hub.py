@@ -1,6 +1,6 @@
 import os
 import ssl
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from logging import getLogger
 from ssl import SSLContext
 from types import MappingProxyType
@@ -648,6 +648,10 @@ class Hub(HasId):
             # Migrate entity unique IDs from old token-hash format to new hub-id format
             _migrate_entity_unique_ids(self.hass, self.id, self.token)
 
+            # Register the hub before creating its devices so their via_device_id links
+            # can reference an existing device-registry entry.
+            self.async_update_device_registry()
+
             # Initialize entities only for platforms that are not set up yet.
             platforms_to_setup = self.get_unsetup_platforms()
             if len(platforms_to_setup) > 0:
@@ -921,7 +925,7 @@ def _migrate_entity_unique_ids(
 
 def _update_device_ids(hub_id: str, hass: HomeAssistant) -> None:
     dreg = device_registry.async_get(hass)
-    all_devices = [dreg.devices[id] for id in dreg.devices]
+    all_devices = _get_all_devices(dreg)
 
     hubitat_devices: list[DeviceEntry] = []
     for dev in all_devices:
@@ -1019,7 +1023,7 @@ def _update_device_rooms(hub: Hub, hass: HomeAssistant) -> None:
     _LOGGER.debug("Synchronizing device rooms...")
 
     dreg = device_registry.async_get(hass)
-    all_devices = [dreg.devices[id] for id in dreg.devices]
+    all_devices = _get_all_devices(dreg)
     hubitat_devices: list[DeviceEntry] = []
     for dev in all_devices:
         ids = list(dev.identifiers)
@@ -1052,6 +1056,14 @@ def _update_device_rooms(hub: Hub, hass: HomeAssistant) -> None:
         elif hass_device.area_id:
             dreg.async_clear_area_id(hass_device.id)
             _LOGGER.debug("Cleared location of %s", device.name)
+
+
+def _get_all_devices(dreg: device_registry.DeviceRegistry) -> list[DeviceEntry]:
+    """Return registry entries across Home Assistant device-registry APIs."""
+    devices: object = dreg.devices
+    if isinstance(devices, Mapping):
+        return list(cast(Mapping[str, DeviceEntry], devices).values())
+    return list(cast(Collection[DeviceEntry], devices))
 
 
 def get_domain_data(hass: HomeAssistant) -> dict[str, Hub]:
