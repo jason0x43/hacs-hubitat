@@ -41,6 +41,7 @@ from .const import (
     H_CONF_SERVER_SSL_KEY,
     H_CONF_SERVER_URL,
     H_CONF_SYNC_AREAS,
+    H_CONF_SYNC_DEVICES,
     PLATFORMS,
     TEMP_F,
     TRIGGER_CAPABILITIES,
@@ -714,6 +715,20 @@ class Hub(HasId):
                     )
 
             self.set_connected(True)
+            should_sync_devices = cast(
+                bool,
+                self.config_entry.options.get(
+                    H_CONF_SYNC_DEVICES,
+                    self.config_entry.data.get(H_CONF_SYNC_DEVICES, False),
+                ),
+            )
+            if should_sync_devices:
+                try:
+                    _remove_unshared_devices(self, self.hass)
+                except Exception:
+                    _LOGGER.exception(
+                        "Unable to remove devices no longer shared by Maker API"
+                    )
             _LOGGER.debug("Hub connection complete")
 
         except Exception:
@@ -1070,6 +1085,32 @@ def _update_device_rooms(hub: Hub, hass: HomeAssistant) -> None:
         elif hass_device.area_id:
             dreg.async_clear_area_id(hass_device.id)
             _LOGGER.debug("Cleared location of %s", device.name)
+
+
+def _remove_unshared_devices(hub: Hub, hass: HomeAssistant) -> None:
+    """Remove registered devices no longer returned by a complete Maker API load."""
+    dreg = device_registry.async_get(hass)
+    current_identifiers = {
+        identifier
+        for device in hub.devices.values()
+        for identifier in get_device_identifiers(hub.id, device.id)
+    }
+    hub_prefix = f"{hub.id}:"
+
+    for device in device_registry.async_entries_for_config_entry(
+        dreg, hub.config_entry.entry_id
+    ):
+        identifiers = set(device.identifiers)
+        is_hubitat_child = any(
+            domain == DOMAIN and identifier.startswith(hub_prefix)
+            for domain, identifier in identifiers
+        )
+        if is_hubitat_child and not identifiers & current_identifiers:
+            dreg.async_remove_device(device.id)
+            _LOGGER.info(
+                "Removed device %s because it is no longer shared by Maker API",
+                device.name,
+            )
 
 
 def _get_all_devices(dreg: device_registry.DeviceRegistry) -> list[DeviceEntry]:

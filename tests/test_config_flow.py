@@ -1,11 +1,19 @@
 from asyncio import Future
 from collections.abc import Awaitable
-from unittest.mock import Mock, patch
+from typing import Any
+from unittest.mock import AsyncMock, Mock, PropertyMock, patch
 
 import pytest
 
-from custom_components.hubitat.const import H_CONF_APP_ID, H_CONF_HUB_ID
-from homeassistant.const import CONF_ACCESS_TOKEN
+from custom_components.hubitat.const import (
+    H_CONF_APP_ID,
+    H_CONF_HUB_ID,
+    H_CONF_LEGACY_LIGHT_NAME_HEURISTIC,
+    H_CONF_SERVER_PORT,
+    H_CONF_SYNC_AREAS,
+    H_CONF_SYNC_DEVICES,
+)
+from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_TEMPERATURE_UNIT
 
 
 @patch("custom_components.hubitat.config_flow.HubitatHub")
@@ -42,6 +50,80 @@ async def test_validate_input(HubitatHub: Mock) -> None:
     assert check_called
 
 
+def test_new_config_defaults_to_synchronizing_devices() -> None:
+    """New config entries opt into Maker API device synchronization."""
+    from custom_components.hubitat.config_flow import CONFIG_SCHEMA
+
+    config = CONFIG_SCHEMA(
+        {
+            CONF_HOST: "hub.local",
+            H_CONF_APP_ID: "123",
+            CONF_ACCESS_TOKEN: "token",
+        }
+    )
+
+    assert config[H_CONF_SYNC_DEVICES] is True
+
+
+@pytest.mark.asyncio
+async def test_options_update_finishes_from_the_first_form() -> None:
+    """Saving ordinary options does not enter device management steps."""
+    from custom_components.hubitat.config_flow import HubitatOptionsFlow
+
+    entry = Mock()
+    entry.data = {
+        CONF_HOST: "hub.local",
+        H_CONF_APP_ID: "123",
+        CONF_ACCESS_TOKEN: "old-token",
+    }
+    entry.options = {"device_type_overrides": {"6": "light"}}
+    flow = HubitatOptionsFlow(entry)
+    flow.hass = Mock()
+    user_input: dict[str, Any] = {
+        CONF_HOST: "hub.local",
+        H_CONF_APP_ID: "",
+        CONF_ACCESS_TOKEN: "new-token",
+        H_CONF_SERVER_PORT: None,
+        "server_url": None,
+        "server_ssl_cert": None,
+        "server_ssl_key": None,
+        CONF_TEMPERATURE_UNIT: "F",
+        H_CONF_SYNC_DEVICES: False,
+        H_CONF_SYNC_AREAS: False,
+    }
+
+    with (
+        patch("custom_components.hubitat.config_flow._validate_input", AsyncMock()),
+        patch.object(
+            HubitatOptionsFlow,
+            "config_entry",
+            new_callable=PropertyMock,
+            return_value=entry,
+        ),
+        patch.object(
+            flow, "async_create_entry", return_value={"type": "create_entry"}
+        ) as create_entry,
+    ):
+        result = await flow.async_step_user(user_input)
+
+    assert result == {"type": "create_entry"}
+    flow.hass.config_entries.async_update_entry.assert_called_once()
+    create_entry.assert_called_once_with(
+        title="",
+        data={
+            CONF_HOST: "hub.local",
+            H_CONF_SERVER_PORT: None,
+            "server_url": None,
+            "server_ssl_cert": None,
+            "server_ssl_key": None,
+            CONF_TEMPERATURE_UNIT: "F",
+            H_CONF_SYNC_DEVICES: False,
+            H_CONF_SYNC_AREAS: False,
+            "device_type_overrides": {"6": "light"},
+        },
+    )
+
+
 @pytest.mark.asyncio
 async def test_async_migrate_entry_v1_to_v2() -> None:
     """Test migration from config entry version 1 to version 2."""
@@ -50,6 +132,7 @@ async def test_async_migrate_entry_v1_to_v2() -> None:
     # Create a mock config entry at version 1
     mock_entry = Mock()
     mock_entry.version = 1
+    mock_entry.minor_version = 1
     mock_entry.data = {
         CONF_ACCESS_TOKEN: "abcd1234efgh5678",
         H_CONF_APP_ID: "123",
@@ -77,6 +160,8 @@ async def test_async_migrate_entry_v1_to_v2() -> None:
 
     # Check version was updated
     assert call_args.kwargs["version"] == 2
+    assert call_args.kwargs["minor_version"] == 2
+    assert new_data[H_CONF_LEGACY_LIGHT_NAME_HEURISTIC] is True
 
     # Check unique_id was set
     assert call_args.kwargs["unique_id"] == "abcd1234"
@@ -89,6 +174,7 @@ async def test_async_migrate_entry_no_token() -> None:
 
     mock_entry = Mock()
     mock_entry.version = 1
+    mock_entry.minor_version = 1
     mock_entry.data = {
         H_CONF_APP_ID: "123",
         # No access token
@@ -102,6 +188,24 @@ async def test_async_migrate_entry_no_token() -> None:
 
     # Migration should fail without a token
     assert result is False
+
+
+@pytest.mark.asyncio
+async def test_async_migrate_entry_preserves_existing_unique_id() -> None:
+    """A minor migration must not clear the existing config entry unique ID."""
+    from custom_components.hubitat import async_migrate_entry
+
+    mock_entry = Mock()
+    mock_entry.version = 2
+    mock_entry.minor_version = 1
+    mock_entry.data = {CONF_ACCESS_TOKEN: "token"}
+    mock_hass = Mock()
+    mock_hass.config_entries.async_update_entry = Mock()
+
+    assert await async_migrate_entry(mock_hass, mock_entry) is True
+    assert (
+        "unique_id" not in mock_hass.config_entries.async_update_entry.call_args.kwargs
+    )
 
 
 @pytest.mark.asyncio

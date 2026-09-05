@@ -17,7 +17,14 @@ from homeassistant.const import CONF_ACCESS_TOKEN, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant
 from homeassistant.helpers.event import async_track_time_interval
 
-from .const import DOMAIN, H_CONF_HUB_ID, H_CONF_HUBITAT_EVENT, PLATFORMS, Platform
+from .const import (
+    DOMAIN,
+    H_CONF_HUB_ID,
+    H_CONF_HUBITAT_EVENT,
+    H_CONF_LEGACY_LIGHT_NAME_HEURISTIC,
+    PLATFORMS,
+    Platform,
+)
 from .hub import Hub, get_domain_data, get_hub
 
 _LOGGER = getLogger(__name__)
@@ -36,24 +43,42 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
     """Migrate old entry to new version."""
     _LOGGER.debug("Migrating config entry from version %s", config_entry.version)
 
-    if config_entry.version == 1:
+    new_data = {**config_entry.data}
+    version = config_entry.version
+    minor_version = config_entry.minor_version
+    unique_id: str | None = None
+
+    if version == 1:
         # Generate hub_id from current token (preserves existing IDs)
-        new_data = {**config_entry.data}
         token: str | None = config_entry.data.get(CONF_ACCESS_TOKEN)
         if token:
             hub_id = str(token)[:8]
             new_data[H_CONF_HUB_ID] = hub_id
-
-            hass.config_entries.async_update_entry(
-                config_entry,
-                data=new_data,
-                version=2,
-                unique_id=hub_id,
-            )
+            version = 2
+            unique_id = hub_id
             _LOGGER.info("Migrated config entry to version 2 with hub_id=%s", hub_id)
         else:
             _LOGGER.error("Cannot migrate config entry: no access token found")
             return False
+
+    if minor_version < 2:
+        # Preserve the historic label-based classification for existing entries.
+        new_data[H_CONF_LEGACY_LIGHT_NAME_HEURISTIC] = True
+        minor_version = 2
+
+    if (
+        new_data != config_entry.data
+        or version != config_entry.version
+        or minor_version != config_entry.minor_version
+    ):
+        update_kwargs: dict[str, Any] = {
+            "data": new_data,
+            "version": version,
+            "minor_version": minor_version,
+        }
+        if unique_id is not None:
+            update_kwargs["unique_id"] = unique_id
+        hass.config_entries.async_update_entry(config_entry, **update_kwargs)
 
     return True
 

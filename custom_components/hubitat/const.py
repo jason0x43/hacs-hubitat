@@ -54,11 +54,13 @@ H_CONF_HUB = "hub"
 H_CONF_HUBITAT_EVENT = "hubitat_event"
 H_CONF_DEVICE_LIST = "device_list"
 H_CONF_DEVICE_TYPE_OVERRIDES = "device_type_overrides"
+H_CONF_LEGACY_LIGHT_NAME_HEURISTIC = "legacy_light_name_heuristic"
 H_CONF_SERVER_PORT = "server_port"
 H_CONF_SERVER_URL = "server_url"
 H_CONF_SERVER_SSL_CERT = "server_ssl_cert"
 H_CONF_SERVER_SSL_KEY = "server_ssl_key"
 H_CONF_SYNC_AREAS = "sync_areas"
+H_CONF_SYNC_DEVICES = "sync_devices"
 H_CONF_HUB_ID = "hub_id"
 H_CONF_BUTTON = "button"
 H_CONF_DOUBLE_TAPPED = "double_tapped"
@@ -113,9 +115,6 @@ class ServiceName(StrEnum):
 
 class ConfigStep(StrEnum):
     USER = "user"
-    REMOVE_DEVICES = "remove_devices"
-    OVERRIDE_LIGHTS = "override_lights"
-    OVERRIDE_SWITCHES = "override_switches"
 
 
 TEMP_F = "F"

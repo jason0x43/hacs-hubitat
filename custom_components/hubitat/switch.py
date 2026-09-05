@@ -2,6 +2,7 @@
 
 import re
 from enum import StrEnum
+from functools import partial
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, Unpack, override
 
@@ -15,7 +16,7 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, ICON_ALARM, ServiceName
+from .const import DOMAIN, H_CONF_LEGACY_LIGHT_NAME_HEURISTIC, ICON_ALARM, ServiceName
 from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities, create_and_add_event_emitters
 from .fan import is_fan
@@ -145,14 +146,18 @@ class HubitatVariableSwitch(HubitatVariableEntity, SwitchEntity):
         self.async_write_ha_state()
 
 
-def is_switch(device: Device, overrides: dict[str, str] | None = None) -> bool:
+def is_switch(
+    device: Device,
+    overrides: dict[str, str] | None = None,
+    use_legacy_label_heuristic: bool = False,
+) -> bool:
     """Return True if device looks like a switch."""
     if overrides and overrides.get(device.id) is not None:
         return overrides[device.id] == "switch"
 
     return (
         DeviceCapability.SWITCH in device.capabilities
-        and not is_light(device, overrides)
+        and not is_light(device, overrides, use_legacy_label_heuristic)
         and not is_fan(device, overrides)
     )
 
@@ -177,12 +182,24 @@ def is_button_controller(device: Device) -> bool:
     )
 
 
-def is_simple_switch(device: Device, overrides: dict[str, str] | None = None) -> bool:
-    return is_switch(device, overrides) and not is_energy_meter(device, overrides)
+def is_simple_switch(
+    device: Device,
+    overrides: dict[str, str] | None = None,
+    use_legacy_label_heuristic: bool = False,
+) -> bool:
+    return is_switch(
+        device, overrides, use_legacy_label_heuristic
+    ) and not is_energy_meter(device, overrides)
 
 
-def is_smart_switch(device: Device, overrides: dict[str, str] | None = None) -> bool:
-    return is_switch(device, overrides) and is_energy_meter(device, overrides)
+def is_smart_switch(
+    device: Device,
+    overrides: dict[str, str] | None = None,
+    use_legacy_label_heuristic: bool = False,
+) -> bool:
+    return is_switch(device, overrides, use_legacy_label_heuristic) and is_energy_meter(
+        device, overrides
+    )
 
 
 async def async_setup_entry(
@@ -192,13 +209,20 @@ async def async_setup_entry(
 ) -> None:
     """Initialize switch devices."""
 
+    legacy_label_heuristic = config_entry.data.get(
+        H_CONF_LEGACY_LIGHT_NAME_HEURISTIC, True
+    )
+
     _ = create_and_add_entities(
         hass,
         config_entry,
         async_add_entities,
         "switch",
         HubitatSwitch,
-        is_simple_switch,
+        partial(
+            is_simple_switch,
+            use_legacy_label_heuristic=legacy_label_heuristic,
+        ),
     )
 
     _ = create_and_add_entities(
@@ -207,7 +231,10 @@ async def async_setup_entry(
         async_add_entities,
         "switch",
         HubitatPowerMeterSwitch,
-        is_smart_switch,
+        partial(
+            is_smart_switch,
+            use_legacy_label_heuristic=legacy_label_heuristic,
+        ),
     )
 
     _ = create_and_add_event_emitters(hass, config_entry, is_button_controller)
