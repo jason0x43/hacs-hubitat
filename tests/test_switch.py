@@ -6,7 +6,6 @@ import pytest
 from custom_components.hubitat.device import HubitatEntity
 from custom_components.hubitat.hubitatmaker import DeviceAttribute, DeviceCommand
 from custom_components.hubitat.hubitatmaker.types import Attribute
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import Entity
 
 E = TypeVar("E", bound=HubitatEntity)
@@ -15,12 +14,15 @@ E = TypeVar("E", bound=HubitatEntity)
 @pytest.mark.asyncio
 @patch("custom_components.hubitat.switch.create_and_add_entities")
 @patch("custom_components.hubitat.switch.create_and_add_event_emitters")
+@patch("custom_components.hubitat.switch.get_hub")
 async def test_setup_entry(
+    get_hub: Mock,
     create_emitters: Mock,
     create_entities: Mock,
 ) -> None:
     create_entities.return_value = []
     create_emitters.return_value = None
+    get_hub.return_value.hub_variables = {}
 
     from custom_components.hubitat.switch import (
         HubitatAlarm,
@@ -33,7 +35,8 @@ async def test_setup_entry(
     )
 
     mock_hass = Mock(spec=["async_register"])
-    mock_config_entry = Mock(spec=ConfigEntry)
+    mock_config_entry = Mock(spec=["entry_id"])
+    mock_config_entry.entry_id = "test"
 
     def add_entities(_: list[Entity]) -> None:
         pass

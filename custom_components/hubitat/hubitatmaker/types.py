@@ -325,3 +325,32 @@ class Mode:
     @override
     def __str__(self) -> str:
         return f'<Mode id="{self.id}" name="{self.name}" active="{self.active}">'
+
+
+class HubVariable:
+    """A Hubitat Hub Variable exposed by Maker API."""
+
+    def __init__(self, properties: dict[str, Any]) -> None:
+        self._properties = properties
+        self.available = True
+
+    @property
+    def name(self) -> str:
+        return cast(str, self._properties["name"])
+
+    @property
+    def type(self) -> str:
+        return cast(str, self._properties["type"])
+
+    @property
+    def value(self) -> Any:
+        return self._properties.get("value")
+
+    def update_value(self, value: Any) -> None:
+        """Update the value received in a location event."""
+        self._properties["value"] = value
+
+    def update(self, properties: dict[str, Any]) -> None:
+        """Update the variable from a Maker API response."""
+        self._properties = properties
+        self.available = True

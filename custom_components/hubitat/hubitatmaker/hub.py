@@ -20,7 +20,7 @@ from aiohttp.client_exceptions import (
 from .const import ID_HSM_STATUS, ID_MODE, DeviceAttribute
 from .error import InvalidConfig, InvalidMode, InvalidToken, RequestError
 from .server import Server, create_server
-from .types import Device, Event, Mode
+from .types import Device, Event, HubVariable, Mode
 
 Listener = Callable[[Event], None]
 
@@ -79,7 +79,9 @@ class Hub:
             raise InvalidConfig()
 
         self._devices: dict[str, Device] = {}
+        self._hub_variables: dict[str, HubVariable] = {}
         self._listeners: dict[str, list[Listener]] = {}
+        self._hub_variable_listeners: dict[str, list[Listener]] = {}
         self._modes: list[Mode] = []
         self._mode_supported: bool | None = None
         self._hsm_status: str | None = None
@@ -105,6 +107,11 @@ class Hub:
     def devices(self) -> Mapping[str, Device]:
         """Return a list of devices managed by the Hubitat hub."""
         return MappingProxyType(self._devices)
+
+    @property
+    def hub_variables(self) -> Mapping[str, HubVariable]:
+        """Return the Hub Variables authorized in Maker API."""
+        return MappingProxyType(self._hub_variables)
 
     @property
     def mode(self) -> str | None:
@@ -149,6 +156,10 @@ class Hub:
             self._listeners[ID_HSM_STATUS] = []
         self._listeners[ID_HSM_STATUS].append(listener)
 
+    def add_hub_variable_listener(self, name: str, listener: Listener) -> None:
+        """Listen for updates to a Hub Variable."""
+        self._hub_variable_listeners.setdefault(name, []).append(listener)
+
     def remove_device_listeners(self, device_id: str) -> None:
         """Remove all listeners for a particular device."""
         self._listeners[device_id] = []
@@ -182,6 +193,20 @@ class Hub:
             for dev in devices:
                 await self._load_device(cast(str, dev["id"]), force_refresh)
 
+    async def load_hub_variables(self) -> None:
+        """Load Hub Variables authorized in Maker API."""
+        variables = cast(list[dict[str, Any]], await self._api_request("hubvariables"))
+        variable_names = set()
+        for properties in variables:
+            name = cast(str, properties["name"])
+            variable_names.add(name)
+            if variable := self._hub_variables.get(name):
+                variable.update(properties)
+            else:
+                self._hub_variables[name] = HubVariable(properties)
+        for name in set(self._hub_variables) - variable_names:
+            self._hub_variables[name].available = False
+
     async def start(self, force_refresh: bool = False) -> None:
         """Download initial state data, and start an event server if requested.
 
@@ -205,6 +230,11 @@ class Hub:
             _LOGGER.debug("Connected to Hubitat hub at %s", self.host)
         except aiohttp.ClientError as e:
             raise ConnectionError(str(e))
+
+        try:
+            await self.load_hub_variables()
+        except Exception:
+            _LOGGER.warning("Unable to access Hub Variables")
 
         try:
             await self._load_modes()
@@ -234,6 +264,16 @@ class Hub:
     async def refresh_device(self, device_id: str) -> None:
         """Refresh a device's state."""
         await self._load_device(device_id, force_refresh=True)
+
+    async def set_hub_variable(self, name: str, value: str | float) -> None:
+        """Set an authorized Hub Variable and retain the returned state."""
+        path = f"hubvariables/{quote(name, safe='')}/{quote(str(value), safe='')}"
+        properties = cast(dict[str, Any], await self._api_request(path))
+        variable = self._hub_variables.get(cast(str, properties["name"]))
+        if variable is None:
+            self._hub_variables[cast(str, properties["name"])] = HubVariable(properties)
+        else:
+            variable.update(properties)
 
     async def send_command(
         self, device_id: str, command: str, arg: str | int | None
@@ -354,6 +394,19 @@ class Hub:
             if device_id in self._listeners:
                 for listener in self._listeners[device_id]:
                     listener(evt)
+        elif event_name.startswith("variable:"):
+            variable_name = event_name.removeprefix("variable:")
+            variable = self._hub_variables.get(variable_name)
+            if variable is None:
+                _LOGGER.debug(
+                    "Received update for unauthorized Hub Variable %s", variable_name
+                )
+                return
+            variable.update_value(event_value)
+            evt = Event(content)
+            for listener in self._hub_variable_listeners.get(variable_name, []):
+                listener(evt)
+
         elif event_name == "mode":
             name = cast(str, event_value)
             mode_set = False

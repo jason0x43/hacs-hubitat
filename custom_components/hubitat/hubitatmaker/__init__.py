@@ -12,7 +12,7 @@ from .const import (
 )
 from .error import ConnectionError, InvalidConfig, InvalidToken, RequestError
 from .hub import Hub
-from .types import Attribute, Device, Event
+from .types import Attribute, Device, Event, HubVariable
 
 __all__ = [
     "Attribute",
@@ -25,6 +25,7 @@ __all__ = [
     "DeviceCommand",
     "DeviceState",
     "Event",
+    "HubVariable",
     "Hub",
     "ID_HSM_STATUS",
     "ID_MODE",

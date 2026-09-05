@@ -29,6 +29,7 @@ FAILURE_MARKERS = (
 REQUIRED_MOCK_REQUESTS = (
     f"/apps/api/{APP_ID}/devices",
     f"/apps/api/{APP_ID}/devices/176",
+    f"/apps/api/{APP_ID}/hubvariables",
     f"/apps/api/{APP_ID}/modes",
     f"/apps/api/{APP_ID}/hsm",
 )

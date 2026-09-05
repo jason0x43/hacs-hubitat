@@ -50,6 +50,7 @@ from .hubitatmaker import (
     Device,
     Event,
     Hub as HubitatHub,
+    HubVariable,
 )
 from .types import Removable, UpdateableEntity
 from .util import (
@@ -155,6 +156,19 @@ class Hub(HasId):
     def devices(self) -> Mapping[str, Device]:
         """The Hubitat devices known to this hub."""
         return self._hub.devices
+
+    @property
+    def hub_variables(self) -> Mapping[str, HubVariable]:
+        """The Hub Variables known to this hub."""
+        return self._hub.hub_variables
+
+    def add_hub_variable_listener(self, name: str, listener: Listener) -> None:
+        """Listen for updates to a Hub Variable."""
+        self._hub.add_hub_variable_listener(name, listener)
+
+    async def set_hub_variable(self, name: str, value: str | float) -> None:
+        """Set a Hub Variable."""
+        await self._hub.set_hub_variable(name, value)
 
     @property
     def entity_id(self) -> str:

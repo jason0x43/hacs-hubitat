@@ -49,6 +49,7 @@ MODES = [
 ]
 
 HSM = {"hsm": "disarmed"}
+HUB_VARIABLES: list[dict[str, object]] = []
 
 
 class MockHubitatState:
@@ -99,6 +100,10 @@ class MockHubitatServer(ThreadingHTTPServer):
 
         if len(parts) >= 2 and parts[0] == "devices":
             self._handle_device(handler, parts)
+            return
+
+        if api_path == "hubvariables":
+            self._respond(handler, HTTPStatus.OK, HUB_VARIABLES)
             return
 
         if api_path == "modes":
