@@ -1,8 +1,11 @@
+from typing import cast
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 from custom_components.hubitat.hub import Hub
+from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
+from custom_components.hubitat.hubitatmaker.types import Device, Event
 from homeassistant.const import UnitOfTemperature
 
 
@@ -15,6 +18,8 @@ def _create_hub(
 ) -> tuple[Hub, Mock, Mock]:
     hass = Mock()
     hass.add_job = Mock()
+    hass.data = {}
+    hass.config.config_dir = "/tmp"
     hass.config.units.temperature_unit = ha_temperature_unit
 
     entry = Mock()
@@ -31,6 +36,7 @@ def _create_hub(
     entry.add_update_listener = Mock(return_value=Mock())
 
     hubitat_hub = Mock()
+    hubitat_hub.devices = {}
     device = Mock()
     hub = Hub(hass, entry, 1, hubitat_hub, device)
     hub._is_connected = connected
@@ -105,6 +111,128 @@ async def test_options_update_to_unset_temperature_unit_reloads_entities():
     runtime_hub.set_temperature_unit(None)
 
     assert runtime_hub.temperature_unit == UnitOfTemperature.CELSIUS
+
+
+@pytest.mark.asyncio
+async def test_cached_event_unit_is_applied_when_device_state_omits_unit():
+    """Use a persisted event unit when the Maker API state has no unit."""
+    hub, _hass, _entry = _create_hub(configured_temperature_unit=None)
+    device = Device(
+        {
+            "id": "9",
+            "name": "Virtual Temperature Sensor",
+            "label": "Virtual Temperature Sensor",
+            "type": "Virtual Temperature Sensor",
+            "attributes": [
+                {
+                    "name": DeviceAttribute.TEMPERATURE,
+                    "currentValue": 21,
+                    "dataType": "NUMBER",
+                    "unit": None,
+                }
+            ],
+            "capabilities": [],
+            "commands": [],
+        }
+    )
+    cast(dict[str, Device], hub._hub.devices)["9"] = device
+    with patch.object(
+        hub._attribute_unit_store,
+        "async_load",
+        AsyncMock(return_value={"9": {"temperature": "°C"}}),
+    ):
+        await hub.async_load_cached_attribute_units()
+    hub.apply_cached_attribute_units()
+
+    assert device.attributes[DeviceAttribute.TEMPERATURE].unit == "°C"
+
+
+def test_event_unit_overrides_cached_unit_and_is_persisted():
+    """An event unit takes precedence and replaces stale cached data."""
+    hub, _hass, _entry = _create_hub()
+    hub._cached_attribute_units = {"9": {"temperature": "°F"}}
+    event = Event(
+        {
+            "deviceId": "9",
+            "name": "temperature",
+            "value": "21",
+            "unit": "°C",
+        }
+    )
+
+    with patch.object(hub._attribute_unit_store, "async_delay_save") as delay_save:
+        hub._cache_attribute_unit(event)
+
+    assert hub._cached_attribute_units == {"9": {"temperature": "°C"}}
+    delay_save.assert_called_once()
+
+
+def test_cached_unit_does_not_override_a_unit_from_device_state():
+    """Use Maker API state units ahead of the persisted fallback."""
+    hub, _hass, _entry = _create_hub()
+    device = Device(
+        {
+            "id": "9",
+            "name": "Virtual Temperature Sensor",
+            "label": "Virtual Temperature Sensor",
+            "type": "Virtual Temperature Sensor",
+            "attributes": [
+                {
+                    "name": DeviceAttribute.TEMPERATURE,
+                    "currentValue": 21,
+                    "dataType": "NUMBER",
+                    "unit": "°F",
+                }
+            ],
+            "capabilities": [],
+            "commands": [],
+        }
+    )
+    cast(dict[str, Device], hub._hub.devices)["9"] = device
+    hub._cached_attribute_units = {"9": {"temperature": "°C"}}
+
+    hub.apply_cached_attribute_units()
+
+    assert device.attributes[DeviceAttribute.TEMPERATURE].unit == "°F"
+
+
+def test_unitless_event_uses_the_cached_unit():
+    """A unit-less event does not erase the last known unit."""
+    hub, _hass, _entry = _create_hub()
+    device = Device(
+        {
+            "id": "9",
+            "name": "Virtual Temperature Sensor",
+            "label": "Virtual Temperature Sensor",
+            "type": "Virtual Temperature Sensor",
+            "attributes": [
+                {
+                    "name": DeviceAttribute.TEMPERATURE,
+                    "currentValue": 21,
+                    "dataType": "NUMBER",
+                    "unit": "°C",
+                }
+            ],
+            "capabilities": [],
+            "commands": [],
+        }
+    )
+    cast(dict[str, Device], hub._hub.devices)["9"] = device
+    hub._cached_attribute_units = {"9": {"temperature": "°C"}}
+    hub._device_listeners["9"] = []
+    device.update_attr(DeviceAttribute.TEMPERATURE, "22", None)
+
+    hub.handle_event(
+        Event(
+            {
+                "deviceId": "9",
+                "name": "temperature",
+                "value": "22",
+            }
+        )
+    )
+
+    assert device.attributes[DeviceAttribute.TEMPERATURE].unit == "°C"
 
 
 def test_set_connected_dispatches_connection_listeners_via_hass_job():
