@@ -12,8 +12,11 @@ from custom_components.hubitat.const import (
     H_CONF_SERVER_PORT,
     H_CONF_SYNC_AREAS,
     H_CONF_SYNC_DEVICES,
+    TEMP_C,
+    TEMP_F,
 )
 from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST, CONF_TEMPERATURE_UNIT
+from homeassistant.helpers.selector import SelectSelector, SelectSelectorMode
 
 
 @patch("custom_components.hubitat.config_flow.HubitatHub")
@@ -63,6 +66,21 @@ def test_new_config_defaults_to_synchronizing_devices() -> None:
     )
 
     assert config[H_CONF_SYNC_DEVICES] is True
+
+
+def test_temperature_unit_uses_dropdown_selector() -> None:
+    """Temperature unit selection is shown as a dropdown."""
+    from custom_components.hubitat.config_flow import CONFIG_SCHEMA
+
+    temperature_key = next(
+        key for key in CONFIG_SCHEMA.schema if key.schema == CONF_TEMPERATURE_UNIT
+    )
+    selector = CONFIG_SCHEMA.schema[temperature_key]
+
+    assert isinstance(selector, SelectSelector)
+    assert selector.config["options"] == [TEMP_F, TEMP_C]
+    assert selector.config["mode"] == SelectSelectorMode.DROPDOWN
+    assert selector.config["translation_key"] == "temperature_unit"
 
 
 @pytest.mark.asyncio

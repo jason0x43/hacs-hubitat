@@ -21,6 +21,11 @@ from homeassistant.const import (
     CONF_TEMPERATURE_UNIT,
 )
 from homeassistant.core import callback
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
 from .const import (
     DOMAIN,
@@ -57,7 +62,13 @@ CONFIG_SCHEMA = vol.Schema(
         vol.Optional(H_CONF_SERVER_PORT): int,
         vol.Optional(H_CONF_SERVER_SSL_CERT): str,
         vol.Optional(H_CONF_SERVER_SSL_KEY): str,
-        vol.Optional(CONF_TEMPERATURE_UNIT, default=TEMP_F): vol.In([TEMP_F, TEMP_C]),
+        vol.Optional(CONF_TEMPERATURE_UNIT, default=TEMP_F): SelectSelector(
+            SelectSelectorConfig(
+                options=[TEMP_F, TEMP_C],
+                mode=SelectSelectorMode.DROPDOWN,
+                translation_key="temperature_unit",
+            )
+        ),
         vol.Optional(H_CONF_SYNC_DEVICES, default=True): bool,
         vol.Optional(H_CONF_SYNC_AREAS, default=False): bool,
     }
@@ -307,7 +318,13 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
                             entry.data.get(CONF_TEMPERATURE_UNIT),
                         )
                         or TEMP_F,
-                    ): vol.In([TEMP_F, TEMP_C]),
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[TEMP_F, TEMP_C],
+                            mode=SelectSelectorMode.DROPDOWN,
+                            translation_key="temperature_unit",
+                        )
+                    ),
                     vol.Optional(
                         H_CONF_SYNC_DEVICES,
                         default=entry.options.get(

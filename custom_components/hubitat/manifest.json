@@ -4,7 +4,7 @@
   "domain": "hubitat",
   "name": "Hubitat",
   "config_flow": true,
-  "documentation": "https://github.com/jason0x43/hacs-hubitat",
+  "documentation": "https://github.com/jason0x43/hacs-hubitat/blob/master/README.md",
   "issue_tracker": "https://github.com/jason0x43/hacs-hubitat/issues",
   "requirements": [],
   "ssdp": [],

@@ -26,6 +26,9 @@
                     "sync_areas": "Sincronizar cômodos"
 				},
 				"data_description": {
+					"server_ssl_cert": "Caminho absoluto para um certificado (por exemplo, /config/ssl/cert.pem)",
+					"server_ssl_key": "Caminho absoluto para uma chave (por exemplo, /config/ssl/key.pem)",
+					"temperature_unit": "Isso deve corresponder à escala de temperatura nas configurações do seu hub.",
 					"sync_devices": "Remove automaticamente os dispositivos que não são mais compartilhados pela API Maker após um carregamento bem-sucedido dos dispositivos.",
 					"sync_areas": "Atribui as áreas dos dispositivos do Home Assistant aos cômodos informados pela API Maker."
                 },
@@ -77,13 +80,22 @@
                     "sync_areas": "Sincronizar cômodos"
                 },
                 "data_description": {
-                    "app_id": "Deixe em branco para manter o valor atual",
-                    "access_token": "Deixe em branco para manter o valor atual",
+					"server_ssl_cert": "Caminho absoluto para um certificado (por exemplo, /config/ssl/cert.pem)",
+					"server_ssl_key": "Caminho absoluto para uma chave (por exemplo, /config/ssl/key.pem)",
+					"temperature_unit": "Isso deve corresponder à escala de temperatura nas configurações do seu hub.",
 					"sync_devices": "Remove automaticamente os dispositivos que não são mais compartilhados pela API Maker após um carregamento bem-sucedido dos dispositivos.",
 					"sync_areas": "Atribui as áreas dos dispositivos do Home Assistant aos cômodos informados pela API Maker."
                 },
                 "description": "Configure as opções para Hubitat. Observe que alterar o ID do aplicativo Maker API ou o token de acesso fará com que a integração seja recarregada.",
                 "title": "Opções do Hubitat"
+            }
+        }
+    },
+    "selector": {
+        "temperature_unit": {
+            "options": {
+                "F": "Fahrenheit",
+                "C": "Celsius"
             }
         }
     }

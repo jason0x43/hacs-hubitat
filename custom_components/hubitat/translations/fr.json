@@ -25,6 +25,9 @@
                     "sync_areas": "Synchroniser les pièces"
 				},
 				"data_description": {
+					"server_ssl_cert": "Chemin absolu vers un certificat (par exemple, /config/ssl/cert.pem)",
+					"server_ssl_key": "Chemin absolu vers une clé (par exemple, /config/ssl/key.pem)",
+					"temperature_unit": "Cette option doit correspondre à l’échelle de température définie dans les paramètres de votre hub.",
 					"sync_devices": "Supprime automatiquement les appareils qui ne sont plus partagés par l’API Maker après un chargement réussi des appareils.",
 					"sync_areas": "Associe les zones des appareils Home Assistant aux pièces signalées par l’API Maker."
                 },
@@ -75,13 +78,22 @@
                     "sync_areas": "Synchroniser les pièces"
                 },
                 "data_description": {
-                    "app_id": "Laissez vide pour conserver la valeur actuelle",
-                    "access_token": "Laissez vide pour conserver la valeur actuelle",
+					"server_ssl_cert": "Chemin absolu vers un certificat (par exemple, /config/ssl/cert.pem)",
+					"server_ssl_key": "Chemin absolu vers une clé (par exemple, /config/ssl/key.pem)",
+					"temperature_unit": "Cette option doit correspondre à l’échelle de température définie dans les paramètres de votre hub.",
 					"sync_devices": "Supprime automatiquement les appareils qui ne sont plus partagés par l’API Maker après un chargement réussi des appareils.",
 					"sync_areas": "Associe les zones des appareils Home Assistant aux pièces signalées par l’API Maker."
                 },
                 "description": "Configurez les options pour Hubitat. Notez que la modification du 'Maker API app ID' ou du jeton d'accès provoquera le rechargement de l'intégration.",
                 "title": "Options d'Hubitat"
+            }
+        }
+    },
+    "selector": {
+        "temperature_unit": {
+            "options": {
+                "F": "Fahrenheit",
+                "C": "Celsius"
             }
         }
     }
