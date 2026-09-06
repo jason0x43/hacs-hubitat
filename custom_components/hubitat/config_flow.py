@@ -53,6 +53,7 @@ from .util import get_hub_short_id
 
 _LOGGER = logging.getLogger(__name__)
 
+
 CONFIG_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): str,
@@ -62,7 +63,7 @@ CONFIG_SCHEMA = vol.Schema(
         vol.Optional(H_CONF_SERVER_PORT): int,
         vol.Optional(H_CONF_SERVER_SSL_CERT): str,
         vol.Optional(H_CONF_SERVER_SSL_KEY): str,
-        vol.Optional(CONF_TEMPERATURE_UNIT, default=TEMP_F): SelectSelector(
+        vol.Optional(CONF_TEMPERATURE_UNIT): SelectSelector(
             SelectSelectorConfig(
                 options=[TEMP_F, TEMP_C],
                 mode=SelectSelectorMode.DROPDOWN,
@@ -73,6 +74,16 @@ CONFIG_SCHEMA = vol.Schema(
         vol.Optional(H_CONF_SYNC_AREAS, default=False): bool,
     }
 )
+
+
+def _temperature_unit_option(entry: ConfigEntry) -> vol.Marker:
+    """Return the option key with a default only for a saved user choice."""
+    temperature_unit = entry.options.get(
+        CONF_TEMPERATURE_UNIT, entry.data.get(CONF_TEMPERATURE_UNIT)
+    )
+    if temperature_unit is None:
+        return vol.Optional(CONF_TEMPERATURE_UNIT)
+    return vol.Optional(CONF_TEMPERATURE_UNIT, default=temperature_unit)
 
 
 class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -209,7 +220,9 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
                 self.options[H_CONF_SERVER_SSL_KEY] = user_input.get(
                     H_CONF_SERVER_SSL_KEY
                 )
-                self.options[CONF_TEMPERATURE_UNIT] = user_input[CONF_TEMPERATURE_UNIT]
+                self.options[CONF_TEMPERATURE_UNIT] = user_input.get(
+                    CONF_TEMPERATURE_UNIT
+                )
                 self.options[H_CONF_SYNC_DEVICES] = user_input.get(H_CONF_SYNC_DEVICES)
                 self.options[H_CONF_SYNC_AREAS] = user_input.get(H_CONF_SYNC_AREAS)
 
@@ -311,14 +324,7 @@ class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
                             or ""
                         },
                     ): str,
-                    vol.Optional(
-                        CONF_TEMPERATURE_UNIT,
-                        default=entry.options.get(
-                            CONF_TEMPERATURE_UNIT,
-                            entry.data.get(CONF_TEMPERATURE_UNIT),
-                        )
-                        or TEMP_F,
-                    ): SelectSelector(
+                    _temperature_unit_option(entry): SelectSelector(
                         SelectSelectorConfig(
                             options=[TEMP_F, TEMP_C],
                             mode=SelectSelectorMode.DROPDOWN,

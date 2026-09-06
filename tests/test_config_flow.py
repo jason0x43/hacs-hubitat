@@ -4,6 +4,7 @@ from typing import Any
 from unittest.mock import AsyncMock, Mock, PropertyMock, patch
 
 import pytest
+import voluptuous as vol
 
 from custom_components.hubitat.const import (
     H_CONF_APP_ID,
@@ -81,6 +82,24 @@ def test_temperature_unit_uses_dropdown_selector() -> None:
     assert selector.config["options"] == [TEMP_F, TEMP_C]
     assert selector.config["mode"] == SelectSelectorMode.DROPDOWN
     assert selector.config["translation_key"] == "temperature_unit"
+
+    data = CONFIG_SCHEMA(
+        {CONF_HOST: "hub.local", H_CONF_APP_ID: "123", CONF_ACCESS_TOKEN: "token"}
+    )
+    assert CONF_TEMPERATURE_UNIT not in data
+
+
+def test_options_schema_keeps_saved_temperature_unit() -> None:
+    """Prepopulate options with an explicit saved temperature unit only."""
+    from custom_components.hubitat.config_flow import _temperature_unit_option
+
+    entry = Mock()
+    entry.data = {CONF_TEMPERATURE_UNIT: "F"}
+    entry.options = {CONF_TEMPERATURE_UNIT: "C"}
+
+    schema = vol.Schema({_temperature_unit_option(entry): str})
+
+    assert schema({})[CONF_TEMPERATURE_UNIT] == "C"
 
 
 @pytest.mark.asyncio

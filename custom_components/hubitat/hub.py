@@ -89,7 +89,7 @@ class Hub(HasId):
     unsub_config_listener: Callable[[Any], None]
     device: Device
 
-    _temperature_unit: str
+    _temperature_unit: str | None
     _hub_entity_id: str
     _hub_device_listeners: list[Listener]
     _device_listeners: dict[str, list[Listener]]
@@ -121,11 +121,8 @@ class Hub(HasId):
         self.entities: list[UpdateableEntity] = []
         self.event_emitters: list[Removable] = []
 
-        self._temperature_unit = (
-            entry.options.get(
-                CONF_TEMPERATURE_UNIT, entry.data.get(CONF_TEMPERATURE_UNIT)
-            )
-            or TEMP_F
+        self._temperature_unit = entry.options.get(
+            CONF_TEMPERATURE_UNIT, entry.data.get(CONF_TEMPERATURE_UNIT)
         )
 
         if index == 1:
@@ -239,6 +236,8 @@ class Hub(HasId):
     @property
     def temperature_unit(self) -> UnitOfTemperature:
         """The units used for temperature values."""
+        if self._temperature_unit is None:
+            return self.hass.config.units.temperature_unit
         return (
             UnitOfTemperature.FAHRENHEIT
             if self._temperature_unit == TEMP_F
@@ -330,7 +329,7 @@ class Hub(HasId):
         if self._hub:
             await self._hub.set_hsm(mode)
 
-    def set_temperature_unit(self, temp_unit: str) -> None:
+    def set_temperature_unit(self, temp_unit: str | None) -> None:
         """Set the hub's temperature units."""
         _LOGGER.debug("Setting hub temperature unit to %s", temp_unit)
         self._temperature_unit = temp_unit
@@ -821,14 +820,11 @@ class Hub(HasId):
             ssl_key,
         )
 
-        temp_unit = (
-            config_entry.options.get(
-                CONF_TEMPERATURE_UNIT,
-                config_entry.data.get(CONF_TEMPERATURE_UNIT),
-            )
-            or TEMP_F
+        temp_unit = config_entry.options.get(
+            CONF_TEMPERATURE_UNIT,
+            config_entry.data.get(CONF_TEMPERATURE_UNIT),
         )
-        if temp_unit != hub.temperature_unit:
+        if temp_unit != hub._temperature_unit:
             hub.set_temperature_unit(temp_unit)
             for entity in hub.entities:
                 entity.load_state()
