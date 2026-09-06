@@ -383,6 +383,21 @@ async def test_failed_device_load_keeps_previous_complete_inventory() -> None:
 
 
 @patch("aiohttp.request", new=create_fake_request())
+@pytest.mark.asyncio
+async def test_forced_device_load_preserves_instances_for_events() -> None:
+    """Forced refreshes keep existing entity device references up to date."""
+    hub = Hub("1.2.3.4", "1234", "token")
+    await hub.load_devices()
+    device = hub.devices["176"]
+
+    await hub.load_devices(force_refresh=True)
+
+    assert hub.devices["176"] is device
+    hub._process_event(events["device"])
+    assert device.attributes[DeviceAttribute.SWITCH].value == "on"
+
+
+@patch("aiohttp.request", new=create_fake_request())
 @patch("custom_components.hubitat.hubitatmaker.server.Server", new=MagicMock())
 @pytest.mark.asyncio
 async def test_process_event() -> None:
