@@ -1179,7 +1179,13 @@ def _update_device_rooms(hub: Hub, hass: HomeAssistant) -> None:
         # Home Assistant, update the device area ID
         device = hub.devices[device_id]
         identifiers = get_device_identifiers(hub.id, device.id)
-        hass_device = dreg.async_get_device(identifiers)
+        if hasattr(dreg, "async_get_device_by_identifier"):
+            hass_device = dreg.async_get_device_by_identifier(
+                next(iter(identifiers)), hub.config_entry.entry_id
+            )
+        else:
+            # Home Assistant versions before the identifier-scoped lookup was added.
+            hass_device = dreg.async_get_device(identifiers)
 
         if not hass_device:
             _LOGGER.debug(
