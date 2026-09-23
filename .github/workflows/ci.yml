@@ -33,18 +33,21 @@ jobs:
         with:
           python-version-file: "pyproject.toml"
 
-      - name: Install dependencies
-        run: uv sync
-
-      - name: Check Home Assistant dependency is latest non-beta
-        run: uv run python scripts/check_homeassistant_current.py
-
       - name: Code quality checks
-        run: uv run poe check
+        run: >-
+          uv run
+          --upgrade-package homeassistant
+          --upgrade-package pytest-homeassistant-custom-component
+          --script scripts/run_with_current_homeassistant.py
+          poe check
 
       - name: Run tests with coverage
         run: |
-          uv run pytest tests \
+          uv run \
+            --upgrade-package homeassistant \
+            --upgrade-package pytest-homeassistant-custom-component \
+            --script scripts/run_with_current_homeassistant.py \
+            pytest tests \
             --cov=custom_components/hubitat \
             --cov-branch \
             --cov-report=json:"$RUNNER_TEMP/pr-coverage.json" \
@@ -103,12 +106,11 @@ jobs:
         with:
           python-version-file: "pyproject.toml"
 
-      - name: Install dependencies
-        run: uv sync --frozen
-
       - name: Resolve Home Assistant versions
         id: resolve
-        run: uv run python scripts/resolve_smoke_versions.py --github-output >> "$GITHUB_OUTPUT"
+        run: >-
+          uv run --no-project python scripts/resolve_smoke_versions.py
+          --github-output >> "$GITHUB_OUTPUT"
 
   smoke-test:
     name: Smoke Test (${{ matrix.label }})
@@ -135,8 +137,7 @@ jobs:
         with:
           python-version-file: "pyproject.toml"
 
-      - name: Install dependencies
-        run: uv sync --frozen
-
       - name: Run Hubitat smoke test
-        run: uv run poe smoke --ha-version "${{ matrix.ha_version }}"
+        run: >-
+          uv run --no-project python scripts/smoke_test.py
+          --ha-version "${{ matrix.ha_version }}"

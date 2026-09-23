@@ -421,6 +421,14 @@ $ uv run poe check
 $ uv run poe test
 ```
 
+These commands use the versions in `uv.lock`. To run the same checks in an
+isolated environment with the latest stable Home Assistant release, use:
+
+```
+$ uv run poe check-current
+$ uv run poe test-current
+```
+
 To start a local Home Assistant container for manual testing, run:
 
 ```sh
