@@ -23,12 +23,14 @@ from custom_components.hubitat.sensor import (
     HubitatTemperatureSensor,
     HubitatUpdateSensor,
     HubitatVoltageSensor,
+    HubitatWindDirectionSensor,
     add_hub_entities,
     async_setup_entry,
     is_update_sensor,
 )
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import (
+    DEGREE,
     PERCENTAGE,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
@@ -391,6 +393,31 @@ def test_rain_daily_sensor_uses_precipitation_depth() -> None:
     assert sensor.device_class == SensorDeviceClass.PRECIPITATION
     assert sensor.native_unit_of_measurement == UnitOfPrecipitationDepth.MILLIMETERS
     assert sensor.state_class == SensorStateClass.TOTAL_INCREASING
+
+
+def test_wind_direction_sensor_uses_direction_device_class() -> None:
+    """Expose wind direction in degrees, not as a wind speed."""
+    device = Mock(
+        id="test-id",
+        name="Test Sensor",
+        label="Test Sensor",
+        attributes={
+            DeviceAttribute.WIND_DIRECTION: Attribute(
+                {
+                    "name": DeviceAttribute.WIND_DIRECTION,
+                    "currentValue": "180",
+                    "dataType": "NUMBER",
+                    "unit": DEGREE,
+                }
+            )
+        },
+    )
+
+    sensor = HubitatWindDirectionSensor(hub=Mock(token="token"), device=device)
+
+    assert sensor.device_class == SensorDeviceClass.WIND_DIRECTION
+    assert sensor.native_unit_of_measurement == DEGREE
+    assert sensor.state_class == SensorStateClass.MEASUREMENT
 
 
 def test_sensor_ignores_unsupported_hubitat_unit() -> None:
