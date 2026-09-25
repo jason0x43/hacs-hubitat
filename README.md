@@ -429,6 +429,10 @@ $ uv run poe check-current
 $ uv run poe test-current
 ```
 
+These tasks copy `pyproject.toml` and `uv.lock` to a temporary project, update
+Home Assistant and its pytest plugin there, and run against that temporary lock.
+The repository's lockfile is unchanged.
+
 To start a local Home Assistant container for manual testing, run:
 
 ```sh
@@ -450,6 +454,8 @@ uv run poe smoke --ha-version 2026.2.3 --ha-version 2026.6.4
 ```
 
 The smoke test starts a temporary Home Assistant container with a generated minimal Hubitat config entry and a sibling mock Maker API container, then waits for Home Assistant to report that Hubitat is ready.
+CI runs this smoke test against the latest stable release and the next beta when
+one is available, independently of the Python quality and unit-test job.
 
 ---
 

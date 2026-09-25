@@ -35,18 +35,12 @@ jobs:
 
       - name: Code quality checks
         run: >-
-          uv run
-          --upgrade-package homeassistant
-          --upgrade-package pytest-homeassistant-custom-component
-          --script scripts/run_with_current_homeassistant.py
-          poe check
+          uv run --no-project python -m scripts.run_with_current_homeassistant
+          poe -e simple check
 
       - name: Run tests with coverage
         run: |
-          uv run \
-            --upgrade-package homeassistant \
-            --upgrade-package pytest-homeassistant-custom-component \
-            --script scripts/run_with_current_homeassistant.py \
+          uv run --no-project python -m scripts.run_with_current_homeassistant \
             pytest tests \
             --cov=custom_components/hubitat \
             --cov-branch \
@@ -87,7 +81,6 @@ jobs:
 
   resolve-smoke-versions:
     name: Resolve Smoke Test Versions
-    needs: test
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.resolve.outputs.matrix }}

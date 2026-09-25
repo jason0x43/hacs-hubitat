@@ -1,37 +1,71 @@
-# /// script
-# requires-python = ">=3.14.2"
-# dependencies = [
-#   "homeassistant",
-#   "poethepoet>=0.47.0",
-#   "pytest",
-#   "pytest-asyncio>=0.16.0",
-#   "pytest-cov>=7.1.0",
-#   "pytest-homeassistant-custom-component",
-#   "ruff",
-#   "setuptools>=62.2.0",
-#   "tomlkit>=0.12.3",
-#   "zuban>=0.7.0",
-# ]
-# ///
-
-"""Run a command in an environment with the current Home Assistant release."""
+"""Run project checks from a temporary lock updated for current Home Assistant."""
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
+import tempfile
 from importlib.metadata import version
+from pathlib import Path
+
+from scripts.homeassistant_versions import latest_stable_homeassistant_version
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
-def main(command: list[str]) -> int:
-    """Run ``command`` using the dependencies declared above."""
+def main(command: list[str], *, resolved: bool = False) -> int:
+    """Run ``command`` with a temporary copy of the project's dependencies."""
     if not command:
         print("A command is required.", file=sys.stderr)
         return 2
 
-    print(f"Testing with Home Assistant {version('homeassistant')}", flush=True)
-    return subprocess.run(command, check=False).returncode
+    if resolved:
+        print(f"Testing with Home Assistant {version('homeassistant')}", flush=True)
+        return subprocess.run(command, check=False).returncode
+
+    homeassistant_version = latest_stable_homeassistant_version()
+    with tempfile.TemporaryDirectory(
+        prefix="hubitat-current-homeassistant-"
+    ) as temp_dir:
+        temp_project = Path(temp_dir)
+        for name in ("pyproject.toml", "uv.lock"):
+            shutil.copy2(PROJECT_ROOT / name, temp_project / name)
+
+        subprocess.run(
+            [
+                "uv",
+                "add",
+                "--project",
+                str(temp_project),
+                "--no-sync",
+                "--upgrade-package",
+                "pytest-homeassistant-custom-component",
+                f"homeassistant=={homeassistant_version}",
+            ],
+            check=True,
+        )
+        return subprocess.run(
+            [
+                "uv",
+                "run",
+                "--project",
+                str(temp_project),
+                "--locked",
+                "python",
+                "-m",
+                "scripts.run_with_current_homeassistant",
+                "--resolved",
+                *command,
+            ],
+            cwd=PROJECT_ROOT,
+            check=False,
+        ).returncode
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
+    arguments = sys.argv[1:]
+    is_resolved = bool(arguments and arguments[0] == "--resolved")
+    raise SystemExit(
+        main(arguments[1:] if is_resolved else arguments, resolved=is_resolved)
+    )
