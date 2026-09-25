@@ -1,5 +1,5 @@
 from typing import TypeVar
-from unittest.mock import AsyncMock, Mock, call, patch
+from unittest.mock import ANY, AsyncMock, Mock, call, patch
 
 import pytest
 
@@ -35,8 +35,9 @@ async def test_setup_entry(
     )
 
     mock_hass = Mock(spec=["async_register"])
-    mock_config_entry = Mock(spec=["entry_id"])
+    mock_config_entry = Mock(spec=["data", "entry_id"])
     mock_config_entry.entry_id = "test"
+    mock_config_entry.data = {}
 
     def add_entities(_: list[Entity]) -> None:
         pass
@@ -53,7 +54,7 @@ async def test_setup_entry(
         mock_add_entities,
         "switch",
         HubitatSwitch,
-        is_simple_switch,
+        ANY,
     )
     call2 = call(
         mock_hass,
@@ -61,7 +62,7 @@ async def test_setup_entry(
         mock_add_entities,
         "switch",
         HubitatPowerMeterSwitch,
-        is_smart_switch,
+        ANY,
     )
     call3 = call(
         mock_hass,
@@ -73,6 +74,8 @@ async def test_setup_entry(
     )
 
     create_entities.assert_has_calls([call1, call2, call3])
+    assert create_entities.call_args_list[0].args[-1].func is is_simple_switch
+    assert create_entities.call_args_list[1].args[-1].func is is_smart_switch
 
     assert create_emitters.call_count == 1, "expected 1 call to create emitters"
 

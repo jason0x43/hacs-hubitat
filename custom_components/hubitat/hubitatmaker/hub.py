@@ -190,8 +190,31 @@ class Hub:
             _LOGGER.debug("Loaded device list")
 
             # load devices sequentially to avoid overloading the hub
+            loaded_devices: dict[str, tuple[dict[str, Any], Device]] = {}
             for dev in devices:
-                await self._load_device(cast(str, dev["id"]), force_refresh)
+                device_id = cast(str, dev["id"])
+                _LOGGER.debug("Loading device %s", device_id)
+                data = cast(
+                    dict[str, Any], await self._api_request(f"devices/{device_id}")
+                )
+                try:
+                    # Validate every response before changing the live inventory.
+                    loaded_devices[device_id] = (data, Device(data))
+                except Exception:
+                    _LOGGER.error("Invalid device info: %s", data)
+                    raise
+
+            # Replace the inventory only after every detail request has completed.
+            # Preserve existing instances so already-created entities continue to
+            # receive state changes after a forced refresh.
+            refreshed_devices: dict[str, Device] = {}
+            for device_id, (data, device) in loaded_devices.items():
+                if existing_device := self._devices.get(device_id):
+                    existing_device.update_state(data)
+                    refreshed_devices[device_id] = existing_device
+                else:
+                    refreshed_devices[device_id] = device
+            self._devices = refreshed_devices
 
     async def load_hub_variables(self) -> None:
         """Load Hub Variables authorized in Maker API."""

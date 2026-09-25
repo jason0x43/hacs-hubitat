@@ -22,7 +22,15 @@
                     "server_ssl_cert": "Certificado SSL do servidor de eventos (opcional)",
                     "server_ssl_key": "Chave privada SSL do servidor de eventos (opcional)",
                     "temperature_unit": "Unidades de temperatura (opcional)",
+                    "sync_devices": "Sincronizar dispositivos",
                     "sync_areas": "Sincronizar cômodos"
+				},
+				"data_description": {
+					"server_ssl_cert": "Caminho absoluto para um certificado (por exemplo, /config/ssl/cert.pem)",
+					"server_ssl_key": "Caminho absoluto para uma chave (por exemplo, /config/ssl/key.pem)",
+					"temperature_unit": "Isso deve corresponder à escala de temperatura nas configurações do seu hub.",
+					"sync_devices": "Remove automaticamente os dispositivos que não são mais compartilhados pela API Maker após um carregamento bem-sucedido dos dispositivos.",
+					"sync_areas": "Atribui as áreas dos dispositivos do Home Assistant aos cômodos informados pela API Maker."
                 },
                 "description": "Coloque o endereço IP ou o nome do host do hub Hubitat, junto com o ID do aplicativo de sua instância da API Maker. Opcionalmente, forneça um número de porta para o servidor de eventos da integração escutar, as unidades usadas para sensores de temperatura (F por padrão) e/ou a URL para a qual o Hubitat deve enviar eventos.",
                 "title": "Conecte-se ao seu hub Hubitat"
@@ -58,46 +66,36 @@
             "unknown": "Erro inesperado"
         },
         "step": {
-            "override_lights": {
-              "data": {
-                "devices": "Interruptores que deveriam ser luzes"
-              },
-              "description": "Os seguintes dispositivos foram classificados automaticamente como interruptores. Selecione qualquer um que deve ser luzes em vez disso.",
-              "title": "Interruptores → Luzes"
-            },
-            "override_switches": {
-              "data": {
-                "devices": "Luzes que deveriam ser interruptores"
-              },
-              "description": "Os seguintes dispositivos foram automaticamente classificados como luzes. Selecione qualquer um que deva ser interruptor.",
-              "title": "Luzes → Interruptores"
-            },
-            "remove_devices": {
-                "data": {
-                    "devices": "Dispositivos para remover"
-                },
-                "description": "Selecione todos os dispositivos gerenciados por esta integração que você deseja remover. Normalmente, isso seria qualquer dispositivo que não estivesse mais sendo compartilhado pelo Hubitat.",
-                "title": "Remover dispositivos"
-            },
             "user": {
                 "data": {
                     "host": "Endereço do Hub",
                     "app_id": "ID do aplicativo da API Maker",
                     "access_token": "Token de acesso da API Maker",
-                    "remove_devices": "Remover dispositivos",
                     "server_port": "Porta do servidor de eventos (opcional)",
                     "server_url": "URL do servidor de eventos (opcional)",
                     "server_ssl_cert": "Certificado SSL do servidor de eventos (opcional)",
                     "server_ssl_key": "Chave privada SSL do servidor de eventos (opcional)",
                     "temperature_unit": "Unidades de temperatura (opcional)",
+                    "sync_devices": "Sincronizar dispositivos",
                     "sync_areas": "Sincronizar cômodos"
                 },
                 "data_description": {
-                    "app_id": "Deixe em branco para manter o valor atual",
-                    "access_token": "Deixe em branco para manter o valor atual"
+					"server_ssl_cert": "Caminho absoluto para um certificado (por exemplo, /config/ssl/cert.pem)",
+					"server_ssl_key": "Caminho absoluto para uma chave (por exemplo, /config/ssl/key.pem)",
+					"temperature_unit": "Isso deve corresponder à escala de temperatura nas configurações do seu hub.",
+					"sync_devices": "Remove automaticamente os dispositivos que não são mais compartilhados pela API Maker após um carregamento bem-sucedido dos dispositivos.",
+					"sync_areas": "Atribui as áreas dos dispositivos do Home Assistant aos cômodos informados pela API Maker."
                 },
                 "description": "Configure as opções para Hubitat. Observe que alterar o ID do aplicativo Maker API ou o token de acesso fará com que a integração seja recarregada.",
                 "title": "Opções do Hubitat"
+            }
+        }
+    },
+    "selector": {
+        "temperature_unit": {
+            "options": {
+                "F": "Fahrenheit",
+                "C": "Celsius"
             }
         }
     }

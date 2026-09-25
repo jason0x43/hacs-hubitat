@@ -57,6 +57,19 @@ def test_light_init():
     assert light.brightness is not None
 
 
+def test_label_based_light_detection_is_legacy_only() -> None:
+    from custom_components.hubitat.light import is_light
+
+    device = Mock(
+        id="test-id",
+        label="Kitchen Lamp",
+        capabilities={DeviceCapability.SWITCH},
+    )
+
+    assert is_light(device) is False
+    assert is_light(device, use_legacy_label_heuristic=True) is True
+
+
 def test_light_off():
     """Test that a light correctly reports off state."""
     hub = Mock()

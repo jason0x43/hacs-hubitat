@@ -21,7 +21,15 @@
                     "server_ssl_cert": "Certificat SSL du serveur d'événements (facultatif)",
                     "server_ssl_key": "Clé privée SSL du serveur d'événements (facultatif)",
                     "temperature_unit": "Unités de température (optionnel)",
+                    "sync_devices": "Synchroniser les appareils",
                     "sync_areas": "Synchroniser les pièces"
+				},
+				"data_description": {
+					"server_ssl_cert": "Chemin absolu vers un certificat (par exemple, /config/ssl/cert.pem)",
+					"server_ssl_key": "Chemin absolu vers une clé (par exemple, /config/ssl/key.pem)",
+					"temperature_unit": "Cette option doit correspondre à l’échelle de température définie dans les paramètres de votre hub.",
+					"sync_devices": "Supprime automatiquement les appareils qui ne sont plus partagés par l’API Maker après un chargement réussi des appareils.",
+					"sync_areas": "Associe les zones des appareils Home Assistant aux pièces signalées par l’API Maker."
                 },
                 "description": "Indiquez l'adresse IP ou le nom d'hôte de votre hub Hubitat, ainsi que l'ID d'application de son instance API Maker. En option, un numéro de port pour l'écoute du serveur d'événements de l'intégration, les unités utilisées pour les capteurs de température (F par défaut) et / ou l'URL sur laquelle Hubitat doit POSTER les événements.",
                 "title": "Connectez-vous à votre hub Hubitat"
@@ -56,27 +64,6 @@
             "unknown": "Erreur inattendue"
         },
         "step": {
-            "override_lights": {
-              "data": {
-                "devices": "Interrupteurs qui devraient être des lumières"
-              },
-              "description": "Les appareils suivants ont été automatiquement classés comme interrupteurs. Sélectionnez ceux qui devraient plutôt être des lumières.",
-              "title": "Interrupteurs → Lumières"
-            },
-            "override_switches": {
-              "data": {
-                "devices": "Lumières qui devraient être des interrupteurs"
-              },
-              "description": "Les appareils suivants ont été automatiquement classés comme lumières. Sélectionnez ceux qui devraient plutôt être des interrupteurs.",
-              "title": "Lumières → Interrupteurs"
-            },
-            "remove_devices": {
-                "data": {
-                    "devices": "Appareils à supprimer"
-                },
-                "description": "Sélectionnez les appareils gérés par cette intégration que vous souhaitez supprimer. En général, cela concerne les appareils qui ne sont plus partagés par Hubitat.",
-                "title": "Supprimer les appareils"
-            },
             "user": {
                 "data": {
                     "host": "L'adresse du Hub",
@@ -87,14 +74,26 @@
                     "server_ssl_cert": "Certificat SSL du serveur d'événements (facultatif)",
                     "server_ssl_key": "Clé privée SSL du serveur d'événements (facultatif)",
                     "temperature_unit": "Unités de température (optionnel)",
+                    "sync_devices": "Synchroniser les appareils",
                     "sync_areas": "Synchroniser les pièces"
                 },
                 "data_description": {
-                    "app_id": "Laissez vide pour conserver la valeur actuelle",
-                    "access_token": "Laissez vide pour conserver la valeur actuelle"
+					"server_ssl_cert": "Chemin absolu vers un certificat (par exemple, /config/ssl/cert.pem)",
+					"server_ssl_key": "Chemin absolu vers une clé (par exemple, /config/ssl/key.pem)",
+					"temperature_unit": "Cette option doit correspondre à l’échelle de température définie dans les paramètres de votre hub.",
+					"sync_devices": "Supprime automatiquement les appareils qui ne sont plus partagés par l’API Maker après un chargement réussi des appareils.",
+					"sync_areas": "Associe les zones des appareils Home Assistant aux pièces signalées par l’API Maker."
                 },
                 "description": "Configurez les options pour Hubitat. Notez que la modification du 'Maker API app ID' ou du jeton d'accès provoquera le rechargement de l'intégration.",
                 "title": "Options d'Hubitat"
+            }
+        }
+    },
+    "selector": {
+        "temperature_unit": {
+            "options": {
+                "F": "Fahrenheit",
+                "C": "Celsius"
             }
         }
     }

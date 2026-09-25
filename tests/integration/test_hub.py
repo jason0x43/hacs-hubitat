@@ -5,7 +5,12 @@ import pytest
 from aiohttp.test_utils import unused_port
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.hubitat.const import DOMAIN, H_CONF_HUBITAT_EVENT, PLATFORMS
+from custom_components.hubitat.const import (
+    DOMAIN,
+    H_CONF_HUBITAT_EVENT,
+    H_CONF_SYNC_DEVICES,
+    PLATFORMS,
+)
 from custom_components.hubitat.hub import Hub, get_hub
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.config_entries import ConfigEntryState
@@ -25,7 +30,7 @@ async def _setup_entry(hass, fake_hubitat: FakeHubitat) -> MockConfigEntry:
         domain=DOMAIN,
         title="Hubitat (aa:bb:cc:dd:ee:ff)",
         data=fake_hubitat.config_entry_data,
-        options=fake_hubitat.config_entry_options,
+        options={**fake_hubitat.config_entry_options, H_CONF_SYNC_DEVICES: True},
         unique_id=fake_hubitat.hub_id,
         version=2,
     )
@@ -97,6 +102,62 @@ async def test_hub_setup_uses_real_hass_registries_and_maker_api(
         assert areg.async_get_area_by_name("Office") is not None
     finally:
         await _unload_entry(hass, entry)
+
+
+async def test_hub_setup_removes_devices_no_longer_shared_by_maker_api(
+    hass, fake_hubitat: FakeHubitat
+) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Hubitat",
+        data=fake_hubitat.config_entry_data,
+        options={**fake_hubitat.config_entry_options, H_CONF_SYNC_DEVICES: True},
+        unique_id=fake_hubitat.hub_id,
+        version=2,
+        minor_version=2,
+    )
+    entry.add_to_hass(hass)
+    dreg = device_registry.async_get(hass)
+    stale = dreg.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, f"{fake_hubitat.hub_id}:stale")},
+        name="No longer shared",
+    )
+
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert entry.state is ConfigEntryState.LOADED
+    assert dreg.async_get(stale.id) is None
+    await _unload_entry(hass, entry)
+
+
+async def test_existing_entry_does_not_remove_devices_without_sync_enabled(
+    hass, fake_hubitat: FakeHubitat
+) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Hubitat",
+        data=fake_hubitat.config_entry_data,
+        options=fake_hubitat.config_entry_options,
+        unique_id=fake_hubitat.hub_id,
+        version=2,
+        minor_version=2,
+    )
+    entry.add_to_hass(hass)
+    dreg = device_registry.async_get(hass)
+    stale = dreg.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, f"{fake_hubitat.hub_id}:stale")},
+        name="No longer shared",
+    )
+
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert entry.state is ConfigEntryState.LOADED
+    assert dreg.async_get(stale.id) is not None
+    await _unload_entry(hass, entry)
 
 
 async def test_hub_event_receiver_updates_entity_state(

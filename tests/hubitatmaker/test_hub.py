@@ -3,7 +3,7 @@ import re
 from os.path import dirname, join
 from typing import Any, final
 from unittest import mock
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from urllib.parse import unquote
 
 import pytest
@@ -14,6 +14,7 @@ from custom_components.hubitat.hubitatmaker.const import (
 )
 from custom_components.hubitat.hubitatmaker.error import InvalidConfig
 from custom_components.hubitat.hubitatmaker.hub import Hub
+from custom_components.hubitat.hubitatmaker.types import Device
 
 hub_edit_page: str = ""
 devices: dict[str, Any] = {}
@@ -357,6 +358,43 @@ async def test_devices_loaded() -> None:
     hub = Hub("1.2.3.4", "1234", "token")
     await hub.start()
     assert len(hub.devices) == 9
+
+
+@pytest.mark.asyncio
+async def test_failed_device_load_keeps_previous_complete_inventory() -> None:
+    """A partial refresh must not replace the last complete device inventory."""
+    hub = Hub("1.2.3.4", "1234", "token")
+    previous_devices = {"existing": Device(device_details["6"])}
+    hub._devices = previous_devices
+
+    async def api_request(path: str) -> dict[str, Any] | list[dict[str, Any]]:
+        if path == "devices":
+            return [{"id": "6"}, {"id": "missing"}]
+        if path == "devices/6":
+            return device_details["6"]
+        raise RuntimeError("device request failed")
+
+    hub._api_request = AsyncMock(side_effect=api_request)  # type: ignore[method-assign]
+
+    with pytest.raises(RuntimeError, match="device request failed"):
+        await hub.load_devices(force_refresh=True)
+
+    assert hub._devices is previous_devices
+
+
+@patch("aiohttp.request", new=create_fake_request())
+@pytest.mark.asyncio
+async def test_forced_device_load_preserves_instances_for_events() -> None:
+    """Forced refreshes keep existing entity device references up to date."""
+    hub = Hub("1.2.3.4", "1234", "token")
+    await hub.load_devices()
+    device = hub.devices["176"]
+
+    await hub.load_devices(force_refresh=True)
+
+    assert hub.devices["176"] is device
+    hub._process_event(events["device"])
+    assert device.attributes[DeviceAttribute.SWITCH].value == "on"
 
 
 @patch("aiohttp.request", new=create_fake_request())

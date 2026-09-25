@@ -2,6 +2,7 @@
 
 import json
 import re
+from functools import partial
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, Unpack, cast, override
 
@@ -28,6 +29,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .const import H_CONF_LEGACY_LIGHT_NAME_HEURISTIC
 from .cover import is_cover
 from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
@@ -294,7 +296,11 @@ MATCH_LIGHT = re.compile(
 )
 
 
-def is_light(device: Device, overrides: dict[str, str] | None = None) -> bool:
+def is_light(
+    device: Device,
+    overrides: dict[str, str] | None = None,
+    use_legacy_label_heuristic: bool = False,
+) -> bool:
     """Return True if device looks like a light."""
     if overrides and overrides.get(device.id) is not None:
         return overrides[device.id] == "light"
@@ -302,8 +308,10 @@ def is_light(device: Device, overrides: dict[str, str] | None = None) -> bool:
     if is_definitely_light(device):
         return True
 
-    if DeviceCapability.SWITCH in device.capabilities and MATCH_LIGHT.search(
-        device.label
+    if (
+        use_legacy_label_heuristic
+        and DeviceCapability.SWITCH in device.capabilities
+        and MATCH_LIGHT.search(device.label)
     ):
         return True
 
@@ -332,8 +340,16 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Initialize light devices."""
+    legacy_label_heuristic = config_entry.data.get(
+        H_CONF_LEGACY_LIGHT_NAME_HEURISTIC, True
+    )
     _ = create_and_add_entities(
-        hass, config_entry, async_add_entities, "light", HubitatLight, is_light
+        hass,
+        config_entry,
+        async_add_entities,
+        "light",
+        HubitatLight,
+        partial(is_light, use_legacy_label_heuristic=legacy_label_heuristic),
     )
 
 

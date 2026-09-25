@@ -1,27 +1,39 @@
 from unittest.mock import Mock, patch
 
-from custom_components.hubitat.config_flow import _get_devices, _remove_devices
+from custom_components.hubitat.const import DOMAIN
+from custom_components.hubitat.hub import _remove_unshared_devices
 
 
-def test_get_and_remove_devices() -> None:
-    matching_b = Mock()
-    matching_b.configure_mock(id="b", name="Beta", config_entries={"entry"})
-    matching_a = Mock()
-    matching_a.configure_mock(id="a", name="Alpha", config_entries={"entry", "other"})
+def test_remove_unshared_devices() -> None:
+    current = Mock(id="current")
+    hub = Mock(
+        id="hub",
+        devices={"current": current},
+        config_entry=Mock(entry_id="entry"),
+    )
+    current_device = Mock(
+        id="current-device", name="Current", identifiers={(DOMAIN, "hub:current")}
+    )
+    stale_device = Mock(
+        id="stale-device", name="Stale", identifiers={(DOMAIN, "hub:stale")}
+    )
+    hub_device = Mock(id="hub-device", name="Hub", identifiers={(DOMAIN, "hub")})
+    other_hub_device = Mock(
+        id="other-device", name="Other", identifiers={(DOMAIN, "other:stale")}
+    )
     registry = Mock()
 
     with (
         patch(
-            "custom_components.hubitat.config_flow.device_registry.async_get",
+            "custom_components.hubitat.hub.device_registry.async_get",
             return_value=registry,
         ),
         patch(
-            "custom_components.hubitat.config_flow.device_registry.async_entries_for_config_entry",
-            return_value=[matching_b, matching_a],
+            "custom_components.hubitat.hub.device_registry.async_entries_for_config_entry",
+            return_value=[current_device, stale_device, hub_device, other_hub_device],
         ) as entries_for_config_entry,
     ):
-        assert _get_devices(Mock(), Mock(entry_id="entry")) == [matching_a, matching_b]
-        _remove_devices(Mock(), ["a", "b"])
+        _remove_unshared_devices(hub, Mock())
 
     entries_for_config_entry.assert_called_once_with(registry, "entry")
-    assert registry.async_remove_device.call_count == 2
+    registry.async_remove_device.assert_called_once_with("stale-device")

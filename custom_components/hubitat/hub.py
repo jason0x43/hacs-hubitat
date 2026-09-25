@@ -17,6 +17,7 @@ from homeassistant.const import (
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers import area_registry, device_registry, entity_registry
 from homeassistant.helpers.device_registry import DeviceEntry
+from homeassistant.helpers.storage import Store
 
 try:
     from homeassistant.helpers.discovery_flow import (
@@ -41,6 +42,7 @@ from .const import (
     H_CONF_SERVER_SSL_KEY,
     H_CONF_SERVER_URL,
     H_CONF_SYNC_AREAS,
+    H_CONF_SYNC_DEVICES,
     PLATFORMS,
     TEMP_F,
     TRIGGER_CAPABILITIES,
@@ -68,6 +70,8 @@ ConnectionListener = Callable[[bool], None]
 
 HUB_DEVICE_NAME = "Hub"
 HUB_NAME = "Hubitat Elevation"
+ATTRIBUTE_UNIT_STORE_VERSION = 1
+ATTRIBUTE_UNIT_SAVE_DELAY = 60
 
 # Hubitat attributes that should be emitted as HA events
 _TRIGGER_ATTRS = tuple([v.attr for v in TRIGGER_CAPABILITIES.values()])
@@ -88,7 +92,7 @@ class Hub(HasId):
     unsub_config_listener: Callable[[Any], None]
     device: Device
 
-    _temperature_unit: str
+    _temperature_unit: str | None
     _hub_entity_id: str
     _hub_device_listeners: list[Listener]
     _device_listeners: dict[str, list[Listener]]
@@ -97,6 +101,8 @@ class Hub(HasId):
     _connection_listeners: list[ConnectionListener]
     _retry_task_unsub: CALLBACK_TYPE | None
     _setup_platforms: set[Platform]
+    _attribute_unit_store: Store[dict[str, dict[str, str]]]
+    _cached_attribute_units: dict[str, dict[str, str]]
 
     def __init__(
         self,
@@ -120,11 +126,8 @@ class Hub(HasId):
         self.entities: list[UpdateableEntity] = []
         self.event_emitters: list[Removable] = []
 
-        self._temperature_unit = (
-            entry.options.get(
-                CONF_TEMPERATURE_UNIT, entry.data.get(CONF_TEMPERATURE_UNIT)
-            )
-            or TEMP_F
+        self._temperature_unit = entry.options.get(
+            CONF_TEMPERATURE_UNIT, entry.data.get(CONF_TEMPERATURE_UNIT)
         )
 
         if index == 1:
@@ -141,6 +144,12 @@ class Hub(HasId):
         self._connection_listeners = []
         self._retry_task_unsub = None
         self._setup_platforms = set()
+        self._attribute_unit_store = Store(
+            hass,
+            ATTRIBUTE_UNIT_STORE_VERSION,
+            f"{DOMAIN}.attribute_units_{entry.entry_id}",
+        )
+        self._cached_attribute_units = {}
 
     @property
     def app_id(self) -> str:
@@ -238,6 +247,8 @@ class Hub(HasId):
     @property
     def temperature_unit(self) -> UnitOfTemperature:
         """The units used for temperature values."""
+        if self._temperature_unit is None:
+            return self.hass.config.units.temperature_unit
         return (
             UnitOfTemperature.FAHRENHEIT
             if self._temperature_unit == TEMP_F
@@ -329,7 +340,7 @@ class Hub(HasId):
         if self._hub:
             await self._hub.set_hsm(mode)
 
-    def set_temperature_unit(self, temp_unit: str) -> None:
+    def set_temperature_unit(self, temp_unit: str | None) -> None:
         """Set the hub's temperature units."""
         _LOGGER.debug("Setting hub temperature unit to %s", temp_unit)
         self._temperature_unit = temp_unit
@@ -360,6 +371,98 @@ class Hub(HasId):
 
         # Cancel retry task if it's still running
         self.cancel_retry_task()
+        await self._attribute_unit_store.async_save(self._cached_attribute_units)
+
+    async def async_load_cached_attribute_units(self) -> None:
+        """Load previously reported attribute units for this config entry."""
+        stored_units = await self._attribute_unit_store.async_load()
+        if not isinstance(stored_units, dict):
+            return
+
+        self._cached_attribute_units = {
+            device_id: {
+                attribute: unit
+                for attribute, unit in attributes.items()
+                if isinstance(attribute, str) and isinstance(unit, str) and unit
+            }
+            for device_id, attributes in stored_units.items()
+            if isinstance(device_id, str) and isinstance(attributes, dict)
+        }
+
+    def apply_cached_attribute_units(self, device_id: str | None = None) -> None:
+        """Apply cached units where the Maker API did not return one."""
+        devices = self.devices
+        device_ids = (device_id,) if device_id is not None else devices
+        for cached_device_id in device_ids:
+            device = devices.get(cached_device_id)
+            if device is None:
+                continue
+            for attribute_name, unit in self._cached_attribute_units.get(
+                cached_device_id, {}
+            ).items():
+                attribute = device.attributes.get(cast(DeviceAttribute, attribute_name))
+                if attribute is not None and attribute.unit is None:
+                    value = attribute.value
+                    if value is not None:
+                        attribute.update_value(value, unit)
+
+    def prune_cached_attribute_units(self, device_id: str | None = None) -> None:
+        """Remove cache entries absent from a successful device-state load."""
+        devices = self.devices
+        if device_id is None:
+            device_ids = tuple(self._cached_attribute_units)
+        else:
+            device_ids = (device_id,)
+
+        changed = False
+        for cached_device_id in device_ids:
+            device = devices.get(cached_device_id)
+            if device is None:
+                changed = (
+                    self._cached_attribute_units.pop(cached_device_id, None) is not None
+                )
+                continue
+
+            cached_units = self._cached_attribute_units.get(cached_device_id)
+            if cached_units is None:
+                continue
+            attribute_names = {str(attribute) for attribute in device.attributes}
+            updated_units = {
+                attribute: unit
+                for attribute, unit in cached_units.items()
+                if attribute in attribute_names
+            }
+            if updated_units != cached_units:
+                changed = True
+                if updated_units:
+                    self._cached_attribute_units[cached_device_id] = updated_units
+                else:
+                    del self._cached_attribute_units[cached_device_id]
+
+        if changed:
+            self._schedule_attribute_unit_save()
+
+    def _cache_attribute_unit(self, event: Event) -> None:
+        """Persist a non-empty unit reported by a device event."""
+        if not event.unit:
+            return
+
+        device_units = self._cached_attribute_units.setdefault(event.device_id, {})
+        if device_units.get(event.attribute) == event.unit:
+            return
+
+        device_units[event.attribute] = event.unit
+        self._schedule_attribute_unit_save()
+
+    def _schedule_attribute_unit_save(self) -> None:
+        """Schedule a durable write of the cached event units."""
+        self._attribute_unit_store.async_delay_save(
+            lambda: {
+                device_id: units.copy()
+                for device_id, units in self._cached_attribute_units.items()
+            },
+            delay=ATTRIBUTE_UNIT_SAVE_DELAY,
+        )
 
     @staticmethod
     async def create(hass: HomeAssistant, entry: ConfigEntry, index: int) -> "Hub":
@@ -458,6 +561,9 @@ class Hub(HasId):
         )
 
         hub = Hub(hass, entry, index, hubitat_hub, device)
+        await hub.async_load_cached_attribute_units()
+        hub.apply_cached_attribute_units()
+        hub.prune_cached_attribute_units()
         hub.set_connected(True)
         domain_data = get_domain_data(hass)
         domain_data[entry.entry_id] = hub
@@ -600,6 +706,7 @@ class Hub(HasId):
         )
 
         hub = Hub(hass, entry, index, hubitat_hub, device)
+        await hub.async_load_cached_attribute_units()
         hub.set_connected(False)
         domain_data = get_domain_data(hass)
         domain_data[entry.entry_id] = hub
@@ -624,6 +731,8 @@ class Hub(HasId):
         try:
             # Start the hub (this will raise ConnectionError if it fails)
             await self._hub.start(force_refresh=force_refresh)
+            self.apply_cached_attribute_units()
+            self.prune_cached_attribute_units()
 
             # Update the device with hub info
             self.device = Device(
@@ -714,6 +823,20 @@ class Hub(HasId):
                     )
 
             self.set_connected(True)
+            should_sync_devices = cast(
+                bool,
+                self.config_entry.options.get(
+                    H_CONF_SYNC_DEVICES,
+                    self.config_entry.data.get(H_CONF_SYNC_DEVICES, False),
+                ),
+            )
+            if should_sync_devices:
+                try:
+                    _remove_unshared_devices(self, self.hass)
+                except Exception:
+                    _LOGGER.exception(
+                        "Unable to remove devices no longer shared by Maker API"
+                    )
             _LOGGER.debug("Hub connection complete")
 
         except Exception:
@@ -806,14 +929,11 @@ class Hub(HasId):
             ssl_key,
         )
 
-        temp_unit = (
-            config_entry.options.get(
-                CONF_TEMPERATURE_UNIT,
-                config_entry.data.get(CONF_TEMPERATURE_UNIT),
-            )
-            or TEMP_F
+        temp_unit = config_entry.options.get(
+            CONF_TEMPERATURE_UNIT,
+            config_entry.data.get(CONF_TEMPERATURE_UNIT),
         )
-        if temp_unit != hub.temperature_unit:
+        if temp_unit != hub._temperature_unit:
             hub.set_temperature_unit(temp_unit)
             for entity in hub.entities:
                 entity.load_state()
@@ -826,6 +946,8 @@ class Hub(HasId):
     async def refresh_device(self, device_id: str) -> None:
         """Load current data for a specific device."""
         await self._hub.refresh_device(device_id)
+        self.apply_cached_attribute_units(device_id)
+        self.prune_cached_attribute_units(device_id)
 
     async def send_command(
         self, device_id: str, command: str, arg: str | int | None
@@ -858,6 +980,9 @@ class Hub(HasId):
 
     def handle_event(self, event: Event) -> None:
         """Handle events received from the Hubitat hub."""
+        self._cache_attribute_unit(event)
+        if event.unit is None:
+            self.apply_cached_attribute_units(event.device_id)
         if self._device_listeners[event.device_id]:
             for listener in self._device_listeners[event.device_id]:
                 try:
@@ -1054,7 +1179,13 @@ def _update_device_rooms(hub: Hub, hass: HomeAssistant) -> None:
         # Home Assistant, update the device area ID
         device = hub.devices[device_id]
         identifiers = get_device_identifiers(hub.id, device.id)
-        hass_device = dreg.async_get_device(identifiers)
+        if hasattr(dreg, "async_get_device_by_identifier"):
+            hass_device = dreg.async_get_device_by_identifier(
+                next(iter(identifiers)), hub.config_entry.entry_id
+            )
+        else:
+            # Home Assistant versions before the identifier-scoped lookup was added.
+            hass_device = dreg.async_get_device(identifiers)
 
         if not hass_device:
             _LOGGER.debug(
@@ -1070,6 +1201,32 @@ def _update_device_rooms(hub: Hub, hass: HomeAssistant) -> None:
         elif hass_device.area_id:
             dreg.async_clear_area_id(hass_device.id)
             _LOGGER.debug("Cleared location of %s", device.name)
+
+
+def _remove_unshared_devices(hub: Hub, hass: HomeAssistant) -> None:
+    """Remove registered devices no longer returned by a complete Maker API load."""
+    dreg = device_registry.async_get(hass)
+    current_identifiers = {
+        identifier
+        for device in hub.devices.values()
+        for identifier in get_device_identifiers(hub.id, device.id)
+    }
+    hub_prefix = f"{hub.id}:"
+
+    for device in device_registry.async_entries_for_config_entry(
+        dreg, hub.config_entry.entry_id
+    ):
+        identifiers = set(device.identifiers)
+        is_hubitat_child = any(
+            domain == DOMAIN and identifier.startswith(hub_prefix)
+            for domain, identifier in identifiers
+        )
+        if is_hubitat_child and not identifiers & current_identifiers:
+            dreg.async_remove_device(device.id)
+            _LOGGER.info(
+                "Removed device %s because it is no longer shared by Maker API",
+                device.name,
+            )
 
 
 def _get_all_devices(dreg: device_registry.DeviceRegistry) -> list[DeviceEntry]:
