@@ -4,18 +4,9 @@ default_install_hook_types:
 repos:
 - repo: local
   hooks:
-  - id: check-homeassistant-current
-    name: check Home Assistant is current
-    entry: uv run scripts/check_homeassistant_current.py
-    language: system
-    stages: ["pre-commit"]
-    require_serial: true
-    always_run: true
-    pass_filenames: false
-
   - id: check-quality
-    name: check code quality
-    entry: uv run poe check
+    name: check code quality with current Home Assistant
+    entry: uv run poe check-current
     language: system
     types: [python]
     stages: ["pre-commit"]
@@ -23,8 +14,8 @@ repos:
     always_run: true
 
   - id: test
-    name: run unit tests
-    entry: uv run poe test
+    name: run unit tests with current Home Assistant
+    entry: uv run poe test-current
     language: system
     types: [python]
     stages: ["pre-push"]

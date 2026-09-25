@@ -1,3 +1,3 @@
 #!/bin/bash
 
-uv run pytest tests
+uv run poe test-current

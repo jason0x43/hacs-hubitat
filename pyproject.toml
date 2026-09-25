@@ -26,8 +26,10 @@ _formatting.shell = "ruff format --check"
 _formatting.env = { CLICOLOR_FORCE = '1' }
 check.parallel = ["_typecheck", "_lint", "_formatting"]
 check.ignore_fail = 'return_non_zero'
+check-current = "python -m scripts.run_with_current_homeassistant poe -e simple check"
 format = "ruff format"
 test = "pytest tests"
+test-current = "python -m scripts.run_with_current_homeassistant pytest tests"
 smoke = "python scripts/smoke_test.py"
 update-homeassistant = "python scripts/update_homeassistant.py"
 pub = "python scripts/publish.py"
