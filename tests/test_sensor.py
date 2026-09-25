@@ -1,3 +1,4 @@
+from typing import Literal
 from unittest.mock import Mock, patch
 
 import pytest
@@ -10,6 +11,7 @@ from custom_components.hubitat.hubitatmaker.types import Attribute
 from custom_components.hubitat.sensor import (
     _SENSOR_ATTRS,
     HubitatBatterySensor,
+    HubitatCpuSensor,
     HubitatCurrentSensor,
     HubitatDewPointSensor,
     HubitatEnergySensor,
@@ -721,6 +723,171 @@ def test_all_known_sensor_types_can_be_initialized(
     assert sensor.device_attrs == (attribute,)
 
 
+def test_generic_sensor_numeric_attribute_gets_measurement_and_unit() -> None:
+    """A generic NUMBER attribute is graphed and tracked like other sensors.
+
+    See https://github.com/jason0x43/hacs-hubitat/issues/188 -- a custom
+    attribute like a weather driver's "cloudiness" (declared as a NUMBER
+    with a unit) has no matching sensor subclass, so it fell back to a plain
+    HubitatSensor with no unit and no state class, and Home Assistant
+    displayed it as text instead of a graphable number. DeviceAttribute.LEVEL
+    is used here only as a stand-in for such an unmapped numeric attribute.
+    """
+    device = Mock(
+        id="test-id",
+        name="Test Sensor",
+        label="Test Sensor",
+        attributes={
+            DeviceAttribute.LEVEL: Attribute(
+                {
+                    "name": DeviceAttribute.LEVEL,
+                    "currentValue": "42",
+                    "dataType": "NUMBER",
+                    "unit": "%",
+                }
+            )
+        },
+    )
+
+    sensor = HubitatSensor(
+        hub=Mock(token="token"),
+        device=device,
+        attribute=DeviceAttribute.LEVEL,
+        device_class=None,
+    )
+
+    assert sensor.device_class is None
+    assert sensor.native_unit_of_measurement == PERCENTAGE
+    assert sensor.state_class == SensorStateClass.MEASUREMENT
+
+
+@pytest.mark.parametrize("value", ["n/a", "", "nan"])
+def test_generic_sensor_numeric_attribute_non_numeric_value_is_unknown(
+    value: str,
+) -> None:
+    """A generic NUMBER attribute with a non-numeric value reports unknown.
+
+    A state class makes Home Assistant reject a non-numeric state, so a
+    value like "n/a" must be reported as None rather than passed through as
+    a literal string.
+    """
+    device = Mock(
+        id="test-id",
+        name="Test Sensor",
+        label="Test Sensor",
+        attributes={
+            DeviceAttribute.LEVEL: Attribute(
+                {
+                    "name": DeviceAttribute.LEVEL,
+                    "currentValue": value,
+                    "dataType": "NUMBER",
+                    "unit": "%",
+                }
+            )
+        },
+    )
+
+    sensor = HubitatSensor(
+        hub=Mock(token="token"),
+        device=device,
+        attribute=DeviceAttribute.LEVEL,
+        device_class=None,
+    )
+
+    assert sensor.native_value is None
+    assert sensor.state_class == SensorStateClass.MEASUREMENT
+
+
+def test_generic_sensor_numeric_attribute_empty_unit_is_none() -> None:
+    """An empty-string Hubitat unit is treated as no unit, not a literal ""."""
+    device = Mock(
+        id="test-id",
+        name="Test Sensor",
+        label="Test Sensor",
+        attributes={
+            DeviceAttribute.LEVEL: Attribute(
+                {
+                    "name": DeviceAttribute.LEVEL,
+                    "currentValue": "42",
+                    "dataType": "NUMBER",
+                    "unit": "",
+                }
+            )
+        },
+    )
+
+    sensor = HubitatSensor(
+        hub=Mock(token="token"),
+        device=device,
+        attribute=DeviceAttribute.LEVEL,
+        device_class=None,
+    )
+
+    assert sensor.native_unit_of_measurement is None
+
+
+@pytest.mark.parametrize("data_type", ["STRING", "ENUM"])
+def test_generic_sensor_categorical_attribute_has_no_unit_or_state_class(
+    data_type: Literal["STRING", "ENUM"],
+) -> None:
+    """A generic STRING/ENUM attribute is left as a plain categorical value."""
+    device = Mock(
+        id="test-id",
+        name="Test Sensor",
+        label="Test Sensor",
+        attributes={
+            DeviceAttribute.MODE: Attribute(
+                {
+                    "name": DeviceAttribute.MODE,
+                    "currentValue": "Day",
+                    "dataType": data_type,
+                    "unit": None,
+                }
+            )
+        },
+    )
+
+    sensor = HubitatSensor(
+        hub=Mock(token="token"),
+        device=device,
+        attribute=DeviceAttribute.MODE,
+        device_class=None,
+    )
+
+    assert sensor.native_unit_of_measurement is None
+    assert sensor.state_class is None
+
+
+def test_known_sensor_subclass_unaffected_by_generic_number_handling() -> None:
+    """A known sensor subclass keeps its own unit and state class as-is.
+
+    HubitatCpuSensor already has device_class=None and an explicit unit and
+    state class; since it isn't the plain HubitatSensor class, the generic
+    NUMBER handling must not kick in and override what it already reports.
+    """
+    device = Mock(
+        id="test-id",
+        name="Test Sensor",
+        label="Test Sensor",
+        attributes={
+            DeviceAttribute.CPU: Attribute(
+                {
+                    "name": DeviceAttribute.CPU,
+                    "currentValue": "10",
+                    "dataType": "NUMBER",
+                    "unit": "unrelated-hubitat-unit",
+                }
+            )
+        },
+    )
+
+    sensor = HubitatCpuSensor(hub=Mock(token="token"), device=device)
+
+    assert sensor.device_class is None
+    assert sensor.native_unit_of_measurement == PERCENTAGE
+    assert sensor.state_class == SensorStateClass.MEASUREMENT
+
+
 def test_is_update_sensor() -> None:
     assert is_update_sensor(Mock())
 
@@ -812,6 +979,16 @@ async def test_sensor_setup_adds_unknown_attributes() -> None:
                     "unit": None,
                 }
             ),
+            # An unmapped NUMBER attribute; the fallback generic sensor it
+            # gets should still be reported as a measurement (#188).
+            DeviceAttribute.LEVEL: Attribute(
+                {
+                    "name": DeviceAttribute.LEVEL,
+                    "currentValue": "50",
+                    "dataType": "NUMBER",
+                    "unit": "%",
+                }
+            ),
         },
     )
     hub = Mock(
@@ -867,7 +1044,13 @@ async def test_sensor_setup_adds_unknown_attributes() -> None:
     }
 
     unknown_entities = add_entities.call_args.args[0]
-    assert len(unknown_entities) == 1
-    assert unknown_entities[0].device_attrs == (DeviceAttribute.MODE,)
-    assert unknown_entities[0].entity_registry_enabled_default is False
+    assert len(unknown_entities) == 2
+    by_attr = {entity.device_attrs: entity for entity in unknown_entities}
+    assert set(by_attr) == {(DeviceAttribute.MODE,), (DeviceAttribute.LEVEL,)}
+    for entity in unknown_entities:
+        assert entity.entity_registry_enabled_default is False
+    # The real creation path (not a directly-constructed HubitatSensor) must
+    # still apply the generic-NUMBER handling.
+    assert by_attr[(DeviceAttribute.LEVEL,)].state_class == SensorStateClass.MEASUREMENT
+    assert by_attr[(DeviceAttribute.MODE,)].state_class is None
     hub.add_entities.assert_called_once_with(unknown_entities)
