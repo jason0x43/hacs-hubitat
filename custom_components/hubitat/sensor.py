@@ -533,7 +533,7 @@ class HubitatWindDirectionSensor(HubitatSensor):
             attribute=DeviceAttribute.WIND_DIRECTION,
             unit=DEGREE,
             device_class=SensorDeviceClass.WIND_DIRECTION,
-            state_class=SensorStateClass.MEASUREMENT,
+            state_class=SensorStateClass.MEASUREMENT_ANGLE,
             **kwargs,
         )
 

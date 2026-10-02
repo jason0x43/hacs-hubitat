@@ -417,7 +417,7 @@ def test_wind_direction_sensor_uses_direction_device_class() -> None:
 
     assert sensor.device_class == SensorDeviceClass.WIND_DIRECTION
     assert sensor.native_unit_of_measurement == DEGREE
-    assert sensor.state_class == SensorStateClass.MEASUREMENT
+    assert sensor.state_class == SensorStateClass.MEASUREMENT_ANGLE
 
 
 def test_sensor_ignores_unsupported_hubitat_unit() -> None:
