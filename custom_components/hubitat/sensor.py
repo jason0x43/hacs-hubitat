@@ -532,8 +532,8 @@ class HubitatWindDirectionSensor(HubitatSensor):
         super().__init__(
             attribute=DeviceAttribute.WIND_DIRECTION,
             unit=DEGREE,
-            device_class=SensorDeviceClass.WIND_SPEED,
-            state_class=SensorStateClass.MEASUREMENT,
+            device_class=SensorDeviceClass.WIND_DIRECTION,
+            state_class=SensorStateClass.MEASUREMENT_ANGLE,
             **kwargs,
         )
 
