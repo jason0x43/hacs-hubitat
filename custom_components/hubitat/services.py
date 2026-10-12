@@ -2,8 +2,6 @@ import json
 from logging import getLogger
 from typing import Any, cast
 
-import voluptuous as vol
-
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_COMMAND, ATTR_ENTITY_ID
@@ -17,6 +15,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.util.json import JsonValueType
 
 from .alarm_control_panel import HubitatSecurityKeypad
+from .compat import vol
 from .const import (
     ATTR_ARGUMENTS,
     ATTR_CODE,
