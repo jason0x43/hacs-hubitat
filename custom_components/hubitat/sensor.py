@@ -4,6 +4,7 @@ import re
 from datetime import date, datetime
 from decimal import Decimal
 from logging import getLogger
+from math import isfinite
 from typing import TYPE_CHECKING, Unpack, override
 
 from custom_components.hubitat.hubitatmaker.const import DeviceCapability
@@ -69,6 +70,21 @@ HUBITAT_UNIT_ALIASES: dict[SensorDeviceClass, dict[str, str]] = {
 }
 
 
+def _is_finite_number(value: float | int | str | datetime | None) -> bool:
+    """Return whether value is an int, float, or str with a finite value.
+
+    Hubitat can report values like "n/a", "", or "nan" for attributes with
+    no known sensor type. Those aren't valid states for a sensor that has a
+    state class, so callers should treat a non-finite value as unknown.
+    """
+    if isinstance(value, datetime) or value is None:
+        return False
+    try:
+        return isfinite(float(value))
+    except ValueError:
+        return False
+
+
 class HubitatSensor(SensorEntity, HubitatEntity):
     """A generic Hubitat sensor."""
 
@@ -120,6 +136,12 @@ class HubitatSensor(SensorEntity, HubitatEntity):
             self._get_native_value()
         )
         self._attr_native_unit_of_measurement = self._get_native_unit_of_measurement()
+        if self._is_generic_number():
+            # A NUMBER attribute with no known sensor type (e.g. a weather
+            # driver's "cloudiness"): treat it as a measurement so Home
+            # Assistant graphs it and keeps statistics instead of treating
+            # it as a categorical value.
+            self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
     @override
@@ -129,7 +151,26 @@ class HubitatSensor(SensorEntity, HubitatEntity):
 
     def _get_native_value(self) -> StateType | date | datetime | Decimal:
         """Return this sensor's current value."""
-        return self.get_attr(self._attribute)
+        value = self.get_attr(self._attribute)
+        if self._is_generic_number() and not _is_finite_number(value):
+            # A state class makes HA reject non-numeric states; report unknown.
+            return None
+        return value
+
+    def _is_generic_number(self) -> bool:
+        """Return whether this is a generic sensor for a numeric attribute.
+
+        A generic HubitatSensor (i.e. not one of the specific subclasses
+        below) has no Home Assistant device class, so its unit and state
+        class are normally left unset. But Hubitat still reports a data type
+        for every attribute, and a "NUMBER" attribute should be graphed and
+        tracked like any other numeric sensor rather than treated as text.
+        """
+        return (
+            type(self) is HubitatSensor
+            and self.device_class is None
+            and self.get_attr_type(self._attribute) == "NUMBER"
+        )
 
     def _get_native_unit_of_measurement(self) -> str | None:
         """Return the Hubitat unit when Home Assistant supports it for this sensor."""
@@ -142,6 +183,13 @@ class HubitatSensor(SensorEntity, HubitatEntity):
             for unit in DEVICE_CLASS_UNITS.get(device_class, set()):
                 if unit is not None and attr_unit.casefold() == str(unit).casefold():
                     return str(unit)
+
+        if attr_unit and self._is_generic_number():
+            # No device class means Home Assistant has no unit table to
+            # validate against, but the Hubitat unit is still meaningful, so
+            # use it as reported instead of discarding it. An empty string
+            # isn't a real unit, so leave that as unset.
+            return attr_unit
 
         return self._attr_native_unit_of_measurement
 
