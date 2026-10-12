@@ -47,6 +47,7 @@ _device_attrs = (
     DeviceAttribute.COLOR_MODE,
     DeviceAttribute.COLOR_NAME,
     DeviceAttribute.COLOR_TEMP,
+    DeviceAttribute.COLOR_TEMP_RANGE,
     DeviceAttribute.HUE,
     DeviceAttribute.LEVEL,
     DeviceAttribute.SATURATION,
@@ -70,8 +71,6 @@ class HubitatLight(LightEntity, HubitatEntity):
         self._attr_unique_id = f"{super().unique_id}::light"
         self._attr_supported_color_modes = self._get_supported_color_modes()
         self._attr_supported_features = self._get_supported_features()
-        self._attr_min_color_temp_kelvin = DEFAULT_MIN_KELVIN
-        self._attr_max_color_temp_kelvin = DEFAULT_MAX_KELVIN
         self.load_state()
 
     @override
@@ -81,6 +80,10 @@ class HubitatLight(LightEntity, HubitatEntity):
         self._attr_color_temp_kelvin: int | None = self._get_color_temp_kelvin()
         self._attr_hs_color: tuple[float, float] | None = self._get_hs_color()
         self._attr_is_on: bool | None = self._get_is_on()
+        (
+            self._attr_min_color_temp_kelvin,
+            self._attr_max_color_temp_kelvin,
+        ) = self._get_color_temp_range()
 
     def _get_color_mode(self) -> ColorMode | None:
         """Return this light's color mode.
@@ -126,6 +129,30 @@ class HubitatLight(LightEntity, HubitatEntity):
             return None
 
         return temp
+
+    def _get_color_temp_range(self) -> tuple[int, int]:
+        """Return the supported (min, max) color temperature in Kelvin.
+
+        Drivers may report a device's range with a colorTemperatureRange
+        attribute holding a JSON list of two Kelvin values, e.g. "[2202, 6535]".
+        If the attribute is missing or invalid, the default range is used.
+        """
+        try:
+            value = self.get_list_attr(DeviceAttribute.COLOR_TEMP_RANGE)
+            if value is None:
+                return DEFAULT_MIN_KELVIN, DEFAULT_MAX_KELVIN
+            low, high = sorted(round(float(v)) for v in value)
+        except (TypeError, ValueError) as e:
+            _LOGGER.debug(
+                "Ignoring invalid color temperature range for %s: %s", self.name, e
+            )
+            return DEFAULT_MIN_KELVIN, DEFAULT_MAX_KELVIN
+        if low <= 0 or low == high:
+            _LOGGER.debug(
+                "Ignoring invalid color temperature range for %s: %s", self.name, value
+            )
+            return DEFAULT_MIN_KELVIN, DEFAULT_MAX_KELVIN
+        return low, high
 
     def _get_hs_color(self) -> tuple[float, float] | None:
         """Return the hue and saturation color value [float, float]."""

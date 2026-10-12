@@ -90,6 +90,7 @@ class DeviceAttribute(StrEnum):
     COLOR_MODE = "colorMode"
     COLOR_NAME = "colorName"
     COLOR_TEMP = "colorTemperature"
+    COLOR_TEMP_RANGE = "colorTemperatureRange"
     CONSUMABLE_STATUS = "consumableStatus"
     CONTACT = "contact"
     COOLING_SETPOINT = "coolingSetpoint"
