@@ -6,8 +6,6 @@ from functools import partial
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, Unpack, override
 
-import voluptuous as vol
-
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
@@ -16,6 +14,7 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .compat import vol
 from .const import DOMAIN, H_CONF_LEGACY_LIGHT_NAME_HEURISTIC, ICON_ALARM, ServiceName
 from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities, create_and_add_event_emitters
