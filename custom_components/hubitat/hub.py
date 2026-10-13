@@ -15,7 +15,7 @@ from homeassistant.const import (
     CONF_TEMPERATURE_UNIT,
     UnitOfTemperature,
 )
-from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import area_registry, device_registry, entity_registry
 from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers.storage import Store
@@ -100,7 +100,6 @@ class Hub(HasId):
     _hub: HubitatHub
     _is_connected: bool
     _connection_listeners: list[ConnectionListener]
-    _retry_task_unsub: CALLBACK_TYPE | None
     _setup_platforms: set[Platform]
     _attribute_unit_store: Store[dict[str, dict[str, str]]]
     _cached_attribute_units: dict[str, dict[str, str]]
@@ -143,7 +142,6 @@ class Hub(HasId):
         self.device = device
         self._is_connected = False
         self._connection_listeners = []
-        self._retry_task_unsub = None
         self._setup_platforms = set()
         self._attribute_unit_store = Store(
             hass,
@@ -151,6 +149,15 @@ class Hub(HasId):
             f"{DOMAIN}.attribute_units_{entry.entry_id}",
         )
         self._cached_attribute_units = {}
+
+        self._connect_task: asyncio.Task[None] | None = None
+
+    def set_connect_task(self, task: asyncio.Task[None]) -> None:
+        """Store the background connect task so unload can cancel it."""
+        self._connect_task = task
+
+    def get_connect_task(self) -> asyncio.Task[None] | None:
+        return self._connect_task
 
     @property
     def app_id(self) -> str:
@@ -354,24 +361,12 @@ class Hub(HasId):
         self._device_listeners = {}
         self._hub_device_listeners = []
 
-    def set_retry_task_unsub(self, unsub: CALLBACK_TYPE) -> None:
-        """Set the retry task cancellation callback."""
-        self._retry_task_unsub = unsub
-
-    def cancel_retry_task(self) -> None:
-        """Cancel the retry task if it's running."""
-        if self._retry_task_unsub is not None:
-            self._retry_task_unsub()
-            self._retry_task_unsub = None
-
     async def unload(self) -> None:
         """Unload the hub."""
         for emitter in self.event_emitters:
             await emitter.async_will_remove_from_hass()
         self.unsub_config_listener()
 
-        # Cancel retry task if it's still running
-        self.cancel_retry_task()
         await self._attribute_unit_store.async_save(self._cached_attribute_units)
 
     async def async_load_cached_attribute_units(self) -> None:
