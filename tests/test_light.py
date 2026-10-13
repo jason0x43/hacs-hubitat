@@ -8,7 +8,11 @@ from custom_components.hubitat.hubitatmaker.const import (
     DeviceCommand,
 )
 from custom_components.hubitat.hubitatmaker.types import Attribute
-from custom_components.hubitat.light import HubitatLight
+from custom_components.hubitat.light import (
+    DEFAULT_MAX_KELVIN,
+    DEFAULT_MIN_KELVIN,
+    HubitatLight,
+)
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
@@ -494,6 +498,99 @@ def test_light_device_attrs():
     assert DeviceAttribute.SWITCH in attrs
     assert DeviceAttribute.LEVEL in attrs
     assert DeviceAttribute.COLOR_MODE in attrs
+    assert DeviceAttribute.COLOR_TEMP_RANGE in attrs
+
+
+def _ct_light(color_temp_range: str | None) -> HubitatLight:
+    """Create a CT light, optionally reporting a colorTemperatureRange."""
+    attributes = {
+        DeviceAttribute.SWITCH: Attribute(
+            {
+                "name": DeviceAttribute.SWITCH,
+                "currentValue": "on",
+                "dataType": "STRING",
+                "unit": None,
+            }
+        ),
+    }
+    if color_temp_range is not None:
+        attributes[DeviceAttribute.COLOR_TEMP_RANGE] = Attribute(
+            {
+                "name": DeviceAttribute.COLOR_TEMP_RANGE,
+                "currentValue": color_temp_range,
+                "dataType": "STRING",
+                "unit": None,
+            }
+        )
+    device = Mock(
+        id="test-id",
+        name="Test Light",
+        label="Test Light",
+        capabilities={DeviceCapability.SWITCH, DeviceCapability.COLOR_TEMP},
+        commands=["on", "off", "setColorTemperature"],
+        attributes=attributes,
+    )
+    return HubitatLight(hub=Mock(token="test-token"), device=device)
+
+
+def test_light_color_temp_range_default():
+    """Lights without a reported range use the default range."""
+    light = _ct_light(None)
+    assert light.min_color_temp_kelvin == DEFAULT_MIN_KELVIN
+    assert light.max_color_temp_kelvin == DEFAULT_MAX_KELVIN
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("[2202, 6535]", (2202, 6535)),
+        ("[20000, 1000]", (1000, 20000)),
+        ("[1, 50000]", (1, 50000)),
+        ("[2202.4, 6534.6]", (2202, 6535)),
+        # round() rounds halves to the nearest even number
+        ("[2202.5, 6535.5]", (2202, 6536)),
+        ("[1500, 50000.5]", (1500, 50000)),
+    ],
+)
+def test_light_color_temp_range_reported(value: str, expected: tuple[int, int]):
+    """A device-reported range overrides the default, in either order."""
+    light = _ct_light(value)
+    assert (light.min_color_temp_kelvin, light.max_color_temp_kelvin) == expected
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "not json",
+        "5000",
+        "[2000]",
+        "[1000, 2000, 3000]",
+        '["a", "b"]',
+        "[0, 6500]",
+        "[3000, 3000]",
+        "[-1, 5000]",
+        "[2000, 1e400]",
+        "[2300, 50001]",
+        # a decimal comma separates list items, giving three values
+        "[2202,5, 6535]",
+    ],
+)
+def test_light_color_temp_range_invalid(value: str):
+    """An invalid reported range falls back to the default range."""
+    light = _ct_light(value)
+    assert light.min_color_temp_kelvin == DEFAULT_MIN_KELVIN
+    assert light.max_color_temp_kelvin == DEFAULT_MAX_KELVIN
+
+
+def test_light_color_temp_range_updates():
+    """A range change reported after startup is picked up on the next event."""
+    light = _ct_light("[2202, 6535]")
+    light._device.attributes[DeviceAttribute.COLOR_TEMP_RANGE].update_value(
+        "[1000, 20000]"
+    )
+    light.load_state()
+    assert light.min_color_temp_kelvin == 1000
+    assert light.max_color_temp_kelvin == 20000
 
 
 @pytest.mark.asyncio
