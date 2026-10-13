@@ -93,6 +93,20 @@ If, for some reason, the event server needs to bind to a different port internal
 
 The integration assigns Home Assistant device classes based on the capabilities reported by Hubitat. Sometimes the device type is ambiguous; a switchable outlet and a light switch may both only implement Hubitat’s [Switch](https://docs.hubitat.com/index.php?title=Driver_Capability_List#Switch) capability, and will therefore look like the same type of device to the integration. In some of these cases, the integration guesses the device class based on the device’s label (e.g., a switch named “Office Lamp” would be setup as a light in Home Assistant). This heuristic behavior is currently only used for lights and switches.
 
+### Color temperature range
+
+Hubitat has no standard attribute for the range of color temperatures a light supports, so lights use Home Assistant’s default range (2000-6535 K). A driver can report a light’s actual range with a custom `colorTemperatureRange` attribute. Its value must be a JSON list of 2 numbers — the minimum and maximum color temperature in Kelvin, in either order (e.g. `[2202, 6535]`). Values are rounded and sorted, acceptable range limits are 1-50000. If the attribute is missing or invalid (out of range, two equal values or not 2 values), the default range is used.
+
+In a Groovy driver, declare the attribute and send the range as an event:
+
+```groovy
+attribute 'colorTemperatureRange', 'string'
+
+sendEvent(name: 'colorTemperatureRange', value: "[${minKelvin}, ${maxKelvin}]")
+```
+
+Changes to the range are picked up on the next event from the device. If a driver starts reporting the attribute after the integration has loaded, reload the integration (see below).
+
 ### Adding new devices
 
 After adding new devices to the Maker API instance in Hubitat, you will need to **reload the integration before the devices will be controllable from Home Assistant**. You can reload the device list by opening **Settings** › **Devices & Services** › **Hubitat**, then tapping **⋮** › **Reload** for the hub instance you’ve updated. Once the integration has loaded the new device list, devices added to the Maker API instance should show up in Home Assistant.

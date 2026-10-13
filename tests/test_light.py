@@ -542,7 +542,15 @@ def test_light_color_temp_range_default():
 
 @pytest.mark.parametrize(
     ("value", "expected"),
-    [("[2202, 6535]", (2202, 6535)), ("[20000, 1000]", (1000, 20000))],
+    [
+        ("[2202, 6535]", (2202, 6535)),
+        ("[20000, 1000]", (1000, 20000)),
+        ("[1, 50000]", (1, 50000)),
+        ("[2202.4, 6534.6]", (2202, 6535)),
+        # round() rounds halves to the nearest even number
+        ("[2202.5, 6535.5]", (2202, 6536)),
+        ("[1500, 50000.5]", (1500, 50000)),
+    ],
 )
 def test_light_color_temp_range_reported(value: str, expected: tuple[int, int]):
     """A device-reported range overrides the default, in either order."""
@@ -560,6 +568,11 @@ def test_light_color_temp_range_reported(value: str, expected: tuple[int, int]):
         '["a", "b"]',
         "[0, 6500]",
         "[3000, 3000]",
+        "[-1, 5000]",
+        "[2000, 1e400]",
+        "[2300, 50001]",
+        # a decimal comma separates list items, giving three values
+        "[2202,5, 6535]",
     ],
 )
 def test_light_color_temp_range_invalid(value: str):

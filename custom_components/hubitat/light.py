@@ -54,6 +54,9 @@ _device_attrs = (
     DeviceAttribute.SWITCH,
 )
 
+# Upper limit for a device-reported color temperature range
+_MAX_COLOR_TEMP_KELVIN = 50000
+
 
 class HubitatLight(LightEntity, HubitatEntity):
     """Representation of a Hubitat light."""
@@ -134,20 +137,22 @@ class HubitatLight(LightEntity, HubitatEntity):
         """Return the supported (min, max) color temperature in Kelvin.
 
         Drivers may report a device's range with a colorTemperatureRange
-        attribute holding a JSON list of two Kelvin values, e.g. "[2202, 6535]".
-        If the attribute is missing or invalid, the default range is used.
+        attribute holding a JSON list of two Kelvin values in either order,
+        e.g. "[2202, 6535]". Values are rounded and must be between 1 and
+        _MAX_COLOR_TEMP_KELVIN. If the attribute is missing or invalid, the
+        default range is used.
         """
         try:
             value = self.get_list_attr(DeviceAttribute.COLOR_TEMP_RANGE)
             if value is None:
                 return DEFAULT_MIN_KELVIN, DEFAULT_MAX_KELVIN
             low, high = sorted(round(float(v)) for v in value)
-        except (TypeError, ValueError) as e:
+        except (OverflowError, TypeError, ValueError) as e:
             _LOGGER.debug(
                 "Ignoring invalid color temperature range for %s: %s", self.name, e
             )
             return DEFAULT_MIN_KELVIN, DEFAULT_MAX_KELVIN
-        if low <= 0 or low == high:
+        if low <= 0 or high > _MAX_COLOR_TEMP_KELVIN or low == high:
             _LOGGER.debug(
                 "Ignoring invalid color temperature range for %s: %s", self.name, value
             )
