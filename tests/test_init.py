@@ -1,8 +1,12 @@
+import asyncio
+from datetime import timedelta
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 from custom_components.hubitat import (
+    _async_connect_loop,
+    _cancel_connect_task,
     async_setup,
     async_setup_entry,
     async_unload_entry,
@@ -16,18 +20,26 @@ async def test_legacy_setup() -> None:
 
 
 @pytest.mark.asyncio
-async def test_setup_entry_connected() -> None:
+async def test_setup_entry_schedules_background_task() -> None:
     hub = Mock(
         id="hub",
-        is_connected=True,
-        async_connect=AsyncMock(),
-        async_update_device_registry=Mock(),
         mark_platforms_setup=Mock(),
-        stop=Mock(),
+        set_connect_task=Mock(),
     )
     hass = Mock()
     hass.config_entries.async_forward_entry_setups = AsyncMock()
-    entry = Mock(entry_id="entry", title="Hubitat (aa:bb:cc:dd:ee:ff)")
+
+    mock_task = Mock(spec=asyncio.Task)
+
+    def mock_create_bg_task(_hass, target_coro, **kwargs):
+        target_coro.close()  # Prevent RuntimeWarning: coroutine was never awaited
+        return mock_task
+
+    entry = Mock(
+        entry_id="entry_123",
+        title="Hubitat (aa:bb:cc:dd:ee:ff)",
+        async_create_background_task=Mock(side_effect=mock_create_bg_task),
+    )
 
     with (
         patch("custom_components.hubitat.get_domain_data", return_value={}),
@@ -39,53 +51,96 @@ async def test_setup_entry_connected() -> None:
     ):
         assert await async_setup_entry(hass, entry) is True
 
-    hub.async_connect.assert_awaited_once()
-    hub.async_update_device_registry.assert_not_called()
     hub.mark_platforms_setup.assert_called_once()
     register.assert_called_once_with(hass, entry)
-    hass.bus.fire.assert_called_once_with(H_CONF_HUBITAT_EVENT, {"name": "ready"})
-    hass.config_entries.async_update_entry.assert_called_once_with(
-        entry, title="Hubitat (hub)"
-    )
+
+    entry.async_create_background_task.assert_called_once()
+    _, kwargs = entry.async_create_background_task.call_args
+    assert kwargs.get("name") == "hubitat_connect_entry_123"
+    assert kwargs.get("eager_start") is False
+
+    hub.set_connect_task.assert_called_once_with(mock_task)
 
 
 @pytest.mark.asyncio
-async def test_setup_entry_offline_schedules_retry() -> None:
-    hub = Mock(
-        id="hub",
-        is_connected=False,
-        async_connect=AsyncMock(side_effect=ConnectionError),
-        mark_platforms_setup=Mock(),
-        set_retry_task_unsub=Mock(),
-        stop=Mock(),
-    )
+async def test_connect_loop_retries_until_connected() -> None:
     hass = Mock()
-    hass.config_entries.async_forward_entry_setups = AsyncMock()
-    hass.async_create_task.side_effect = lambda coroutine: coroutine.close()
-    entry = Mock(entry_id="entry", title="Hubitat")
-    unsub = Mock()
-
-    with (
-        patch("custom_components.hubitat.get_domain_data", return_value={}),
-        patch(
-            "custom_components.hubitat.Hub.create_offline",
-            AsyncMock(return_value=hub),
+    config_entry = Mock(title="Hubitat (abc12345)")
+    hub = Mock(
+        id="abc12345",
+        async_connect=AsyncMock(
+            side_effect=[ConnectionError("down"), asyncio.TimeoutError(), None]
         ),
-        patch(
-            "custom_components.hubitat.async_track_time_interval",
-            return_value=unsub,
-        ),
-        patch("custom_components.hubitat.async_register_services"),
-    ):
-        assert await async_setup_entry(hass, entry) is True
+        set_connected=Mock(),
+    )
 
-    hass.async_create_task.assert_called_once()
-    hub.set_retry_task_unsub.assert_called_once_with(unsub)
+    with patch("custom_components.hubitat.RETRY_CONNECT_INTERVAL", timedelta(0)):
+        await _async_connect_loop(hass, config_entry, hub)
+
+    assert hub.async_connect.await_count == 3
+    assert hub.set_connected.call_count == 2
+    hass.bus.fire.assert_called_once_with(H_CONF_HUBITAT_EVENT, {"name": "ready"})
+    config_entry.async_update_entry.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_connect_loop_updates_mac_title_on_connect() -> None:
+    hass = Mock()
+    config_entry = Mock(title="Hubitat (00:11:22:33:44:55)")
+    hub = Mock(id="hub123", async_connect=AsyncMock(return_value=None))
+
+    await _async_connect_loop(hass, config_entry, hub)
+
+    hass.config_entries.async_update_entry.assert_called_once_with(
+        config_entry, title="Hubitat (hub123)"
+    )
+    hass.bus.fire.assert_called_once_with(H_CONF_HUBITAT_EVENT, {"name": "ready"})
+
+
+@pytest.mark.asyncio
+async def test_connect_loop_does_not_swallow_cancellation() -> None:
+    started = asyncio.Event()
+
+    async def blocked() -> None:
+        started.set()
+        await asyncio.Event().wait()
+
+    hub = Mock(async_connect=AsyncMock(side_effect=blocked), set_connected=Mock())
+    task = asyncio.create_task(_async_connect_loop(Mock(), Mock(), hub))
+    await started.wait()
+    task.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    hub.set_connected.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_cancel_connect_task_cancels_and_awaits() -> None:
+    task = asyncio.create_task(asyncio.sleep(3600))
+    hub = Mock(get_connect_task=Mock(return_value=task))
+
+    await _cancel_connect_task(hub)
+
+    assert task.cancelled()
+
+
+@pytest.mark.asyncio
+async def test_cancel_connect_task_noop_when_empty_or_done() -> None:
+    hub_none = Mock(get_connect_task=Mock(return_value=None))
+    await _cancel_connect_task(hub_none)
+
+    done_task = asyncio.create_task(asyncio.sleep(0))
+    await done_task
+    hub_done = Mock(get_connect_task=Mock(return_value=done_task))
+    await _cancel_connect_task(hub_done)
 
 
 @pytest.mark.asyncio
 async def test_unload_entry() -> None:
     hub = Mock(
+        get_connect_task=Mock(return_value=None),
         get_unsetup_platforms=Mock(return_value=("select",)),
         stop=Mock(),
         unload=AsyncMock(),
