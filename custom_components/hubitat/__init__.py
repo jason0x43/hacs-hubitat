@@ -7,8 +7,6 @@ from datetime import timedelta
 from logging import getLogger
 from typing import Any
 
-import voluptuous as vol
-
 from custom_components.hubitat.services import (
     async_register_services,
     async_remove_services,
@@ -17,6 +15,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ACCESS_TOKEN, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant
 
+from .compat import vol
 from .const import (
     DOMAIN,
     H_CONF_HUB_ID,

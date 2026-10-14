@@ -5,8 +5,6 @@ from itertools import chain
 from json import loads
 from typing import Any, Callable, cast
 
-import voluptuous as vol
-
 from custom_components.hubitat.util import get_hubitat_device_id
 from homeassistant.components.device_automation import (
     DEVICE_TRIGGER_BASE_SCHEMA,
@@ -29,6 +27,7 @@ from homeassistant.helpers.trigger import (
 )
 from homeassistant.helpers.typing import ConfigType
 
+from .compat import vol
 from .const import (
     ATTR_ATTRIBUTE,
     ATTR_DEVICE_ID,

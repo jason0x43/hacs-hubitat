@@ -4,8 +4,6 @@ import logging
 from copy import deepcopy
 from typing import Any, TypedDict, cast, override
 
-import voluptuous as vol
-
 import homeassistant.helpers.config_validation as cv
 from homeassistant.config_entries import (
     CONN_CLASS_LOCAL_PUSH,
@@ -27,6 +25,7 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
 )
 
+from .compat import vol
 from .const import (
     DOMAIN,
     H_CONF_APP_ID,

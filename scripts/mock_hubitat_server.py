@@ -74,7 +74,8 @@ class MockHubitatHandler(BaseHTTPRequestHandler):
 
 class MockHubitatServer(ThreadingHTTPServer):
     def __init__(self, server_address: tuple[str, int]) -> None:
-        super().__init__(server_address, MockHubitatHandler)
+        # zuban 0.10.1 fails to resolve Self in the handler factory type
+        super().__init__(server_address, MockHubitatHandler)  # type: ignore[arg-type]
         self.state = MockHubitatState()
 
     def handle(self, handler: MockHubitatHandler) -> None:

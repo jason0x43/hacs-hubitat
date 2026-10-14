@@ -4,8 +4,8 @@ from typing import Any
 from unittest.mock import AsyncMock, Mock, PropertyMock, patch
 
 import pytest
-import voluptuous as vol
 
+from custom_components.hubitat.compat import vol
 from custom_components.hubitat.const import (
     H_CONF_APP_ID,
     H_CONF_HUB_ID,
