@@ -73,7 +73,8 @@ async def test_start_and_stop_delegate_to_thread_and_loop() -> None:
 
 
 @pytest.mark.asyncio
-async def test_start_raises_on_bind_failure_and_cleans_up() -> None:
+@pytest.mark.allow_hosts(["127.0.0.1", "localhost"])
+async def test_start_raises_on_bind_failure_and_cleans_up(socket_enabled) -> None:
     """Server.start() should propagate bind failures and clean up its loop."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as blocker:
         blocker.bind(("127.0.0.1", 0))
@@ -85,7 +86,7 @@ async def test_start_raises_on_bind_failure_and_cleans_up() -> None:
             await asyncio.wait_for(asyncio.to_thread(server.start), timeout=5)
 
         assert exc_info.value.errno == errno.EADDRINUSE
-        assert server._stopped is True
+        assert getattr(server, "_stopped") is True
         assert server._server_loop.is_closed() is True
 
         # stop() should be a safe no-op on a stopped/failed server
@@ -94,14 +95,15 @@ async def test_start_raises_on_bind_failure_and_cleans_up() -> None:
     # Re-starting on the same instance after freeing the port should succeed
     await asyncio.wait_for(asyncio.to_thread(server.start), timeout=5)
     try:
-        assert server._stopped is False
+        assert getattr(server, "_stopped") is False
         assert not server._server_loop.is_closed()
     finally:
         server.stop()
 
 
 @pytest.mark.asyncio
-async def test_start_propagates_generic_startup_exceptions() -> None:
+@pytest.mark.allow_hosts(["127.0.0.1", "localhost"])
+async def test_start_propagates_generic_startup_exceptions(socket_enabled) -> None:
     """Worker-thread startup exceptions must bubble up to the caller."""
     server = Server(Mock(), "127.0.0.1", 0)
     with patch(

@@ -135,6 +135,7 @@ async def test_hub_setup_removes_devices_no_longer_shared_by_maker_api(
     )
 
     await hass.config_entries.async_setup(entry.entry_id)
+    await _wait_for(lambda: get_hub(hass, entry.entry_id).is_connected)
     await hass.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
@@ -283,16 +284,18 @@ async def test_hub_unload_stops_event_server_and_cleans_domain_data(
     # Reloading after unload proves the old listener released its port and
     # entity/event listeners were cleaned up enough for a fresh setup.
     assert await hass.config_entries.async_setup(entry.entry_id)
+    await _wait_for(lambda: get_hub(hass, entry.entry_id).is_connected)
     await hass.async_block_till_done()
     reloaded_hub = get_hub(hass, entry.entry_id)
     assert reloaded_hub.port == event_server_port
     assert reloaded_hub.event_url == event_url
     assert set(reloaded_hub.get_unsetup_platforms(PLATFORMS)) == set()
 
+
 def _create_mock_entry(fake_hubitat: FakeHubitat) -> MockConfigEntry:
     return MockConfigEntry(
         domain=DOMAIN,
-        title="Hubitat (aa:bb:cc:dd:ee:ff)",
+        title="Hubitat",
         data=fake_hubitat.config_entry_data,
         options=fake_hubitat.config_entry_options,
         unique_id=fake_hubitat.hub_id,
@@ -342,7 +345,7 @@ async def test_setup_returns_while_async_connect_is_blocked(
     hass.bus.async_listen(H_CONF_HUBITAT_EVENT, lambda ev: ready_events.append(ev))
 
     try:
-        with patch.object(Hub, "async_connect", probe):
+        with patch.object(Hub, "async_connect", lambda hub_self: probe(hub_self)):
             await asyncio.wait_for(
                 hass.config_entries.async_setup(entry.entry_id), timeout=5
             )
@@ -373,9 +376,7 @@ async def test_setup_returns_while_async_connect_is_blocked(
         await _unload_entry(hass, entry)
 
 
-async def test_retries_never_run_concurrently(
-    hass, fake_hubitat: FakeHubitat
-) -> None:
+async def test_retries_never_run_concurrently(hass, fake_hubitat: FakeHubitat) -> None:
     """Connection retries run sequentially and never overlap."""
     entry = _create_mock_entry(fake_hubitat)
     entry.add_to_hass(hass)
@@ -388,7 +389,7 @@ async def test_retries_never_run_concurrently(
                 "custom_components.hubitat.RETRY_CONNECT_INTERVAL",
                 timedelta(milliseconds=10),
             ),
-            patch.object(Hub, "async_connect", probe),
+            patch.object(Hub, "async_connect", lambda hub_self: probe(hub_self)),
         ):
             await hass.config_entries.async_setup(entry.entry_id)
             await asyncio.wait_for(probe.started.wait(), timeout=5)
@@ -436,19 +437,19 @@ async def test_unload_during_blocked_connect_cancels_task_and_frees_port(
     entry = _create_mock_entry(fake_hubitat)
     entry.add_to_hass(hass)
 
-    load_started = asyncio.Event()
-    release_load = asyncio.Event()
-    original_load_devices = HubitatHub.load_devices
+    server_started = asyncio.Event()
+    release_connect = asyncio.Event()
+    original_start_server = HubitatHub._start_server
 
-    async def gated_load_devices(hub_self: HubitatHub, force_refresh: bool = False) -> None:
-        load_started.set()
-        await release_load.wait()
-        await original_load_devices(hub_self, force_refresh=force_refresh)
+    async def gated_start_server(hub_self: HubitatHub) -> None:
+        await original_start_server(hub_self)
+        server_started.set()
+        await release_connect.wait()
 
     try:
-        with patch.object(HubitatHub, "load_devices", gated_load_devices):
+        with patch.object(HubitatHub, "_start_server", gated_start_server):
             await hass.config_entries.async_setup(entry.entry_id)
-            await asyncio.wait_for(load_started.wait(), timeout=5)
+            await asyncio.wait_for(server_started.wait(), timeout=5)
 
             hub = get_hub(hass, entry.entry_id)
             connect_task = hub.get_connect_task()
@@ -471,5 +472,5 @@ async def test_unload_during_blocked_connect_cancels_task_and_frees_port(
         _assert_connection_state(reloaded_hub, True)
         assert reloaded_hub.port == event_server_port
     finally:
-        release_load.set()
+        release_connect.set()
         await _unload_entry(hass, entry)

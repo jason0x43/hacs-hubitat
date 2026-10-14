@@ -124,18 +124,21 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     # automatically when the config entry is unloaded.
     task = config_entry.async_create_background_task(
         hass,
-        _async_connect_loop(hass, config_entry, hub),
+        _async_connect_loop(hass, hub),
         name=f"hubitat_connect_{config_entry.entry_id}",
         eager_start=False,
     )
     hub.set_connect_task(task)
 
+    if re.match(r"Hubitat \(\w{2}(:\w{2}){5}\)", config_entry.title):
+        _ = hass.config_entries.async_update_entry(
+            config_entry, title=f"Hubitat ({hub.id})"
+        )
+
     return True
 
 
-async def _async_connect_loop(
-    hass: HomeAssistant, config_entry: ConfigEntry, hub: Hub
-) -> None:
+async def _async_connect_loop(hass: HomeAssistant, hub: Hub) -> None:
     """Connect to the hub, retrying every RETRY_CONNECT_INTERVAL until connected.
 
     Attempts run sequentially inside this single task, so they can never overlap.
@@ -162,21 +165,11 @@ async def _async_connect_loop(
                 _LOGGER.debug("Connection attempt failed again: %s", error)
         else:
             _LOGGER.info("Successfully connected to Hubitat hub")
-            _on_hub_connected(hass, config_entry, hub)
+            hass.bus.fire(H_CONF_HUBITAT_EVENT, {"name": "ready"})
+            _LOGGER.info("Hubitat is ready")
             return
 
         await asyncio.sleep(RETRY_CONNECT_INTERVAL.total_seconds())
-
-
-def _on_hub_connected(hass: HomeAssistant, config_entry: ConfigEntry, hub: Hub) -> None:
-    """Rename MAC-based titles and announce readiness once connected."""
-    if re.match(r"Hubitat \(\w{2}(:\w{2}){5}\)", config_entry.title):
-        _ = hass.config_entries.async_update_entry(
-            config_entry, title=f"Hubitat ({hub.id})"
-        )
-
-    hass.bus.fire(H_CONF_HUBITAT_EVENT, {"name": "ready"})
-    _LOGGER.info("Hubitat is ready")
 
 
 async def _cancel_connect_task(hub: Hub) -> None:

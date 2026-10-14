@@ -835,7 +835,7 @@ class Hub(HasId):
                     )
             _LOGGER.debug("Hub connection complete")
 
-        except Exception, asyncio.CancelledError:
+        except BaseException:
             # If connection fails, clean up to allow clean retry
             # Stop the event server to avoid "address in use" errors
             self._hub.stop()

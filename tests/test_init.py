@@ -51,6 +51,10 @@ async def test_setup_entry_schedules_background_task() -> None:
     ):
         assert await async_setup_entry(hass, entry) is True
 
+    hass.config_entries.async_update_entry.assert_called_once_with(
+        entry, title="Hubitat (hub)"
+    )
+
     hub.mark_platforms_setup.assert_called_once()
     register.assert_called_once_with(hass, entry)
 
@@ -65,7 +69,7 @@ async def test_setup_entry_schedules_background_task() -> None:
 @pytest.mark.asyncio
 async def test_connect_loop_retries_until_connected() -> None:
     hass = Mock()
-    config_entry = Mock(title="Hubitat (abc12345)")
+    Mock(title="Hubitat (abc12345)")
     hub = Mock(
         id="abc12345",
         async_connect=AsyncMock(
@@ -75,25 +79,10 @@ async def test_connect_loop_retries_until_connected() -> None:
     )
 
     with patch("custom_components.hubitat.RETRY_CONNECT_INTERVAL", timedelta(0)):
-        await _async_connect_loop(hass, config_entry, hub)
+        await _async_connect_loop(hass, hub)
 
     assert hub.async_connect.await_count == 3
     assert hub.set_connected.call_count == 2
-    hass.bus.fire.assert_called_once_with(H_CONF_HUBITAT_EVENT, {"name": "ready"})
-    config_entry.async_update_entry.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_connect_loop_updates_mac_title_on_connect() -> None:
-    hass = Mock()
-    config_entry = Mock(title="Hubitat (00:11:22:33:44:55)")
-    hub = Mock(id="hub123", async_connect=AsyncMock(return_value=None))
-
-    await _async_connect_loop(hass, config_entry, hub)
-
-    hass.config_entries.async_update_entry.assert_called_once_with(
-        config_entry, title="Hubitat (hub123)"
-    )
     hass.bus.fire.assert_called_once_with(H_CONF_HUBITAT_EVENT, {"name": "ready"})
 
 
@@ -106,7 +95,7 @@ async def test_connect_loop_does_not_swallow_cancellation() -> None:
         await asyncio.Event().wait()
 
     hub = Mock(async_connect=AsyncMock(side_effect=blocked), set_connected=Mock())
-    task = asyncio.create_task(_async_connect_loop(Mock(), Mock(), hub))
+    task = asyncio.create_task(_async_connect_loop(Mock(), hub))
     await started.wait()
     task.cancel()
 
