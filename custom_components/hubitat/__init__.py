@@ -1,8 +1,9 @@
 """The Hubitat integration."""
 
 import asyncio
+import contextlib
 import re
-from datetime import datetime, timedelta
+from datetime import timedelta
 from logging import getLogger
 from typing import Any
 
@@ -13,7 +14,6 @@ from custom_components.hubitat.services import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ACCESS_TOKEN, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers.event import async_track_time_interval
 
 from .compat import vol
 from .const import (
@@ -25,14 +25,24 @@ from .const import (
     Platform,
 )
 from .hub import Hub, get_domain_data, get_hub
+from .hubitatmaker.error import (
+    ConnectionError as HubitatConnectionError,
+    InvalidConfig,
+    InvalidToken,
+)
 
+_EXPECTED_ERRORS = (
+    asyncio.TimeoutError,
+    ConnectionError,
+    HubitatConnectionError,
+    InvalidToken,
+    InvalidConfig,
+)
 _LOGGER = getLogger(__name__)
 _HUB_STATUS_PLATFORMS: tuple[Platform, ...] = ("binary_sensor",)
 
-# Time to attempt initial hub connection during startup
-STARTUP_CONNECT_TIMEOUT = 60  # seconds
 
-# Interval for retrying hub connection after startup failure
+# Interval between hub connection attempts until the first successful connect
 RETRY_CONNECT_INTERVAL = timedelta(seconds=90)
 
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
@@ -94,60 +104,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     domain_data = get_domain_data(hass)
 
-    # Try to connect to the hub with a timeout
-    hub: Hub | None = None
-
-    # First create an offline hub to get a HubitatHub instance we can cleanup
-    # if the connection attempt times out
+    # Create an offline hub so there is always an object to clean up, even if
+    # the connection never succeeds
     hub = await Hub.create_offline(hass, config_entry, len(domain_data) + 1)
     await hass.config_entries.async_forward_entry_setups(
         config_entry, _HUB_STATUS_PLATFORMS
     )
     hub.mark_platforms_setup(_HUB_STATUS_PLATFORMS)
-
-    try:
-        # Try to connect with timeout
-        await asyncio.wait_for(hub.async_connect(), timeout=STARTUP_CONNECT_TIMEOUT)
-
-        _LOGGER.info("Successfully connected to Hubitat hub")
-
-    except (asyncio.TimeoutError, ConnectionError) as e:
-        _LOGGER.warning(
-            "Unable to connect to Hubitat hub during startup (will retry): %s", e
-        )
-
-        # Schedule periodic connection attempts
-        async def retry_connection(_now: datetime | None = None) -> None:
-            """Attempt to reconnect to the hub."""
-            if not hub.is_connected:
-                _LOGGER.debug("Attempting to reconnect to Hubitat hub...")
-                try:
-                    await asyncio.wait_for(
-                        hub.async_connect(), timeout=STARTUP_CONNECT_TIMEOUT
-                    )
-                    _LOGGER.info("Successfully reconnected to Hubitat hub")
-
-                    # Cancel the retry task now that we're connected
-                    hub.cancel_retry_task()
-
-                    # Fire ready event now that we're connected
-                    hass.bus.fire(H_CONF_HUBITAT_EVENT, {"name": "ready"})
-
-                    # Update hub state
-                    if re.match(r"Hubitat \(\w{2}(:\w{2}){5}\)", config_entry.title):
-                        _ = hass.config_entries.async_update_entry(
-                            config_entry, title=f"Hubitat ({hub.id})"
-                        )
-                except (asyncio.TimeoutError, ConnectionError) as e:
-                    _LOGGER.debug("Reconnection attempt failed: %s", e)
-                    hub.set_connected(False)
-
-        # Retry immediately once, then periodically
-        _ = hass.async_create_task(retry_connection())
-        unsub = async_track_time_interval(
-            hass, retry_connection, RETRY_CONNECT_INTERVAL
-        )
-        hub.set_retry_task_unsub(unsub)
 
     async_register_services(hass, config_entry)
 
@@ -156,20 +119,67 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     _ = hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_hub)
 
-    # If this config entry's title uses a MAC address, rename it to use the hub
-    # ID (only if hub is connected)
-    if hub.is_connected and re.match(
-        r"Hubitat \(\w{2}(:\w{2}){5}\)", config_entry.title
-    ):
+    # Connect in the background so setup returns immediately, even if the hub
+    # takes a long time to load its devices. Home Assistant cancels the task
+    # automatically when the config entry is unloaded.
+    task = config_entry.async_create_background_task(
+        hass,
+        _async_connect_loop(hass, hub),
+        name=f"hubitat_connect_{config_entry.entry_id}",
+        eager_start=False,
+    )
+    hub.set_connect_task(task)
+
+    if re.match(r"Hubitat \(\w{2}(:\w{2}){5}\)", config_entry.title):
         _ = hass.config_entries.async_update_entry(
             config_entry, title=f"Hubitat ({hub.id})"
         )
 
-    if hub.is_connected:
-        hass.bus.fire(H_CONF_HUBITAT_EVENT, {"name": "ready"})
-        _LOGGER.info("Hubitat is ready")
-
     return True
+
+
+async def _async_connect_loop(hass: HomeAssistant, hub: Hub) -> None:
+    """Connect to the hub, retrying every RETRY_CONNECT_INTERVAL until connected.
+
+    Attempts run sequentially inside this single task, so they can never overlap.
+    CancelledError is not caught here, so unload cancels the task cleanly.
+    """
+    last_error: str | None = None
+    while True:
+        try:
+            await hub.async_connect()
+        except Exception as e:  # CancelledError is a BaseException, so it propagates
+            hub.set_connected(False)
+            error = f"{type(e).__name__}: {e}"
+            if error != last_error:
+                last_error = error
+                if isinstance(e, _EXPECTED_ERRORS):
+                    _LOGGER.warning(
+                        "Unable to connect to Hubitat hub (will retry): %s", error
+                    )
+                else:
+                    _LOGGER.exception(
+                        "Unexpected error connecting to Hubitat hub (will retry)"
+                    )
+            else:
+                _LOGGER.debug("Connection attempt failed again: %s", error)
+        else:
+            _LOGGER.info("Successfully connected to Hubitat hub")
+            hass.bus.fire(H_CONF_HUBITAT_EVENT, {"name": "ready"})
+            _LOGGER.info("Hubitat is ready")
+            return
+
+        await asyncio.sleep(RETRY_CONNECT_INTERVAL.total_seconds())
+
+
+async def _cancel_connect_task(hub: Hub) -> None:
+    """Cancel the background connect task and wait for it to finish."""
+    task = hub.get_connect_task()
+    if task is None or task.done():
+        return
+    _ = task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
 
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -178,6 +188,11 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     async_remove_services(hass, config_entry)
 
     hub = get_hub(hass, config_entry.entry_id)
+
+    # Stop the connect loop first so it can't finish connecting, or forward
+    # platforms, while we're tearing the hub down.
+    await _cancel_connect_task(hub)
+
     platforms_to_unload = tuple(
         p for p in PLATFORMS if p not in hub.get_unsetup_platforms()
     )

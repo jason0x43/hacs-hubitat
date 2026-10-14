@@ -533,11 +533,13 @@ class Hub:
             attempt += 1
             conn = aiohttp.TCPConnector(ssl=False)
             try:
+                timeout = aiohttp.ClientTimeout(total=15)
                 async with aiohttp.request(
                     method,
                     f"{self.api_url}/{path}",
                     params=params,
                     connector=conn,
+                    timeout=timeout,
                 ) as resp:
                     if resp.status >= 400:
                         # retry on server errors or request timeout w/ increasing delay

@@ -1,3 +1,5 @@
+import asyncio
+from datetime import timedelta
 from unittest.mock import patch
 
 import aiohttp
@@ -12,6 +14,7 @@ from custom_components.hubitat.const import (
     PLATFORMS,
 )
 from custom_components.hubitat.hub import Hub, get_hub
+from custom_components.hubitat.hubitatmaker.hub import Hub as HubitatHub
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import SERVICE_TURN_ON, STATE_OFF, STATE_ON
@@ -23,6 +26,12 @@ pytestmark = [
     pytest.mark.asyncio,
     pytest.mark.allow_hosts(["127.0.0.1", "localhost"]),
 ]
+
+
+async def _wait_for(predicate, timeout: float = 5.0) -> None:
+    async with asyncio.timeout(timeout):
+        while not predicate():
+            await asyncio.sleep(0.01)
 
 
 async def _setup_entry(hass, fake_hubitat: FakeHubitat) -> MockConfigEntry:
@@ -37,6 +46,7 @@ async def _setup_entry(hass, fake_hubitat: FakeHubitat) -> MockConfigEntry:
     entry.add_to_hass(hass)
 
     await hass.config_entries.async_setup(entry.entry_id)
+    await _wait_for(lambda: get_hub(hass, entry.entry_id).is_connected)
     await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.LOADED
     return entry
@@ -125,6 +135,7 @@ async def test_hub_setup_removes_devices_no_longer_shared_by_maker_api(
     )
 
     await hass.config_entries.async_setup(entry.entry_id)
+    await _wait_for(lambda: get_hub(hass, entry.entry_id).is_connected)
     await hass.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
@@ -231,23 +242,27 @@ async def test_offline_hub_can_connect_later_without_duplicate_platform_setup(
     entry.add_to_hass(hass)
 
     try:
-        with patch("custom_components.hubitat.STARTUP_CONNECT_TIMEOUT", 1):
+        with patch(
+            "custom_components.hubitat.RETRY_CONNECT_INTERVAL",
+            timedelta(milliseconds=10),
+        ):
             await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
-        assert entry.state is ConfigEntryState.LOADED
+            await hass.async_block_till_done()
+            assert entry.state is ConfigEntryState.LOADED
 
-        hub = get_hub(hass, entry.entry_id)
-        _assert_connection_state(hub, False)
-        assert _get_hub_status_entity_id(hass, hub.id)
+            hub = get_hub(hass, entry.entry_id)
+            _assert_connection_state(hub, False)
+            assert _get_hub_status_entity_id(hass, hub.id)
 
-        fake_hubitat.online = True
-        await hub.async_connect()
-        hub.cancel_retry_task()
-        await hass.async_block_till_done()
+            fake_hubitat.online = True
+            await _wait_for(
+                lambda: hub.is_connected and not hub.get_unsetup_platforms()
+            )
+            await hass.async_block_till_done()
 
-        _assert_connection_state(hub, True)
-        assert set(hub.get_unsetup_platforms()) == set()
-        assert get_state_entity_id(hass, "switch", "Loft Fan")
+            _assert_connection_state(hub, True)
+            assert set(hub.get_unsetup_platforms()) == set()
+            assert get_state_entity_id(hass, "switch", "Loft Fan")
     finally:
         await _unload_entry(hass, entry)
 
@@ -269,8 +284,193 @@ async def test_hub_unload_stops_event_server_and_cleans_domain_data(
     # Reloading after unload proves the old listener released its port and
     # entity/event listeners were cleaned up enough for a fresh setup.
     assert await hass.config_entries.async_setup(entry.entry_id)
+    await _wait_for(lambda: get_hub(hass, entry.entry_id).is_connected)
     await hass.async_block_till_done()
     reloaded_hub = get_hub(hass, entry.entry_id)
     assert reloaded_hub.port == event_server_port
     assert reloaded_hub.event_url == event_url
     assert set(reloaded_hub.get_unsetup_platforms(PLATFORMS)) == set()
+
+
+def _create_mock_entry(fake_hubitat: FakeHubitat) -> MockConfigEntry:
+    return MockConfigEntry(
+        domain=DOMAIN,
+        title="Hubitat",
+        data=fake_hubitat.config_entry_data,
+        options=fake_hubitat.config_entry_options,
+        unique_id=fake_hubitat.hub_id,
+        version=2,
+    )
+
+
+class ConnectProbe:
+    """Tracks and gates Hub.async_connect invocations."""
+
+    def __init__(self, target_connect) -> None:
+        self._target_connect = target_connect
+        self.calls = 0
+        self.in_flight = 0
+        self.max_in_flight = 0
+        self.started = asyncio.Event()
+        self.gates: list[asyncio.Event] = []
+
+    async def __call__(self, hub_self: Hub) -> None:
+        self.calls += 1
+        self.in_flight += 1
+        self.max_in_flight = max(self.max_in_flight, self.in_flight)
+        self.started.set()
+
+        gate = asyncio.Event()
+        self.gates.append(gate)
+        try:
+            await gate.wait()
+            await self._target_connect(hub_self)
+        finally:
+            self.in_flight -= 1
+
+    def release(self) -> None:
+        if self.gates:
+            self.gates.pop(0).set()
+
+
+async def test_setup_returns_while_async_connect_is_blocked(
+    hass, fake_hubitat: FakeHubitat
+) -> None:
+    """Setup returns immediately while connect continues in the background."""
+    entry = _create_mock_entry(fake_hubitat)
+    entry.add_to_hass(hass)
+
+    probe = ConnectProbe(Hub.async_connect)
+    ready_events = []
+    hass.bus.async_listen(H_CONF_HUBITAT_EVENT, lambda ev: ready_events.append(ev))
+
+    try:
+        with patch.object(Hub, "async_connect", lambda hub_self: probe(hub_self)):
+            await asyncio.wait_for(
+                hass.config_entries.async_setup(entry.entry_id), timeout=5
+            )
+            assert entry.state is ConfigEntryState.LOADED
+
+            hub = get_hub(hass, entry.entry_id)
+            _assert_connection_state(hub, False)
+            assert _get_hub_status_entity_id(hass, hub.id)
+            assert len(ready_events) == 0
+
+            await asyncio.wait_for(probe.started.wait(), timeout=5)
+            assert probe.calls == 1
+
+            # async_block_till_done must return even while background task is blocked
+            await asyncio.wait_for(hass.async_block_till_done(), timeout=5)
+            _assert_connection_state(hub, False)
+
+            probe.release()
+            connect_task = hub.get_connect_task()
+            assert connect_task is not None
+            await asyncio.wait_for(connect_task, timeout=5)
+            await hass.async_block_till_done()
+
+            _assert_connection_state(hub, True)
+            assert len(ready_events) == 1
+    finally:
+        probe.release()
+        await _unload_entry(hass, entry)
+
+
+async def test_retries_never_run_concurrently(hass, fake_hubitat: FakeHubitat) -> None:
+    """Connection retries run sequentially and never overlap."""
+    entry = _create_mock_entry(fake_hubitat)
+    entry.add_to_hass(hass)
+
+    probe = ConnectProbe(Hub.async_connect)
+
+    try:
+        with (
+            patch(
+                "custom_components.hubitat.RETRY_CONNECT_INTERVAL",
+                timedelta(milliseconds=10),
+            ),
+            patch.object(Hub, "async_connect", lambda hub_self: probe(hub_self)),
+        ):
+            await hass.config_entries.async_setup(entry.entry_id)
+            await asyncio.wait_for(probe.started.wait(), timeout=5)
+
+            # Wait 10x the retry interval while the first attempt is still blocked
+            await asyncio.sleep(0.1)
+            assert probe.calls == 1
+            assert probe.in_flight == 1
+
+            # Fail the first attempt by setting fake_hubitat offline before releasing
+            fake_hubitat.online = False
+            probe.release()
+
+            # Wait for the second attempt to start
+            await _wait_for(lambda: probe.calls == 2)
+            assert probe.in_flight == 1
+            assert probe.max_in_flight == 1
+
+            # Allow the second attempt to succeed
+            fake_hubitat.online = True
+            probe.release()
+
+            hub = get_hub(hass, entry.entry_id)
+            connect_task = hub.get_connect_task()
+            assert connect_task is not None
+            await asyncio.wait_for(connect_task, timeout=5)
+            await hass.async_block_till_done()
+
+            _assert_connection_state(hub, True)
+            assert probe.calls == 2
+            assert probe.max_in_flight == 1
+            assert connect_task.done() and not connect_task.cancelled()
+    finally:
+        probe.release()
+        await _unload_entry(hass, entry)
+
+
+async def test_unload_during_blocked_connect_cancels_task_and_frees_port(
+    hass, fake_hubitat: FakeHubitat
+) -> None:
+    """Unloading mid-connect after event server started cancels task and frees port."""
+    event_server_port = unused_port()
+    fake_hubitat.event_server_port = event_server_port
+
+    entry = _create_mock_entry(fake_hubitat)
+    entry.add_to_hass(hass)
+
+    server_started = asyncio.Event()
+    release_connect = asyncio.Event()
+    original_start_server = HubitatHub._start_server
+
+    async def gated_start_server(hub_self: HubitatHub) -> None:
+        await original_start_server(hub_self)
+        server_started.set()
+        await release_connect.wait()
+
+    try:
+        with patch.object(HubitatHub, "_start_server", gated_start_server):
+            await hass.config_entries.async_setup(entry.entry_id)
+            await asyncio.wait_for(server_started.wait(), timeout=5)
+
+            hub = get_hub(hass, entry.entry_id)
+            connect_task = hub.get_connect_task()
+            assert connect_task is not None
+            assert not connect_task.done()
+            _assert_connection_state(hub, False)
+
+            # Unload while blocked inside load_devices (after event server started)
+            await _unload_entry(hass, entry)
+            assert entry.state is ConfigEntryState.NOT_LOADED
+            assert connect_task.done()
+            assert connect_task.cancelled()
+
+        # Re-setting up on the same port must succeed without EADDRINUSE
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        reloaded_hub = get_hub(hass, entry.entry_id)
+        await _wait_for(lambda: reloaded_hub.is_connected)
+        await hass.async_block_till_done()
+
+        _assert_connection_state(reloaded_hub, True)
+        assert reloaded_hub.port == event_server_port
+    finally:
+        release_connect.set()
+        await _unload_entry(hass, entry)

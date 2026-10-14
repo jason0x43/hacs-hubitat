@@ -35,6 +35,7 @@ class Server:
         self._main_loop = asyncio.get_event_loop()
         self._runner: web.AppRunner
         self._startup_event: threading.Event
+        self._startup_exception: BaseException | None = None
         self._server_loop: asyncio.AbstractEventLoop
         self._stopped = True
 
@@ -50,6 +51,7 @@ class Server:
         self._runner = web.AppRunner(app)
 
         self._startup_event = threading.Event()
+        self._startup_exception = None
         self._server_loop = asyncio.new_event_loop()
         self._stopped = False
         t = threading.Thread(target=self._run)
@@ -57,6 +59,9 @@ class Server:
 
         # Wait for server to startup
         self._startup_event.wait()
+
+        if self._startup_exception is not None:
+            raise self._startup_exception
 
     def stop(self) -> None:
         """Gracefully stop a running server."""
@@ -83,26 +88,46 @@ class Server:
     def _run(self) -> None:
         """Execute the server in its own thread with its own event loop."""
         asyncio.set_event_loop(self._server_loop)
-        self._server_loop.run_until_complete(self._runner.setup())
+        try:
+            self._server_loop.run_until_complete(self._runner.setup())
 
-        site = web.TCPSite(
-            self._runner, self.host, self.port, ssl_context=self.ssl_context
-        )
-        self._server_loop.run_until_complete(site.start())
-
-        # If the Server was initialized with port 0, determine what port the
-        # underlying server ended up listening on
-        if self.port == 0:
-            # Access the protected _server attribute to get socket info
-            site_server = cast(
-                AsyncioServer,
-                site._server,
+            site = web.TCPSite(
+                self._runner,
+                self.host,
+                self.port,
+                ssl_context=self.ssl_context,
             )
-            sockets = list(site_server.sockets or [])
-            socket = sockets[0]
-            self.port = socket.getsockname()[1]
+            self._server_loop.run_until_complete(site.start())
 
-        self._startup_event.set()
+            # If the Server was initialized with port 0, determine what port the
+            # underlying server ended up listening on
+            if self.port == 0:
+                # Access the protected _server attribute to get socket info
+                site_server = cast(
+                    AsyncioServer,
+                    site._server,
+                )
+                sockets = list(site_server.sockets or [])
+                socket = sockets[0]
+                self.port = socket.getsockname()[1]
+
+        # Catch BaseException so any worker-thread startup failure is propagated to
+        # start();
+        # otherwise the finally block could wake the caller after the thread died.
+        except BaseException as e:
+            self._startup_exception = e
+            self._stopped = True
+
+            try:
+                self._server_loop.run_until_complete(self._runner.cleanup())
+            finally:
+                self._server_loop.close()
+
+            return
+
+        finally:
+            self._startup_event.set()
+
         self._server_loop.run_forever()
 
     async def _stop(self) -> None:
