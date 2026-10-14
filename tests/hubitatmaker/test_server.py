@@ -1,3 +1,6 @@
+import asyncio
+import errno
+import socket
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -67,3 +70,47 @@ async def test_start_and_stop_delegate_to_thread_and_loop() -> None:
     run_coroutine.assert_called_once_with(stop_result, server._server_loop)
     future.result.assert_called_once_with(5)
     server._server_loop.call_soon_threadsafe.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_start_raises_on_bind_failure_and_cleans_up() -> None:
+    """Server.start() should propagate bind failures and clean up its loop."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as blocker:
+        blocker.bind(("127.0.0.1", 0))
+        blocker.listen(1)
+        port = blocker.getsockname()[1]
+
+        server = Server(Mock(), "127.0.0.1", port)
+        with pytest.raises(OSError) as exc_info:
+            await asyncio.wait_for(asyncio.to_thread(server.start), timeout=5)
+
+        assert exc_info.value.errno == errno.EADDRINUSE
+        assert server._stopped is True
+        assert server._server_loop.is_closed() is True
+
+        # stop() should be a safe no-op on a stopped/failed server
+        server.stop()
+
+    # Re-starting on the same instance after freeing the port should succeed
+    await asyncio.wait_for(asyncio.to_thread(server.start), timeout=5)
+    try:
+        assert server._stopped is False
+        assert not server._server_loop.is_closed()
+    finally:
+        server.stop()
+
+
+@pytest.mark.asyncio
+async def test_start_propagates_generic_startup_exceptions() -> None:
+    """Worker-thread startup exceptions must bubble up to the caller."""
+    server = Server(Mock(), "127.0.0.1", 0)
+    with patch(
+        "aiohttp.web.AppRunner.setup",
+        side_effect=RuntimeError("runner setup failed"),
+    ):
+        with pytest.raises(RuntimeError, match="runner setup failed"):
+            await asyncio.wait_for(asyncio.to_thread(server.start), timeout=5)
+
+    assert server._stopped is True
+    assert server._server_loop.is_closed() is True
+    server.stop()
