@@ -1,6 +1,8 @@
 """Support for Hubitat thermostats."""
 
+import math
 from enum import StrEnum
+from logging import getLogger
 from typing import TYPE_CHECKING, Any, Unpack, cast, override
 
 from custom_components.hubitat.const import TEMP_C, TEMP_F
@@ -11,6 +13,7 @@ from homeassistant.components.climate import (
 from homeassistant.components.climate.const import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
+    DEFAULT_MAX_TEMP,
     FAN_AUTO,
     FAN_ON,
     PRESET_AWAY,
@@ -28,10 +31,13 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
 from .hubitatmaker import Device, DeviceCapability, DeviceCommand
+
+_LOGGER = getLogger(__name__)
 
 
 class ClimateMode(StrEnum):
@@ -65,6 +71,10 @@ class ClimateFanMode(StrEnum):
 
 
 PRESET_AWAY_AND_ECO = "Away and Eco"
+
+# Support a lower minimum temperature than the HA default (in Celsius)
+DEFAULT_MIN_SETPOINT = 4.4
+
 HASS_FAN_MODES = [FAN_ON, FAN_AUTO]
 HASS_PRESET_MODES = [PRESET_HOME, PRESET_AWAY]
 HASS_NEST_PRESET_MODES = [
@@ -80,6 +90,9 @@ _device_attrs = (
     DeviceAttribute.FAN_MODE,
     DeviceAttribute.HEATING_SETPOINT,
     DeviceAttribute.HUMIDITY,
+    DeviceAttribute.MAX_SETPOINT,
+    DeviceAttribute.MIN_SETPOINT,
+    DeviceAttribute.SETPOINT_STEP,
     DeviceAttribute.THERMOSTAT_MODE,
     DeviceAttribute.NEST_MODE,
     DeviceAttribute.OPERATING_STATE,
@@ -93,6 +106,8 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
     """Representation of a Hubitat switch."""
 
     _attr_supported_features: ClimateEntityFeature
+    _attr_min_temp: float
+    _attr_max_temp: float
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         HubitatEntity.__init__(self, **kwargs)
@@ -115,9 +130,6 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
         self._attr_precision: float = PRECISION_TENTHS
         self._attr_unique_id: str | None = f"{super().unique_id}::climate"
 
-        # Support a lower minimum temperature than the HA default
-        self._attr_min_temp: float = 4.4
-
         if hasattr(ClimateEntityFeature, "TURN_OFF"):
             self._attr_supported_features |= ClimateEntityFeature.TURN_OFF
             self._enable_turn_on_off_backwards_compatibility: bool = False
@@ -126,6 +138,8 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
 
     @override
     def load_state(self):
+        # The temperature unit must be loaded before the setpoint range
+        self._attr_temperature_unit: str = self._get_temperature_unit()
         # In 2025.4.1 this is int | None, in 2025.10.1+ it's float | None
         # We use float | None which works at runtime in both versions
         self._attr_current_humidity: float | None = self._get_current_humidity()
@@ -142,7 +156,8 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
         self._attr_target_temperature_low: float | None = (
             self._get_target_temperature_low()
         )
-        self._attr_temperature_unit: str = self._get_temperature_unit()
+        (self._attr_min_temp, self._attr_max_temp) = self._get_setpoint_range()
+        self._attr_target_temperature_step: float | None = self._get_setpoint_step()
 
     def _get_current_humidity(self) -> float | None:
         humidity = self.get_int_attr(DeviceAttribute.HUMIDITY)
@@ -221,6 +236,53 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
         if self.hvac_mode == HVACMode.HEAT_COOL or self.hvac_mode == HVACMode.AUTO:
             return self.get_float_attr(DeviceAttribute.HEATING_SETPOINT)
         return None
+
+    def _get_setpoint_range(self) -> tuple[float, float]:
+        """Return the supported (min, max) setpoint in the entity's unit.
+
+        Drivers may report a device's setpoint limits with minSetpoint and
+        maxSetpoint attributes, in the device's temperature unit. A missing
+        limit uses its default value. If the resulting range is invalid, the
+        default range is used.
+        """
+        unit = self._attr_temperature_unit
+        default_min = TemperatureConverter.convert(
+            DEFAULT_MIN_SETPOINT, UnitOfTemperature.CELSIUS, unit
+        )
+        default_max = TemperatureConverter.convert(
+            DEFAULT_MAX_TEMP, UnitOfTemperature.CELSIUS, unit
+        )
+        try:
+            low = self.get_float_attr(DeviceAttribute.MIN_SETPOINT)
+            high = self.get_float_attr(DeviceAttribute.MAX_SETPOINT)
+        except (TypeError, ValueError) as e:
+            _LOGGER.debug("Ignoring invalid setpoint range for %s: %s", self.name, e)
+            return default_min, default_max
+        low = default_min if low is None else low
+        high = default_max if high is None else high
+        if not (math.isfinite(low) and math.isfinite(high)) or low >= high:
+            _LOGGER.debug(
+                "Ignoring invalid setpoint range for %s: [%s, %s]",
+                self.name,
+                low,
+                high,
+            )
+            return default_min, default_max
+        return low, high
+
+    def _get_setpoint_step(self) -> float | None:
+        """Return the setpoint step reported by a setpointStep attribute."""
+        try:
+            step = self.get_float_attr(DeviceAttribute.SETPOINT_STEP)
+        except (TypeError, ValueError) as e:
+            _LOGGER.debug("Ignoring invalid setpoint step for %s: %s", self.name, e)
+            return None
+        if step is None:
+            return None
+        if not math.isfinite(step) or step <= 0:
+            _LOGGER.debug("Ignoring invalid setpoint step for %s: %s", self.name, step)
+            return None
+        return step
 
     def _get_temperature_unit(self) -> str:
         """Return the unit of measurement used by the platform."""

@@ -505,3 +505,113 @@ async def test_thermostat_setup_and_detection() -> None:
     with patch("custom_components.hubitat.climate.create_and_add_entities") as create:
         await async_setup_entry(Mock(), Mock(), Mock())
     create.assert_called_once()
+
+
+def _thermostat_with_setpoint_attrs(
+    unit: str = "F", **values: str
+) -> HubitatThermostat:
+    """Create a thermostat reporting the given setpoint attributes."""
+    attributes = {
+        DeviceAttribute.TEMP_UNIT: Attribute(
+            {
+                "name": DeviceAttribute.TEMP_UNIT,
+                "currentValue": unit,
+                "dataType": "STRING",
+                "unit": None,
+            }
+        )
+    }
+    for name, value in values.items():
+        attr = DeviceAttribute(name)
+        attributes[attr] = Attribute(
+            {
+                "name": attr,
+                "currentValue": value,
+                "dataType": "NUMBER",
+                "unit": None,
+            }
+        )
+    return HubitatThermostat(
+        hub=Mock(token="token", temperature_unit=UnitOfTemperature.FAHRENHEIT),
+        device=create_thermostat_device(attributes=attributes),
+    )
+
+
+def test_thermostat_setpoint_range_default_celsius() -> None:
+    """Celsius thermostats default to a 4.4-35 C setpoint range."""
+    thermostat = _thermostat_with_setpoint_attrs("C")
+    assert thermostat.min_temp == pytest.approx(4.4)
+    assert thermostat.max_temp == pytest.approx(35)
+    assert thermostat.target_temperature_step is None
+
+
+def test_thermostat_setpoint_range_default_fahrenheit() -> None:
+    """The default range is converted for Fahrenheit thermostats."""
+    thermostat = _thermostat_with_setpoint_attrs("F")
+    assert thermostat.min_temp == pytest.approx(39.92)
+    assert thermostat.max_temp == pytest.approx(95)
+
+
+def test_thermostat_setpoint_range_reported() -> None:
+    """Device-reported setpoint limits and step override the defaults."""
+    thermostat = _thermostat_with_setpoint_attrs(
+        minSetpoint="41", maxSetpoint="90", setpointStep="0.5"
+    )
+    assert thermostat.min_temp == 41
+    assert thermostat.max_temp == 90
+    assert thermostat.target_temperature_step == 0.5
+
+
+def test_thermostat_setpoint_range_partial() -> None:
+    """A missing limit uses its default value."""
+    thermostat = _thermostat_with_setpoint_attrs(minSetpoint="41")
+    assert thermostat.min_temp == 41
+    assert thermostat.max_temp == pytest.approx(95)
+
+    thermostat = _thermostat_with_setpoint_attrs(maxSetpoint="90")
+    assert thermostat.min_temp == pytest.approx(39.92)
+    assert thermostat.max_temp == 90
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        {"minSetpoint": "90", "maxSetpoint": "41"},
+        {"minSetpoint": "70", "maxSetpoint": "70"},
+        {"minSetpoint": "abc", "maxSetpoint": "90"},
+        {"minSetpoint": "41", "maxSetpoint": "1e400"},
+        {"minSetpoint": "nan", "maxSetpoint": "90"},
+        {"maxSetpoint": "30"},
+    ],
+)
+def test_thermostat_setpoint_range_invalid(values: dict[str, str]) -> None:
+    """An invalid reported range falls back to the default range."""
+    thermostat = _thermostat_with_setpoint_attrs(**values)
+    assert thermostat.min_temp == pytest.approx(39.92)
+    assert thermostat.max_temp == pytest.approx(95)
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "abc", "inf", "nan"])
+def test_thermostat_setpoint_step_invalid(value: str) -> None:
+    """An invalid reported step is ignored."""
+    thermostat = _thermostat_with_setpoint_attrs(setpointStep=value)
+    assert thermostat.target_temperature_step is None
+
+
+def test_thermostat_setpoint_range_updates() -> None:
+    """Setpoint limits reported after startup are picked up on the next event."""
+    thermostat = _thermostat_with_setpoint_attrs(minSetpoint="41", maxSetpoint="90")
+    thermostat._device.attributes[DeviceAttribute.MIN_SETPOINT].update_value("45")
+    thermostat._device.attributes[DeviceAttribute.MAX_SETPOINT].update_value("85")
+    thermostat.load_state()
+    assert thermostat.min_temp == 45
+    assert thermostat.max_temp == 85
+
+
+def test_thermostat_setpoint_attrs_are_device_attrs() -> None:
+    """Setpoint attributes aren't also exposed as generic sensors."""
+    attrs = _thermostat_with_setpoint_attrs().device_attrs
+    assert attrs is not None
+    assert DeviceAttribute.MIN_SETPOINT in attrs
+    assert DeviceAttribute.MAX_SETPOINT in attrs
+    assert DeviceAttribute.SETPOINT_STEP in attrs
