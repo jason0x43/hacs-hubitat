@@ -109,7 +109,7 @@ Changes to the range are picked up on the next event from the device. If a drive
 
 ### Thermostat setpoint limits
 
-Hubitat has no standard attributes for the range of setpoints a thermostat accepts, so thermostats use a default range of 4.4-35 °C (about 40-95 °F). A driver can report a thermostat’s actual limits with custom `minSetpoint` and `maxSetpoint` number attributes, and the setpoint increment with a `setpointStep` number attribute. Values are in the thermostat’s temperature unit (its `temperatureUnit` attribute, or the hub’s unit if that isn’t set). Either limit may be omitted, in which case its default is used. If the resulting range is invalid (non-numeric, or the minimum isn’t below the maximum), the default range is used. An invalid step is ignored.
+Hubitat has no standard attributes for the range of setpoints a thermostat accepts, so thermostats use a default range of 4.4-35 °C (40-95 °F). A driver can report a thermostat’s actual limits with custom `minSetpoint` and `maxSetpoint` number attributes, and the setpoint increment with a `setpointStep` number attribute. Values sent with a temperature unit (e.g. `°F`) are converted; values without one are assumed to be in the thermostat’s temperature unit (its `temperatureUnit` attribute, or the hub’s unit if that isn’t set). A missing or invalid limit uses its default. If the minimum isn’t below the maximum, the default range is used. A step that isn’t positive or is larger than the range is ignored.
 
 In a Groovy driver, declare the attributes and send the values as events:
 

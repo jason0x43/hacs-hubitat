@@ -72,8 +72,11 @@ class ClimateFanMode(StrEnum):
 
 PRESET_AWAY_AND_ECO = "Away and Eco"
 
-# Support a lower minimum temperature than the HA default (in Celsius)
-DEFAULT_MIN_SETPOINT = 4.4
+# Support a lower minimum temperature than the HA default
+DEFAULT_MIN_SETPOINT: dict[str, float] = {
+    UnitOfTemperature.CELSIUS: 4.4,
+    UnitOfTemperature.FAHRENHEIT: 40.0,
+}
 
 HASS_FAN_MODES = [FAN_ON, FAN_AUTO]
 HASS_PRESET_MODES = [PRESET_HOME, PRESET_AWAY]
@@ -241,26 +244,21 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
         """Return the supported (min, max) setpoint in the entity's unit.
 
         Drivers may report a device's setpoint limits with minSetpoint and
-        maxSetpoint attributes, in the device's temperature unit. A missing
-        limit uses its default value. If the resulting range is invalid, the
-        default range is used.
+        maxSetpoint attributes. A missing or invalid limit uses its default
+        value. If the resulting range is invalid, the default range is used.
         """
         unit = self._attr_temperature_unit
-        default_min = TemperatureConverter.convert(
-            DEFAULT_MIN_SETPOINT, UnitOfTemperature.CELSIUS, unit
+        default_min = DEFAULT_MIN_SETPOINT.get(
+            unit, DEFAULT_MIN_SETPOINT[UnitOfTemperature.CELSIUS]
         )
         default_max = TemperatureConverter.convert(
             DEFAULT_MAX_TEMP, UnitOfTemperature.CELSIUS, unit
         )
-        try:
-            low = self.get_float_attr(DeviceAttribute.MIN_SETPOINT)
-            high = self.get_float_attr(DeviceAttribute.MAX_SETPOINT)
-        except (TypeError, ValueError) as e:
-            _LOGGER.debug("Ignoring invalid setpoint range for %s: %s", self.name, e)
-            return default_min, default_max
+        low = self._get_setpoint_attr(DeviceAttribute.MIN_SETPOINT)
+        high = self._get_setpoint_attr(DeviceAttribute.MAX_SETPOINT)
         low = default_min if low is None else low
         high = default_max if high is None else high
-        if not (math.isfinite(low) and math.isfinite(high)) or low >= high:
+        if low >= high:
             _LOGGER.debug(
                 "Ignoring invalid setpoint range for %s: [%s, %s]",
                 self.name,
@@ -272,26 +270,46 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
 
     def _get_setpoint_step(self) -> float | None:
         """Return the setpoint step reported by a setpointStep attribute."""
-        try:
-            step = self.get_float_attr(DeviceAttribute.SETPOINT_STEP)
-        except (TypeError, ValueError) as e:
-            _LOGGER.debug("Ignoring invalid setpoint step for %s: %s", self.name, e)
-            return None
+        step = self._get_setpoint_attr(DeviceAttribute.SETPOINT_STEP, interval=True)
         if step is None:
             return None
-        if not math.isfinite(step) or step <= 0:
+        if step <= 0 or step > self._attr_max_temp - self._attr_min_temp:
             _LOGGER.debug("Ignoring invalid setpoint step for %s: %s", self.name, step)
             return None
         return step
 
+    def _get_setpoint_attr(
+        self, attr: DeviceAttribute, interval: bool = False
+    ) -> float | None:
+        """Return a finite setpoint attribute value in the entity's unit.
+
+        Values with a temperature unit are converted to the entity's unit;
+        values without one are assumed to already be in it.
+        """
+        try:
+            value = self.get_float_attr(attr)
+        except (TypeError, ValueError) as e:
+            _LOGGER.debug("Ignoring invalid %s for %s: %s", attr, self.name, e)
+            return None
+        if value is None:
+            return None
+        if not math.isfinite(value):
+            _LOGGER.debug("Ignoring invalid %s for %s: %s", attr, self.name, value)
+            return None
+        unit = _to_temperature_unit(self._device.attributes[attr].unit)
+        if unit is not None and unit != self._attr_temperature_unit:
+            convert = (
+                TemperatureConverter.convert_interval
+                if interval
+                else TemperatureConverter.convert
+            )
+            value = convert(value, unit, self._attr_temperature_unit)
+        return value
+
     def _get_temperature_unit(self) -> str:
         """Return the unit of measurement used by the platform."""
-        unit = self.get_str_attr(DeviceAttribute.TEMP_UNIT)
-        if unit == TEMP_F:
-            return UnitOfTemperature.FAHRENHEIT
-        if unit == TEMP_C:
-            return UnitOfTemperature.CELSIUS
-        return self._hub.temperature_unit
+        unit = _to_temperature_unit(self.get_str_attr(DeviceAttribute.TEMP_UNIT))
+        return unit or self._hub.temperature_unit
 
     @property
     @override
@@ -354,6 +372,16 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the thermostat."""
         await self.send_command("off")
+
+
+def _to_temperature_unit(unit: str | None) -> UnitOfTemperature | None:
+    """Return the HA temperature unit for a Hubitat unit like "F" or "°F"."""
+    unit = unit.removeprefix("°").upper() if unit else None
+    if unit == TEMP_F:
+        return UnitOfTemperature.FAHRENHEIT
+    if unit == TEMP_C:
+        return UnitOfTemperature.CELSIUS
+    return None
 
 
 def is_thermostat(device: Device, _overrides: dict[str, str] | None = None) -> bool:
