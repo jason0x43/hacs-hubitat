@@ -69,6 +69,13 @@ class HubitatBase(Removable):
         return None
 
     @callback
+    def get_attr_type(self, attr: DeviceAttribute) -> str | None:
+        """Get the Hubitat data type (e.g. "NUMBER") of an attribute."""
+        if attr in self._device.attributes:
+            return self._device.attributes[attr].type
+        return None
+
+    @callback
     def get_float_attr(self, attr: DeviceAttribute) -> float | None:
         """Get the current value of an attribute as a float."""
         if attr in self._device.attributes:
