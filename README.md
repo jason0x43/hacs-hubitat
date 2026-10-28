@@ -107,6 +107,24 @@ sendEvent(name: 'colorTemperatureRange', value: "[${minKelvin}, ${maxKelvin}]")
 
 Changes to the range are picked up on the next event from the device. If a driver starts reporting the attribute after the integration has loaded, reload the integration (see below).
 
+### Thermostat setpoint limits
+
+Hubitat has no standard attributes for the range of setpoints a thermostat accepts, so thermostats use a default range of 4.4-35 °C (40-95 °F). A driver can report a thermostat’s actual limits with custom `minSetpoint` and `maxSetpoint` number attributes, and the setpoint increment with a `setpointStep` number attribute. Values sent with a temperature unit (e.g. `°F`) are converted; values without one are assumed to be in the thermostat’s temperature unit (its `temperatureUnit` attribute, or the hub’s unit if that isn’t set). A missing or invalid limit uses its default. If the minimum isn’t below the maximum, the default range is used. A step that isn’t positive or is larger than the range is ignored.
+
+In a Groovy driver, declare the attributes and send the values as events:
+
+```groovy
+attribute 'minSetpoint', 'number'
+attribute 'maxSetpoint', 'number'
+attribute 'setpointStep', 'number'
+
+sendEvent(name: 'minSetpoint', value: 41)
+sendEvent(name: 'maxSetpoint', value: 90)
+sendEvent(name: 'setpointStep', value: 0.5)
+```
+
+Changes to the limits are picked up on the next event from the device. If a driver starts reporting the attributes after the integration has loaded, reload the integration (see below).
+
 ### Adding new devices
 
 After adding new devices to the Maker API instance in Hubitat, you will need to **reload the integration before the devices will be controllable from Home Assistant**. You can reload the device list by opening **Settings** › **Devices & Services** › **Hubitat**, then tapping **⋮** › **Reload** for the hub instance you’ve updated. Once the integration has loaded the new device list, devices added to the Maker API instance should show up in Home Assistant.
