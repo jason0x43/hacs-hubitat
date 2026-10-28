@@ -16,6 +16,7 @@ from custom_components.hubitat.hubitatmaker.const import (
 )
 from custom_components.hubitat.hubitatmaker.types import Attribute
 from homeassistant.components.climate.const import (
+    ATTR_HVAC_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
     FAN_AUTO,
@@ -496,6 +497,113 @@ async def test_thermostat_commands() -> None:
         ]
     )
     assert thermostat.send_command.await_count == 16
+
+
+@pytest.mark.asyncio
+async def test_thermostat_set_temperature_with_hvac_mode() -> None:
+    thermostat = HubitatThermostat(
+        hub=Mock(token="token", temperature_unit=UnitOfTemperature.FAHRENHEIT),
+        device=create_thermostat_device(),
+    )
+    thermostat.send_command = AsyncMock()  # type: ignore[method-assign]
+
+    # Range setpoints are used for a requested auto mode even when the
+    # thermostat is currently in heat mode
+    thermostat._attr_hvac_mode = HVACMode.HEAT
+    await thermostat.async_set_temperature(
+        **{
+            ATTR_HVAC_MODE: HVACMode.AUTO,
+            ATTR_TARGET_TEMP_LOW: 59,
+            ATTR_TARGET_TEMP_HIGH: 80,
+            ATTR_TEMPERATURE: 79,
+        }
+    )
+    assert thermostat.send_command.await_args_list == [
+        call(DeviceCommand.AUTO),
+        call(DeviceCommand.SET_HEATING_SETPOINT, 59),
+        call(DeviceCommand.SET_COOLING_SETPOINT, 80),
+    ]
+
+    thermostat.send_command.reset_mock()
+    await thermostat.async_set_temperature(
+        **{
+            ATTR_HVAC_MODE: HVACMode.HEAT_COOL,
+            ATTR_TARGET_TEMP_LOW: 62,
+            ATTR_TARGET_TEMP_HIGH: 78,
+        }
+    )
+    assert thermostat.send_command.await_args_list == [
+        call(DeviceCommand.AUTO),
+        call(DeviceCommand.SET_HEATING_SETPOINT, 62),
+        call(DeviceCommand.SET_COOLING_SETPOINT, 78),
+    ]
+
+    # A single setpoint follows the requested mode, not the current one
+    thermostat._attr_hvac_mode = HVACMode.AUTO
+    thermostat.send_command.reset_mock()
+    await thermostat.async_set_temperature(
+        **{ATTR_HVAC_MODE: HVACMode.COOL, ATTR_TEMPERATURE: 74}
+    )
+    assert thermostat.send_command.await_args_list == [
+        call(DeviceCommand.COOL),
+        call(DeviceCommand.SET_COOLING_SETPOINT, 74),
+    ]
+
+    thermostat.send_command.reset_mock()
+    await thermostat.async_set_temperature(
+        **{ATTR_HVAC_MODE: HVACMode.HEAT, ATTR_TEMPERATURE: 68}
+    )
+    assert thermostat.send_command.await_args_list == [
+        call(DeviceCommand.HEAT),
+        call(DeviceCommand.SET_HEATING_SETPOINT, 68),
+    ]
+
+    # Turning off sends no setpoints
+    thermostat.send_command.reset_mock()
+    await thermostat.async_set_temperature(
+        **{ATTR_HVAC_MODE: HVACMode.OFF, ATTR_TEMPERATURE: 70}
+    )
+    assert thermostat.send_command.await_args_list == [call(DeviceCommand.OFF)]
+
+
+@pytest.mark.asyncio
+async def test_thermostat_set_temperature_without_hvac_mode() -> None:
+    thermostat = HubitatThermostat(
+        hub=Mock(token="token", temperature_unit=UnitOfTemperature.FAHRENHEIT),
+        device=create_thermostat_device(),
+    )
+    thermostat.send_command = AsyncMock()  # type: ignore[method-assign]
+
+    # Setpoints follow the current mode and no mode command is sent
+    thermostat._attr_hvac_mode = HVACMode.AUTO
+    await thermostat.async_set_temperature(
+        **{ATTR_TARGET_TEMP_LOW: 65, ATTR_TARGET_TEMP_HIGH: 75, ATTR_TEMPERATURE: 70}
+    )
+    assert thermostat.send_command.await_args_list == [
+        call(DeviceCommand.SET_HEATING_SETPOINT, 65),
+        call(DeviceCommand.SET_COOLING_SETPOINT, 75),
+    ]
+
+    thermostat._attr_hvac_mode = HVACMode.COOL
+    thermostat.send_command.reset_mock()
+    await thermostat.async_set_temperature(
+        **{ATTR_TARGET_TEMP_LOW: 65, ATTR_TARGET_TEMP_HIGH: 75, ATTR_TEMPERATURE: 74}
+    )
+    assert thermostat.send_command.await_args_list == [
+        call(DeviceCommand.SET_COOLING_SETPOINT, 74)
+    ]
+
+    thermostat._attr_hvac_mode = HVACMode.HEAT
+    thermostat.send_command.reset_mock()
+    await thermostat.async_set_temperature(**{ATTR_TEMPERATURE: 68})
+    assert thermostat.send_command.await_args_list == [
+        call(DeviceCommand.SET_HEATING_SETPOINT, 68)
+    ]
+
+    thermostat._attr_hvac_mode = HVACMode.OFF
+    thermostat.send_command.reset_mock()
+    await thermostat.async_set_temperature(**{ATTR_TEMPERATURE: 68})
+    thermostat.send_command.assert_not_awaited()
 
 
 @pytest.mark.asyncio

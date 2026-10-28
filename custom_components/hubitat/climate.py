@@ -9,6 +9,7 @@ from homeassistant.components.climate import (
     ClimateEntity,
 )
 from homeassistant.components.climate.const import (
+    ATTR_HVAC_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
     FAN_AUTO,
@@ -273,7 +274,15 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
     @override
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
-        if self.hvac_mode == HVACMode.HEAT_COOL or self.hvac_mode == HVACMode.AUTO:
+        # The entity's mode only updates when the hub reports the change, so
+        # use a requested mode directly when choosing setpoints
+        hvac_mode = cast(HVACMode | None, kwargs.get(ATTR_HVAC_MODE))
+        if hvac_mode is not None:
+            await self.async_set_hvac_mode(hvac_mode)
+        else:
+            hvac_mode = self.hvac_mode
+
+        if hvac_mode == HVACMode.HEAT_COOL or hvac_mode == HVACMode.AUTO:
             temp_low = cast(float | None, kwargs.get(ATTR_TARGET_TEMP_LOW))
             temp_high = cast(float | None, kwargs.get(ATTR_TARGET_TEMP_HIGH))
             if temp_low is not None:
@@ -283,9 +292,9 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
         else:
             temp = cast(float | None, kwargs.get(ATTR_TEMPERATURE))
             if temp is not None:
-                if self.hvac_mode == HVACMode.COOL:
+                if hvac_mode == HVACMode.COOL:
                     await self.send_command(DeviceCommand.SET_COOLING_SETPOINT, temp)
-                elif self.hvac_mode == HVACMode.HEAT:
+                elif hvac_mode == HVACMode.HEAT:
                     await self.send_command(DeviceCommand.SET_HEATING_SETPOINT, temp)
 
     @override
