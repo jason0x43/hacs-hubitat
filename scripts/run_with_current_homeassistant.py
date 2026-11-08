@@ -40,7 +40,7 @@ def main(command: list[str], *, resolved: bool = False) -> int:
                 str(temp_project),
                 "--no-sync",
                 "--upgrade-package",
-                "pytest-homeassistant-custom-component",
+                "pytest-homeassistant",
                 f"homeassistant=={homeassistant_version}",
             ],
             check=True,

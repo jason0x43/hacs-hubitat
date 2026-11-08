@@ -73,6 +73,13 @@ class ClimateFanMode(StrEnum):
 
 PRESET_AWAY_AND_ECO = "Away and Eco"
 
+# Home Assistant 2026.11 renamed the climate temperature attributes (for example,
+# _attr_temperature_unit became _attr_native_temperature_unit). Older versions
+# only read the original names.
+_TEMPERATURE_ATTR_PREFIX = (
+    "_attr_native_" if hasattr(ClimateEntity, "native_temperature_unit") else "_attr_"
+)
+
 # Support a lower minimum temperature than the HA default
 DEFAULT_MIN_SETPOINT: dict[str, float] = {
     UnitOfTemperature.CELSIUS: 4.4,
@@ -112,6 +119,7 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
     _attr_supported_features: ClimateEntityFeature
     _attr_min_temp: float
     _attr_max_temp: float
+    _temperature_unit: str
 
     def __init__(self, **kwargs: Unpack[HubitatEntityArgs]):
         HubitatEntity.__init__(self, **kwargs)
@@ -143,25 +151,32 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
     @override
     def load_state(self):
         # The temperature unit must be loaded before the setpoint range
-        self._attr_temperature_unit: str = self._get_temperature_unit()
+        self._temperature_unit = self._get_temperature_unit()
+        self._set_temperature_attr("temperature_unit", self._temperature_unit)
         # In 2025.4.1 this is int | None, in 2025.10.1+ it's float | None
         # We use float | None which works at runtime in both versions
         self._attr_current_humidity: float | None = self._get_current_humidity()
-        self._attr_current_temperature: float | None = self._get_current_temperature()
+        self._set_temperature_attr(
+            "current_temperature", self._get_current_temperature()
+        )
         self._attr_fan_mode: str | None = self._get_fan_mode()
         self._attr_hvac_mode: HVACMode | None = self._get_hvac_mode()
         self._attr_hvac_action: HVACAction | None = self._get_hvac_action()
         self._attr_preset_mode: str | None = self._get_preset_mode()
         self._attr_preset_modes: list[str] | None = self._get_preset_modes()
-        self._attr_target_temperature: float | None = self._get_target_temperature()
-        self._attr_target_temperature_high: float | None = (
-            self._get_target_temperature_high()
+        self._set_temperature_attr("target_temperature", self._get_target_temperature())
+        self._set_temperature_attr(
+            "target_temperature_high", self._get_target_temperature_high()
         )
-        self._attr_target_temperature_low: float | None = (
-            self._get_target_temperature_low()
+        self._set_temperature_attr(
+            "target_temperature_low", self._get_target_temperature_low()
         )
         (self._attr_min_temp, self._attr_max_temp) = self._get_setpoint_range()
         self._attr_target_temperature_step: float | None = self._get_setpoint_step()
+
+    def _set_temperature_attr(self, name: str, value: str | float | None) -> None:
+        """Set a temperature attribute under this Home Assistant version's name."""
+        setattr(self, f"{_TEMPERATURE_ATTR_PREFIX}{name}", value)
 
     def _get_current_humidity(self) -> float | None:
         humidity = self.get_int_attr(DeviceAttribute.HUMIDITY)
@@ -248,7 +263,7 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
         maxSetpoint attributes. A missing or invalid limit uses its default
         value. If the resulting range is invalid, the default range is used.
         """
-        unit = self._attr_temperature_unit
+        unit = self._temperature_unit
         default_min = DEFAULT_MIN_SETPOINT.get(
             unit, DEFAULT_MIN_SETPOINT[UnitOfTemperature.CELSIUS]
         )
@@ -298,13 +313,13 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
             _LOGGER.debug("Ignoring invalid %s for %s: %s", attr, self.name, value)
             return None
         unit = _to_temperature_unit(self._device.attributes[attr].unit)
-        if unit is not None and unit != self._attr_temperature_unit:
+        if unit is not None and unit != self._temperature_unit:
             convert = (
                 TemperatureConverter.convert_interval
                 if interval
                 else TemperatureConverter.convert
             )
-            value = convert(value, unit, self._attr_temperature_unit)
+            value = convert(value, unit, self._temperature_unit)
         return value
 
     def _get_temperature_unit(self) -> str:

@@ -15,6 +15,7 @@ from custom_components.hubitat.hubitatmaker.const import (
     DeviceCommand,
 )
 from custom_components.hubitat.hubitatmaker.types import Attribute
+from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE,
     ATTR_TARGET_TEMP_HIGH,
@@ -28,6 +29,17 @@ from homeassistant.components.climate.const import (
     HVACMode,
 )
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
+
+
+def temperature_attr(thermostat: HubitatThermostat, name: str) -> Any:
+    """Read a climate temperature property by this Home Assistant version's name.
+
+    Home Assistant 2026.11 renamed these properties with a native_ prefix.
+    """
+    native_name = f"native_{name}"
+    if hasattr(ClimateEntity, native_name):
+        return getattr(thermostat, native_name)
+    return getattr(thermostat, name)
 
 
 def create_thermostat_device(**kwargs: Any) -> Mock:
@@ -98,7 +110,7 @@ def test_thermostat_init():
 
     thermostat = HubitatThermostat(hub=hub, device=device)
 
-    assert thermostat.current_temperature == 72.0
+    assert temperature_attr(thermostat, "current_temperature") == 72.0
     assert thermostat.hvac_mode == HVACMode.AUTO
 
 
@@ -113,7 +125,9 @@ def test_thermostat_temperature_unit():
 
     thermostat = HubitatThermostat(hub=hub, device=device)
 
-    assert thermostat.temperature_unit == UnitOfTemperature.FAHRENHEIT
+    assert (
+        temperature_attr(thermostat, "temperature_unit") == UnitOfTemperature.FAHRENHEIT
+    )
 
 
 def test_thermostat_celsius():
@@ -136,7 +150,7 @@ def test_thermostat_celsius():
 
     thermostat = HubitatThermostat(hub=hub, device=device)
 
-    assert thermostat.temperature_unit == UnitOfTemperature.CELSIUS
+    assert temperature_attr(thermostat, "temperature_unit") == UnitOfTemperature.CELSIUS
 
 
 def test_thermostat_heat_mode():
@@ -162,9 +176,9 @@ def test_thermostat_heat_mode():
     thermostat = HubitatThermostat(hub=hub, device=device)
 
     assert thermostat.hvac_mode == HVACMode.HEAT
-    assert thermostat.target_temperature == 68.0
-    assert thermostat.target_temperature_high is None
-    assert thermostat.target_temperature_low is None
+    assert temperature_attr(thermostat, "target_temperature") == 68.0
+    assert temperature_attr(thermostat, "target_temperature_high") is None
+    assert temperature_attr(thermostat, "target_temperature_low") is None
 
 
 def test_thermostat_cool_mode():
@@ -190,7 +204,7 @@ def test_thermostat_cool_mode():
     thermostat = HubitatThermostat(hub=hub, device=device)
 
     assert thermostat.hvac_mode == HVACMode.COOL
-    assert thermostat.target_temperature == 76.0
+    assert temperature_attr(thermostat, "target_temperature") == 76.0
 
 
 def test_thermostat_off_mode():
@@ -230,9 +244,9 @@ def test_thermostat_auto_mode_temperatures():
     thermostat = HubitatThermostat(hub=hub, device=device)
 
     assert thermostat.hvac_mode == HVACMode.AUTO
-    assert thermostat.target_temperature is None
-    assert thermostat.target_temperature_low == 68.0
-    assert thermostat.target_temperature_high == 76.0
+    assert temperature_attr(thermostat, "target_temperature") is None
+    assert temperature_attr(thermostat, "target_temperature_low") == 68.0
+    assert temperature_attr(thermostat, "target_temperature_high") == 76.0
 
 
 def test_thermostat_hvac_action_heating():
@@ -458,7 +472,7 @@ def test_thermostat_temperature_unit_fallback_and_device_attrs() -> None:
             }
         ),
     )
-    assert thermostat.temperature_unit == UnitOfTemperature.CELSIUS
+    assert temperature_attr(thermostat, "temperature_unit") == UnitOfTemperature.CELSIUS
     assert thermostat.device_attrs is not None
     assert DeviceAttribute.TEMP in thermostat.device_attrs
 
@@ -770,6 +784,6 @@ def test_thermostat_setpoint_range_hub_unit_change() -> None:
 
     hub.temperature_unit = UnitOfTemperature.CELSIUS
     thermostat.load_state()
-    assert thermostat.temperature_unit == UnitOfTemperature.CELSIUS
+    assert temperature_attr(thermostat, "temperature_unit") == UnitOfTemperature.CELSIUS
     assert thermostat.min_temp == pytest.approx(4.4)
     assert thermostat.max_temp == pytest.approx(35)

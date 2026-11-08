@@ -5,7 +5,7 @@ from unittest.mock import patch
 import aiohttp
 import pytest
 from aiohttp.test_utils import unused_port
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.hubitat.const import (
     DOMAIN,

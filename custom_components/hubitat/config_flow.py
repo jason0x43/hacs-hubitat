@@ -6,12 +6,10 @@ from typing import Any, TypedDict, cast, override
 
 import homeassistant.helpers.config_validation as cv
 from homeassistant.config_entries import (
-    CONN_CLASS_LOCAL_PUSH,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
     OptionsFlow,
-    OptionsFlowWithConfigEntry,
 )
 from homeassistant.const import (
     CONF_ACCESS_TOKEN,
@@ -90,7 +88,6 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION: int = 2
     MINOR_VERSION: int = 2
-    CONNECTION_CLASS: str = CONN_CLASS_LOCAL_PUSH
 
     hub: HubitatHub | None = None
 
@@ -167,12 +164,19 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class HubitatOptionsFlow(OptionsFlowWithConfigEntry):
+class HubitatOptionsFlow(OptionsFlow):
     """Handle an options flow for Hubitat."""
 
     def __init__(self, config_entry: ConfigEntry):
         """Initialize an options flow."""
-        super().__init__(config_entry)
+        # The config_entry property is provided by Home Assistant once the flow
+        # is running; only a working copy of the options is kept here.
+        self._options: dict[str, Any] = deepcopy(dict(config_entry.options))
+
+    @property
+    def options(self) -> dict[str, Any]:
+        """Return the options being edited."""
+        return self._options
 
     async def async_step_init(
         self, _user_input: dict[str, Any] | None = None

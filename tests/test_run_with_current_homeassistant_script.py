@@ -56,7 +56,7 @@ def test_main_updates_a_temporary_copy_of_the_project(monkeypatch, tmp_path) -> 
     assert commands[0][0][0:2] == ["uv", "add"]
     assert commands[0][0][-3:] == [
         "--upgrade-package",
-        "pytest-homeassistant-custom-component",
+        "pytest-homeassistant",
         "homeassistant==2026.9.3",
     ]
     assert commands[0][1:] == (None, True)

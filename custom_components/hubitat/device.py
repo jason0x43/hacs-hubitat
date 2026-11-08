@@ -4,7 +4,7 @@ from abc import ABC
 from datetime import datetime
 from functools import cached_property
 from logging import getLogger
-from typing import Any, TypedDict, Unpack, cast
+from typing import Any, TypedDict, Unpack
 
 from typing_extensions import override
 
@@ -229,17 +229,17 @@ class HubitatEventEmitter(HubitatBase):
 
 def get_device_info(hub: Hub, device: Device) -> device_registry.DeviceInfo:
     """Return the device info."""
-    info: device_registry.DeviceInfo = {
-        "identifiers": get_device_identifiers(hub.id, device.id)
-    }
+    # DeviceInfo is a TypedDict before Home Assistant 2026.11 and a dataclass
+    # after, so it is built from keyword arguments, which both accept.
+    fields: dict[str, Any] = {"identifiers": get_device_identifiers(hub.id, device.id)}
 
     # if this entity's device isn't the hub, link it to the hub
     if device.id != hub.id:
-        info["name"] = device.label
-        info["suggested_area"] = device.room
+        fields["name"] = device.label
+        fields["suggested_area"] = device.room
         if hasattr(device_registry, "async_get_device_id_by_identifier"):
             try:
-                info["via_device_id"] = (
+                fields["via_device_id"] = (
                     device_registry.async_get_device_id_by_identifier(
                         hub.hass,
                         (DOMAIN, hub.id),
@@ -251,9 +251,9 @@ def get_device_info(hub: Hub, device: Device) -> device_registry.DeviceInfo:
             except ValueError:
                 pass
 
-        if "via_device_id" not in info:
-            cast(dict[str, Any], info)["via_device"] = (DOMAIN, hub.id)
-        info["model"] = device.type
-        info["manufacturer"] = "Hubitat"
+        if "via_device_id" not in fields:
+            fields["via_device"] = (DOMAIN, hub.id)
+        fields["model"] = device.type
+        fields["manufacturer"] = "Hubitat"
 
-    return info
+    return device_registry.DeviceInfo(**fields)

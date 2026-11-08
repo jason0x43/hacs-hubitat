@@ -19,11 +19,6 @@ from custom_components.hubitat.const import (
 from homeassistant.const import CONF_ACCESS_TOKEN, CONF_HOST
 
 
-@pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
-    """Allow Home Assistant to load this custom integration in tests."""
-
-
 class _FakeSocket:
     def connect(self, _address: tuple[str, int]) -> None:
         pass
