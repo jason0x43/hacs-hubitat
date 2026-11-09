@@ -1,10 +1,19 @@
 from unittest.mock import Mock, patch
 
+import pytest
+
 from custom_components.hubitat.const import DOMAIN
 from custom_components.hubitat.device import get_device_info
 from custom_components.hubitat.hub import _update_device_rooms
+from homeassistant.helpers import device_registry
+
+requires_device_id_lookup = pytest.mark.skipif(
+    not hasattr(device_registry, "async_get_device_id_by_identifier"),
+    reason="Home Assistant lacks device_registry.async_get_device_id_by_identifier",
+)
 
 
+@requires_device_id_lookup
 def test_get_device_info_uses_via_device_id_when_supported() -> None:
     hub = Mock(id="hub")
     hub.config_entry.entry_id = "entry"
@@ -24,6 +33,7 @@ def test_get_device_info_uses_via_device_id_when_supported() -> None:
     )
 
 
+@requires_device_id_lookup
 def test_get_device_info_omits_via_device_when_hub_is_not_registered() -> None:
     hub = Mock(id="hub")
     hub.config_entry.entry_id = "entry"

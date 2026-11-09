@@ -18,6 +18,7 @@ from custom_components.hubitat.util import (
     to_display_name,
 )
 from homeassistant.config_entries import ConfigEntryState
+from homeassistant.helpers import device_registry
 
 
 def test_util_helpers() -> None:
@@ -49,6 +50,10 @@ def test_get_hubitat_device_id() -> None:
         get_hubitat_device_id(device)
 
 
+@pytest.mark.skipif(
+    not hasattr(device_registry, "ChildDeviceEntry"),
+    reason="Home Assistant lacks child device support in the device registry",
+)
 def test_helpers_find_devices_and_hubs() -> None:
     hass = Mock()
     device = Mock(id="device", config_entries={"missing", "loaded"})

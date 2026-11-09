@@ -72,6 +72,10 @@ def _get_hub_status_entity_id(hass, hub_id: str) -> str:
     return entity_id
 
 
+@pytest.mark.skipif(
+    not hasattr(device_registry.DeviceRegistry, "async_get_device_by_identifier"),
+    reason="Home Assistant lacks DeviceRegistry.async_get_device_by_identifier",
+)
 async def test_hub_setup_uses_real_hass_registries_and_maker_api(
     hass, fake_hubitat: FakeHubitat
 ) -> None:
