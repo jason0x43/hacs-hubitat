@@ -3,7 +3,7 @@
 import math
 from enum import StrEnum
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Unpack, cast, override
+from typing import TYPE_CHECKING, Any, Literal, Unpack, cast, override
 
 from custom_components.hubitat.const import TEMP_C, TEMP_F
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
@@ -72,6 +72,14 @@ class ClimateFanMode(StrEnum):
 
 
 PRESET_AWAY_AND_ECO = "Away and Eco"
+
+type _TemperatureAttr = Literal[
+    "temperature_unit",
+    "current_temperature",
+    "target_temperature",
+    "target_temperature_high",
+    "target_temperature_low",
+]
 
 # Home Assistant 2026.11 renamed the climate temperature attributes (for example,
 # _attr_temperature_unit became _attr_native_temperature_unit). Older versions
@@ -174,8 +182,15 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
         (self._attr_min_temp, self._attr_max_temp) = self._get_setpoint_range()
         self._attr_target_temperature_step: float | None = self._get_setpoint_step()
 
-    def _set_temperature_attr(self, name: str, value: str | float | None) -> None:
-        """Set a temperature attribute under this Home Assistant version's name."""
+    def _set_temperature_attr(
+        self, name: _TemperatureAttr, value: str | float | None
+    ) -> None:
+        """Set a temperature attribute under this Home Assistant version's name.
+
+        The attribute is set dynamically because the older names are Final
+        deprecation aliases in Home Assistant 2026.11, so they can't be assigned
+        in code that type checks against it.
+        """
         setattr(self, f"{_TEMPERATURE_ATTR_PREFIX}{name}", value)
 
     def _get_current_humidity(self) -> float | None:

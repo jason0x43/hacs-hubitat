@@ -20,6 +20,10 @@ from .util import get_device_identifiers, get_hub_device_id
 
 _LOGGER = getLogger(__name__)
 
+# Newer Home Assistant versions link devices by registry ID (via_device_id) and
+# deprecate linking by identifier (via_device).
+HAS_DEVICE_ID_LOOKUP = hasattr(device_registry, "async_get_device_id_by_identifier")
+
 
 class HubitatBase(Removable):
     """Base class for Hubitat entities and event emitters."""
@@ -237,7 +241,7 @@ def get_device_info(hub: Hub, device: Device) -> device_registry.DeviceInfo:
     if device.id != hub.id:
         fields["name"] = device.label
         fields["suggested_area"] = device.room
-        if hasattr(device_registry, "async_get_device_id_by_identifier"):
+        if HAS_DEVICE_ID_LOOKUP:
             try:
                 fields["via_device_id"] = (
                     device_registry.async_get_device_id_by_identifier(
@@ -246,12 +250,15 @@ def get_device_info(hub: Hub, device: Device) -> device_registry.DeviceInfo:
                         config_entry_id=hub.config_entry.entry_id,
                     )
                 )
+            # The hub isn't registered (or the registry isn't available), so
+            # there's nothing to link to. via_device is deprecated in versions
+            # with this lookup, so it isn't used as a fallback. Separate except
+            # clauses keep this parseable on Python 3.13.
             except TypeError:
                 pass
             except ValueError:
                 pass
-
-        if "via_device_id" not in fields:
+        else:
             fields["via_device"] = (DOMAIN, hub.id)
         fields["model"] = device.type
         fields["manufacturer"] = "Hubitat"
