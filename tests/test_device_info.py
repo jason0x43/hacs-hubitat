@@ -4,20 +4,31 @@ from custom_components.hubitat.const import DOMAIN
 from custom_components.hubitat.device import get_device_info
 from custom_components.hubitat.hub import _update_device_rooms
 
+# create=True lets these run on Home Assistant versions without the lookup API.
+_DEVICE_ID_LOOKUP = (
+    "custom_components.hubitat.device.device_registry.async_get_device_id_by_identifier"
+)
 
-def test_get_device_info_uses_via_device_id_when_supported() -> None:
+
+def _create_hub_and_device() -> tuple[Mock, Mock]:
     hub = Mock(id="hub")
     hub.config_entry.entry_id = "entry"
     device = Mock(id="device", label="Device", room="Office", type="Switch")
+    return hub, device
 
-    with patch(
-        "custom_components.hubitat.device.device_registry.async_get_device_id_by_identifier",
-        return_value="registry-hub-id",
-    ) as get_device_id:
+
+def test_get_device_info_uses_via_device_id_when_supported() -> None:
+    hub, device = _create_hub_and_device()
+
+    with (
+        patch("custom_components.hubitat.device.HAS_DEVICE_ID_LOOKUP", True),
+        patch(_DEVICE_ID_LOOKUP, create=True, return_value="registry-hub-id") as get_id,
+    ):
         info = get_device_info(hub, device)
 
-    assert info["via_device_id"] == "registry-hub-id"
-    get_device_id.assert_called_once_with(
+    assert dict(info)["via_device_id"] == "registry-hub-id"
+    assert "via_device" not in dict(info)
+    get_id.assert_called_once_with(
         hub.hass,
         ("hubitat", "hub"),
         config_entry_id="entry",
@@ -25,17 +36,30 @@ def test_get_device_info_uses_via_device_id_when_supported() -> None:
 
 
 def test_get_device_info_omits_via_device_when_hub_is_not_registered() -> None:
-    hub = Mock(id="hub")
-    hub.config_entry.entry_id = "entry"
-    device = Mock(id="device", label="Device", room="Office", type="Switch")
+    hub, device = _create_hub_and_device()
 
-    with patch(
-        "custom_components.hubitat.device.device_registry.async_get_device_id_by_identifier",
-        side_effect=ValueError,
+    with (
+        patch("custom_components.hubitat.device.HAS_DEVICE_ID_LOOKUP", True),
+        patch(_DEVICE_ID_LOOKUP, create=True, side_effect=ValueError),
+    ):
+        info = get_device_info(hub, device)
+
+    assert "via_device" not in dict(info)
+    assert "via_device_id" not in dict(info)
+
+
+def test_get_device_info_uses_via_device_without_device_id_lookup() -> None:
+    hub, device = _create_hub_and_device()
+
+    with (
+        patch("custom_components.hubitat.device.HAS_DEVICE_ID_LOOKUP", False),
+        patch(_DEVICE_ID_LOOKUP, create=True) as get_id,
     ):
         info = get_device_info(hub, device)
 
     assert dict(info)["via_device"] == ("hubitat", "hub")
+    assert "via_device_id" not in dict(info)
+    get_id.assert_not_called()
 
 
 def test_update_device_rooms_uses_config_entry_scoped_identifier_lookup() -> None:

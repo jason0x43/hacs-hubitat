@@ -4,7 +4,7 @@ from abc import ABC
 from datetime import datetime
 from functools import cached_property
 from logging import getLogger
-from typing import Any, TypedDict, Unpack, cast
+from typing import Any, TypedDict, Unpack
 
 from typing_extensions import override
 
@@ -19,6 +19,10 @@ from .types import Removable, UpdateableEntity
 from .util import get_device_identifiers, get_hub_device_id
 
 _LOGGER = getLogger(__name__)
+
+# Newer Home Assistant versions link devices by registry ID (via_device_id) and
+# deprecate linking by identifier (via_device).
+HAS_DEVICE_ID_LOOKUP = hasattr(device_registry, "async_get_device_id_by_identifier")
 
 
 class HubitatBase(Removable):
@@ -229,31 +233,34 @@ class HubitatEventEmitter(HubitatBase):
 
 def get_device_info(hub: Hub, device: Device) -> device_registry.DeviceInfo:
     """Return the device info."""
-    info: device_registry.DeviceInfo = {
-        "identifiers": get_device_identifiers(hub.id, device.id)
-    }
+    # DeviceInfo is a TypedDict before Home Assistant 2026.11 and a dataclass
+    # after, so it is built from keyword arguments, which both accept.
+    fields: dict[str, Any] = {"identifiers": get_device_identifiers(hub.id, device.id)}
 
     # if this entity's device isn't the hub, link it to the hub
     if device.id != hub.id:
-        info["name"] = device.label
-        info["suggested_area"] = device.room
-        if hasattr(device_registry, "async_get_device_id_by_identifier"):
+        fields["name"] = device.label
+        fields["suggested_area"] = device.room
+        if HAS_DEVICE_ID_LOOKUP:
             try:
-                info["via_device_id"] = (
+                fields["via_device_id"] = (
                     device_registry.async_get_device_id_by_identifier(
                         hub.hass,
                         (DOMAIN, hub.id),
                         config_entry_id=hub.config_entry.entry_id,
                     )
                 )
+            # The hub isn't registered (or the registry isn't available), so
+            # there's nothing to link to. via_device is deprecated in versions
+            # with this lookup, so it isn't used as a fallback. Separate except
+            # clauses keep this parseable on Python 3.13.
             except TypeError:
                 pass
             except ValueError:
                 pass
+        else:
+            fields["via_device"] = (DOMAIN, hub.id)
+        fields["model"] = device.type
+        fields["manufacturer"] = "Hubitat"
 
-        if "via_device_id" not in info:
-            cast(dict[str, Any], info)["via_device"] = (DOMAIN, hub.id)
-        info["model"] = device.type
-        info["manufacturer"] = "Hubitat"
-
-    return info
+    return device_registry.DeviceInfo(**fields)

@@ -8,6 +8,9 @@ from homeassistant.helpers.device_registry import DeviceEntry
 from .error import DeviceError
 from .hub import Hub, get_domain_data
 
+# Home Assistant 2026.11 added child devices, which device lookups must exclude.
+HAS_CHILD_DEVICES = hasattr(device_registry, "ChildDeviceEntry")
+
 
 def are_config_entries_loaded(hass: HomeAssistant, device_id: str) -> bool:
     """Return true if all of a device's config entries are loaded"""
@@ -22,7 +25,7 @@ def are_config_entries_loaded(hass: HomeAssistant, device_id: str) -> bool:
 def get_device_entry_by_device_id(hass: HomeAssistant, device_id: str) -> DeviceEntry:
     """Get the device entry for a given device ID."""
     dreg = device_registry.async_get(hass)
-    if hasattr(device_registry, "ChildDeviceEntry"):
+    if HAS_CHILD_DEVICES:
         device = dreg.async_get(device_id, include_child_devices=False)
     else:
         device = dreg.async_get(device_id)

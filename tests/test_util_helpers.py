@@ -49,7 +49,8 @@ def test_get_hubitat_device_id() -> None:
         get_hubitat_device_id(device)
 
 
-def test_helpers_find_devices_and_hubs() -> None:
+@pytest.mark.parametrize("has_child_devices", [True, False])
+def test_helpers_find_devices_and_hubs(has_child_devices: bool) -> None:
     hass = Mock()
     device = Mock(id="device", config_entries={"missing", "loaded"})
     registry = Mock()
@@ -60,14 +61,20 @@ def test_helpers_find_devices_and_hubs() -> None:
         loaded if entry_id == "loaded" else None
     )
 
-    with patch(
-        "custom_components.hubitat.helpers.device_registry.async_get",
-        return_value=registry,
+    with (
+        patch(
+            "custom_components.hubitat.helpers.device_registry.async_get",
+            return_value=registry,
+        ),
+        patch("custom_components.hubitat.helpers.HAS_CHILD_DEVICES", has_child_devices),
     ):
         assert get_device_entry_by_device_id(hass, "device") is device
-        registry.async_get.assert_called_once_with(
-            "device", include_child_devices=False
-        )
+        if has_child_devices:
+            registry.async_get.assert_called_once_with(
+                "device", include_child_devices=False
+            )
+        else:
+            registry.async_get.assert_called_once_with("device")
         assert are_config_entries_loaded(hass, "device") is False
 
         registry.async_get.return_value = None

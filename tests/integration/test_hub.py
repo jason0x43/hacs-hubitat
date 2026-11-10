@@ -5,7 +5,7 @@ from unittest.mock import patch
 import aiohttp
 import pytest
 from aiohttp.test_utils import unused_port
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.hubitat.const import (
     DOMAIN,
@@ -72,6 +72,19 @@ def _get_hub_status_entity_id(hass, hub_id: str) -> str:
     return entity_id
 
 
+def _get_device_by_identifier(
+    dreg: device_registry.DeviceRegistry, identifier: tuple[str, str], entry_id: str
+) -> device_registry.DeviceEntry | None:
+    """Find a config entry's device using the lookup this Home Assistant supports.
+
+    Home Assistant 2026.11 deprecated async_get_device in favor of
+    async_get_device_by_identifier, which older versions don't have.
+    """
+    if hasattr(dreg, "async_get_device_by_identifier"):
+        return dreg.async_get_device_by_identifier(identifier, entry_id)
+    return dreg.async_get_device(identifiers={identifier})
+
+
 async def test_hub_setup_uses_real_hass_registries_and_maker_api(
     hass, fake_hubitat: FakeHubitat
 ) -> None:
@@ -97,11 +110,11 @@ async def test_hub_setup_uses_real_hass_registries_and_maker_api(
         assert hass.states.get(hub_status_entity_id).state == STATE_ON
 
         dreg = device_registry.async_get(hass)
-        hub_device = dreg.async_get_device_by_identifier(
-            (DOMAIN, fake_hubitat.hub_id), entry.entry_id
+        hub_device = _get_device_by_identifier(
+            dreg, (DOMAIN, fake_hubitat.hub_id), entry.entry_id
         )
-        device = dreg.async_get_device_by_identifier(
-            (DOMAIN, f"{fake_hubitat.hub_id}:176"), entry.entry_id
+        device = _get_device_by_identifier(
+            dreg, (DOMAIN, f"{fake_hubitat.hub_id}:176"), entry.entry_id
         )
         assert hub_device is not None
         assert device is not None

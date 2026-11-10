@@ -38,6 +38,9 @@ version = "python scripts/version.py"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+# Let Home Assistant install its httpx alias before respx is imported.
+addopts = "-p no:respx"
 filterwarnings = [
     "ignore::DeprecationWarning:pkg_resources",
     "ignore:Inheritance class HomeAssistantApplication:DeprecationWarning",
@@ -49,7 +52,7 @@ dev = [
     "ruff",
     "pre-commit>=3.0.0",
     "homeassistant",
-    "pytest-homeassistant-custom-component",
+    "pytest-homeassistant>=2026.11.0",
     "pytest-asyncio>=0.16.0",
     "setuptools>=62.2.0",
     "tomlkit>=0.12.3",
