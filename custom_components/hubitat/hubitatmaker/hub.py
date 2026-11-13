@@ -344,7 +344,9 @@ class Hub:
     def set_host(self, host: str) -> None:
         """Set the host address that the hub is accessible at."""
         _LOGGER.debug("Setting host to %s", host)
-        host_url = urlparse(host)
+        # Without a scheme, urlparse treats "host:port" as "scheme:path", so
+        # parse scheme-less values as a network location.
+        host_url = urlparse(host if "://" in host else f"//{host}")
         self.scheme = host_url.scheme or "http"
         self.host = host_url.netloc or host_url.path
 
@@ -605,9 +607,12 @@ class Hub:
         """Start an event listener server."""
         # First, figure out what address to listen on. Open a connection to
         # the Hubitat hub and see what address it used. This assumes this
-        # machine and the Hubitat hub are on the same network.
+        # machine and the Hubitat hub are on the same network. The host may
+        # include a port (e.g. "hub.example.com:8443"), which socket.connect
+        # can't resolve, so use the bare hostname.
+        hostname = urlparse(self.base_url).hostname or self.host
         with _open_socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.connect((self.host, 80))
+            s.connect((hostname, 80))
             address = cast(str, s.getsockname()[0])
 
         self._server = create_server(
