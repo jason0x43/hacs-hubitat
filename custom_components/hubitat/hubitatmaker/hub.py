@@ -307,6 +307,18 @@ class Hub:
         if self._server is None:
             await self._start_server()
 
+    def stop_event_server(self) -> None:
+        """Stop the event server, keeping listeners (unlike stop()).
+
+        This is used to stop a fallback server started by start_event_server once
+        events can be delivered another way.
+        """
+        if self._server:
+            self._server.stop()
+            self._server = None
+            _LOGGER.debug("Stopped event server")
+        self.use_server = self._default_use_server
+
     async def refresh_device(self, device_id: str) -> None:
         """Refresh a device's state."""
         await self._load_device(device_id, force_refresh=True)

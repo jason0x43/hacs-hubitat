@@ -95,7 +95,9 @@ Home Assistant keeps two addresses for itself in **Settings** › **System** ›
 
 The integration's **Event URL** option overrides both. Use it when the address Hubitat needs is one Home Assistant shouldn't advertise for itself, such as the IP address of the machine running a Docker container, or a VPN address.
 
-The integration works out the event URL when it connects to the hub, so after changing any of these settings, reload the integration (**Settings** › **Devices & services** › **Hubitat** › **⋮** › **Reload**). You can check the URL Hubitat was given in the Maker API instance's “URL to send device events to by POST” setting.
+The integration keeps the event URL up to date while it's running. When Home Assistant's internal or external URL changes, or (for a cloud hub) Home Assistant Cloud logs in, logs out, or its cloudhook is removed, the integration gives Maker API the new URL, so no reload or restart is needed. Changing the **Event URL** option reloads the integration automatically. If the integration fell back to the legacy event server because there was no usable local URL, it switches to the webhook once one is available. The one exception is Home Assistant's detected LAN IP address (used when no internal URL is set, or when it's a `.local` name), which Home Assistant only detects at startup, so a change to that needs a Home Assistant restart.
+
+You can check the URL Hubitat was given in the Maker API instance's “URL to send device events to by POST” setting.
 
 #### Hubitat cloud access
 
@@ -298,7 +300,7 @@ Note that you will need to restart Home Assistant after updating, whichever meth
 
 If the integration was set up successfully but devices aren't updating, the problem is almost always that Hubitat is unable to send messages to Home Assistant. Just because HA can talk to Hubitat does _not_ mean that Hubitat can talk back to HA.
 
-Start by checking the URL in the Maker API instance's “URL to send device events to by POST” setting. If its address isn't one Hubitat can reach, fix Home Assistant's [internal URL](#home-assistant-network-settings) (or, for a hub accessed through the Hubitat cloud, its external URL), then reload the integration.
+Start by checking the URL in the Maker API instance's “URL to send device events to by POST” setting. If its address isn't one Hubitat can reach, fix Home Assistant's [internal URL](#home-assistant-network-settings) (or, for a hub accessed through the Hubitat cloud, its external URL). The integration updates Maker API as soon as the setting changes.
 
 A common cause is Home Assistant running in a VM or Docker container that hasn't been bridged to the local network. In this situation, Home Assistant's detected address is on the virtualization system's internal network, which Hubitat won't be able to address. There are two solutions. One is to update the container or VM to use network bridging, so that the virtual system appears like a host on the local network. In this situation, HA's network address will be directly visible to Hubitat, so the integration will be able to set things up automatically.
 

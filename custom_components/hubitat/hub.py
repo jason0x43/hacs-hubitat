@@ -16,9 +16,14 @@ from homeassistant.const import (
     CONF_ACCESS_TOKEN,
     CONF_HOST,
     CONF_TEMPERATURE_UNIT,
+    EVENT_CORE_CONFIG_UPDATE,
     UnitOfTemperature,
 )
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import (
+    Event as HassEvent,
+    HomeAssistant,
+    callback,
+)
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import area_registry, device_registry, entity_registry
 from homeassistant.helpers.device_registry import DeviceEntry
@@ -59,7 +64,7 @@ from .const import (
 from .event_delivery import (
     CloudNotConnected,
     async_get_event_url,
-    async_listen_cloud_connected,
+    async_listen_cloud_changes,
     is_cloud_host,
 )
 from .hubitatmaker import (
@@ -88,6 +93,8 @@ ATTRIBUTE_UNIT_STORE_VERSION = 1
 ATTRIBUTE_UNIT_SAVE_DELAY = 60
 # Seconds to wait before retrying a failed event URL update
 EVENT_URL_RETRY_DELAY = 60
+# Core config keys that can change the event URL
+_URL_CONFIG_KEYS = frozenset({"internal_url", "external_url"})
 
 # Hubitat attributes that should be emitted as HA events
 _TRIGGER_ATTRS = tuple([v.attr for v in TRIGGER_CAPABILITIES.values()])
@@ -170,8 +177,13 @@ class Hub(HasId):
         # Webhook event delivery state
         self._webhook_registered = False
         self._accept_webhook_events = False
-        self._unsub_cloud_listener: Callable[[], None] | None = None
+        self._unsub_url_listeners: list[Callable[[], None]] = []
         self._cancel_event_url_retry: Callable[[], None] | None = None
+        self._event_url_lock = asyncio.Lock()
+        # The URL last sent to Maker API
+        self._event_url: str | None = None
+        # True if the hub fell back to the legacy event server
+        self._using_fallback_server = False
 
     def set_connect_task(self, task: asyncio.Task[None]) -> None:
         """Store the background connect task so unload can cancel it."""
@@ -251,56 +263,105 @@ class Hub(HasId):
         self._hub.process_event(cast(dict[str, Any], event))
         return None
 
-    async def _async_update_event_url(self) -> None:
-        """Point Maker API at this hub's webhook."""
+    async def _async_update_event_url(self, *, initial: bool = False) -> None:
+        """Point Maker API at this hub's webhook.
+
+        initial:
+          True when the hub has just started. The URL is always sent to Maker API
+          then, and a local hub with no usable URL falls back to the legacy
+          event server. Otherwise the URL is only sent if it has changed, and a
+          missing URL leaves the current one in place.
+        """
         webhook_id = self.webhook_id
         if self.use_event_server or webhook_id is None:
             return
 
-        try:
-            url = await async_get_event_url(
-                self.hass, webhook_id, self.host, self._event_base_url
-            )
-        except CloudNotConnected:
-            _LOGGER.info(
-                "Waiting for Home Assistant Cloud to connect before setting the "
-                "Hubitat event URL"
-            )
-            self._listen_for_cloud_connection()
-            return
-        except HomeAssistantError as e:
-            if is_cloud_host(self.host):
-                _LOGGER.error("Unable to set up Hubitat event delivery: %s", e)
+        async with self._event_url_lock:
+            try:
+                url = await async_get_event_url(
+                    self.hass, webhook_id, self.host, self._event_base_url
+                )
+            except CloudNotConnected:
+                # The cloud listener sets the URL once Home Assistant Cloud
+                # connects. Until then, a cloudhook the hub already has keeps
+                # working.
+                if self._event_url is None:
+                    _LOGGER.info(
+                        "Waiting for Home Assistant Cloud to connect before "
+                        "setting the Hubitat event URL"
+                    )
                 return
-            # A local hub can still reach the standalone event server, which is
-            # what entries used before webhook delivery.
-            _LOGGER.warning(
-                "%s; falling back to the legacy event server. Set Home "
-                "Assistant's internal URL or the integration's Event URL option "
-                "to use the webhook instead.",
-                e,
-            )
-            await self._hub.start_event_server()
-            return
-
-        await self._hub.set_event_url(url)
-
-    def _listen_for_cloud_connection(self) -> None:
-        """Set the event URL once Home Assistant Cloud connects."""
-        if self._unsub_cloud_listener is not None:
-            return
-
-        async def handle_cloud_connected() -> None:
-            # If the hub isn't running (it was stopped or failed to start), the
-            # next connection attempt sets the event URL itself.
-            if not self._accept_webhook_events:
+            except HomeAssistantError as e:
+                if is_cloud_host(self.host):
+                    _LOGGER.error("Unable to set up Hubitat event delivery: %s", e)
+                    return
+                if not initial:
+                    _LOGGER.warning("%s; keeping the current Hubitat event URL", e)
+                    return
+                # A local hub can still reach the standalone event server, which
+                # is what entries used before webhook delivery.
+                _LOGGER.warning(
+                    "%s; falling back to the legacy event server. Set Home "
+                    "Assistant's internal URL or the integration's Event URL "
+                    "option to use the webhook instead.",
+                    e,
+                )
+                await self._hub.start_event_server()
+                self._using_fallback_server = True
                 return
-            self._stop_cloud_listener()
-            await self._async_update_event_url_or_retry()
 
-        self._unsub_cloud_listener = async_listen_cloud_connected(
-            self.hass, handle_cloud_connected
+            if url == self._event_url and not initial:
+                return
+
+            await self._hub.set_event_url(url)
+            self._event_url = url
+
+            if self._using_fallback_server:
+                _LOGGER.info("Switching from the legacy event server to the webhook")
+                self._hub.stop_event_server()
+                self._using_fallback_server = False
+
+    def _listen_for_event_url_changes(self) -> None:
+        """Update the event URL when the settings it depends on change."""
+        webhook_id = self.webhook_id
+        if self.use_event_server or webhook_id is None or self._unsub_url_listeners:
+            return
+
+        @callback
+        def handle_core_config_update(event: HassEvent[Any]) -> None:
+            if _URL_CONFIG_KEYS.isdisjoint(event.data):
+                return
+            _LOGGER.debug("Home Assistant URLs changed; updating Hubitat event URL")
+            self._schedule_event_url_update()
+
+        self._unsub_url_listeners.append(
+            self.hass.bus.async_listen(
+                EVENT_CORE_CONFIG_UPDATE, handle_core_config_update
+            )
         )
+
+        if is_cloud_host(self.host):
+            self._unsub_url_listeners.extend(
+                async_listen_cloud_changes(
+                    self.hass, webhook_id, self._schedule_event_url_update
+                )
+            )
+
+    @callback
+    def _schedule_event_url_update(self) -> None:
+        """Update the event URL in the background."""
+        if not self._accept_webhook_events:
+            return
+        _ = self.config_entry.async_create_background_task(
+            self.hass,
+            self._async_update_event_url_or_retry(),
+            name=f"hubitat_event_url_{self.config_entry.entry_id}",
+        )
+
+    def _stop_listening_for_event_url_changes(self) -> None:
+        for unsub in self._unsub_url_listeners:
+            unsub()
+        self._unsub_url_listeners = []
 
     async def _async_update_event_url_or_retry(self) -> None:
         """Update the event URL, retrying later if the update fails.
@@ -325,27 +386,24 @@ class Hub(HasId):
         @callback
         def retry(_now: Any) -> None:
             self._cancel_event_url_retry = None
-            if not self._accept_webhook_events:
-                return
-            _ = self.config_entry.async_create_background_task(
-                self.hass,
-                self._async_update_event_url_or_retry(),
-                name=f"hubitat_event_url_{self.config_entry.entry_id}",
-            )
+            self._schedule_event_url_update()
 
         self._cancel_event_url_retry = async_call_later(
             self.hass, EVENT_URL_RETRY_DELAY, retry
         )
 
+    def _reset_event_url_state(self) -> None:
+        """Stop webhook event handling and URL updates (the hub has stopped)."""
+        self._accept_webhook_events = False
+        self._stop_listening_for_event_url_changes()
+        self._cancel_event_url_retries()
+        self._event_url = None
+        self._using_fallback_server = False
+
     def _cancel_event_url_retries(self) -> None:
         if self._cancel_event_url_retry is not None:
             self._cancel_event_url_retry()
             self._cancel_event_url_retry = None
-
-    def _stop_cloud_listener(self) -> None:
-        if self._unsub_cloud_listener is not None:
-            self._unsub_cloud_listener()
-            self._unsub_cloud_listener = None
 
     @property
     def app_id(self) -> str:
@@ -545,9 +603,7 @@ class Hub(HasId):
         """Stop the hub."""
         if self._hub:
             self._hub.stop()
-        self._accept_webhook_events = False
-        self._stop_cloud_listener()
-        self._cancel_event_url_retries()
+        self._reset_event_url_state()
         self.set_connected(False)
         self._device_listeners = {}
         self._hub_device_listeners = []
@@ -922,7 +978,8 @@ class Hub(HasId):
             # Start the hub (this will raise ConnectionError if it fails)
             await self._hub.start(force_refresh=force_refresh)
             self._accept_webhook_events = True
-            await self._async_update_event_url()
+            self._listen_for_event_url_changes()
+            await self._async_update_event_url(initial=True)
             self.apply_cached_attribute_units()
             self.prune_cached_attribute_units()
 
@@ -1035,9 +1092,7 @@ class Hub(HasId):
             # If connection fails, clean up to allow clean retry
             # Stop the event server to avoid "address in use" errors
             self._hub.stop()
-            self._accept_webhook_events = False
-            self._stop_cloud_listener()
-            self._cancel_event_url_retries()
+            self._reset_event_url_state()
 
             # Clear device listeners that were added
             for device_id in self._hub.devices:

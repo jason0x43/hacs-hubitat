@@ -10,7 +10,7 @@ from custom_components.hubitat.event_delivery import (
     NoEventUrlAvailable,
     async_delete_cloudhook,
     async_get_event_url,
-    async_listen_cloud_connected,
+    async_listen_cloud_changes,
     can_deliver_cloud_events,
     is_cloud_host,
 )
@@ -198,25 +198,37 @@ async def test_delete_cloudhook_ignores_errors_and_missing_cloud() -> None:
     await async_delete_cloudhook(_hass(), "hook-id")
 
 
-@pytest.mark.asyncio
-async def test_listen_cloud_connected() -> None:
+def test_listen_cloud_changes() -> None:
     cloud = _cloud()
-    cloud.CloudConnectionState = SimpleNamespace(
-        CLOUD_CONNECTED="connected", CLOUD_DISCONNECTED="disconnected"
-    )
-    unsub = Mock()
-    cloud.async_listen_connection_change.return_value = unsub
-    target = AsyncMock()
+    unsub_connection = Mock()
+    unsub_cloudhook = Mock()
+    cloud.async_listen_connection_change.return_value = unsub_connection
+    cloud.async_listen_cloudhook_change.return_value = unsub_cloudhook
+    target = Mock()
     hass = _hass({"cloud"})
 
     with patch.object(event_delivery, "_get_cloud", return_value=cloud):
-        result = async_listen_cloud_connected(hass, target)
+        unsubs = async_listen_cloud_changes(hass, "hook-id", target)
 
-    assert result is unsub
-    handler = cloud.async_listen_connection_change.call_args.args[1]
-    await handler("disconnected")
-    target.assert_not_awaited()
-    await handler("connected")
-    target.assert_awaited_once()
+    assert unsubs == [unsub_connection, unsub_cloudhook]
+    assert cloud.async_listen_cloudhook_change.call_args.args[1] == "hook-id"
 
-    assert async_listen_cloud_connected(_hass(), target) is None
+    # Any connection state change (connect, disconnect, logout) is relevant
+    cloud.async_listen_connection_change.call_args.args[1]("disconnected")
+    cloud.async_listen_cloudhook_change.call_args.args[2](None)
+    assert target.call_count == 2
+
+
+def test_listen_cloud_changes_without_cloudhook_listener() -> None:
+    cloud = _cloud()
+    del cloud.async_listen_cloudhook_change
+    hass = _hass({"cloud"})
+
+    with patch.object(event_delivery, "_get_cloud", return_value=cloud):
+        unsubs = async_listen_cloud_changes(hass, "hook-id", Mock())
+
+    assert unsubs == [cloud.async_listen_connection_change.return_value]
+
+
+def test_listen_cloud_changes_without_cloud() -> None:
+    assert async_listen_cloud_changes(_hass(), "hook-id", Mock()) == []

@@ -229,6 +229,31 @@ async def test_webhook_receives_events_by_default(
         await _unload_entry(hass, entry)
 
 
+async def test_event_url_follows_internal_url_changes(
+    hass, fake_hubitat: FakeHubitat
+) -> None:
+    hass.config.internal_url = "http://192.168.1.10:8123"
+    entry = await _setup_entry(hass, fake_hubitat)
+    try:
+        webhook_id = entry.data[H_CONF_WEBHOOK_ID]
+        assert fake_hubitat.post_urls[-1].startswith("http://192.168.1.10:8123/")
+        post_count = len(fake_hubitat.post_urls)
+
+        await hass.config.async_update(internal_url="http://192.168.1.20:8123")
+        await _wait_for(lambda: len(fake_hubitat.post_urls) > post_count)
+        assert fake_hubitat.post_urls[-1] == (
+            f"http://192.168.1.20:8123/api/webhook/{webhook_id}"
+        )
+
+        # A config change that doesn't affect the URL doesn't update Maker API
+        post_count = len(fake_hubitat.post_urls)
+        await hass.config.async_update(location_name="Elsewhere")
+        await hass.async_block_till_done()
+        assert len(fake_hubitat.post_urls) == post_count
+    finally:
+        await _unload_entry(hass, entry)
+
+
 async def test_webhook_is_reregistered_on_reload(
     hass, fake_hubitat: FakeHubitat
 ) -> None:

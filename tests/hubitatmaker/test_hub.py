@@ -767,3 +767,22 @@ async def test_start_event_server_fallback(MockServer: mock.Mock) -> None:
 
     hub.stop()
     assert hub.use_server is False
+
+
+@patch("aiohttp.request", new=create_fake_request())
+@patch("custom_components.hubitat.hubitatmaker.server.Server")
+@pytest.mark.asyncio
+async def test_stop_event_server_keeps_listeners(MockServer: mock.Mock) -> None:
+    """Stopping a fallback server leaves device listeners in place."""
+    hub = Hub("1.2.3.4", "1234", "token", start_server=False)
+    await hub.start()
+    listener = MagicMock()
+    hub.add_device_listener("176", listener)
+
+    await hub.start_event_server()
+    hub.stop_event_server()
+
+    MockServer.return_value.stop.assert_called_once()
+    assert hub.use_server is False
+    hub.process_event(events["device"])
+    listener.assert_called_once()

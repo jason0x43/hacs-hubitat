@@ -7,14 +7,14 @@ Hubitat cloud relay (using a Home Assistant Cloud cloudhook or Home Assistant's
 external URL).
 """
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from logging import getLogger
 from types import ModuleType
 from typing import Any
 from urllib.parse import urlparse
 
 from homeassistant.components import webhook
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.network import NoURLAvailableError, get_url
 
@@ -49,23 +49,39 @@ def _cloud_logged_in(hass: HomeAssistant) -> bool:
     return cloud is not None and bool(cloud.async_is_logged_in(hass))
 
 
-def async_listen_cloud_connected(
-    hass: HomeAssistant, target: Callable[[], Awaitable[None]]
-) -> Callable[[], None] | None:
-    """Call target whenever Home Assistant Cloud connects.
+def async_listen_cloud_changes(
+    hass: HomeAssistant, webhook_id: str, target: Callable[[], None]
+) -> list[Callable[[], None]]:
+    """Call target when something that affects a cloud hub's event URL changes.
 
-    Returns an unsubscribe function, or None if the cloud integration isn't
+    That's when Home Assistant Cloud connects or disconnects (including logging
+    in or out), or when the webhook's cloudhook is created or deleted. Returns
+    unsubscribe functions, which is an empty list if the cloud integration isn't
     loaded.
     """
     cloud = _get_cloud(hass)
     if cloud is None:
-        return None
+        return []
 
-    async def handle_change(state: Any) -> None:
-        if state == cloud.CloudConnectionState.CLOUD_CONNECTED:
-            await target()
+    @callback
+    def handle_connection_change(_state: Any) -> None:
+        target()
 
-    return cloud.async_listen_connection_change(hass, handle_change)
+    unsubs: list[Callable[[], None]] = [
+        cloud.async_listen_connection_change(hass, handle_connection_change)
+    ]
+
+    # Not available in older Home Assistant versions
+    listen_cloudhook = getattr(cloud, "async_listen_cloudhook_change", None)
+    if listen_cloudhook is not None:
+
+        @callback
+        def handle_cloudhook_change(_cloudhook: Any) -> None:
+            target()
+
+        unsubs.append(listen_cloudhook(hass, webhook_id, handle_cloudhook_change))
+
+    return unsubs
 
 
 def is_cloud_host(host: str | None) -> bool:
