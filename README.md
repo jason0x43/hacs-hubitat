@@ -59,7 +59,8 @@ The basic setup process is:
 
 1. Create a Maker API instance in Hubitat
 2. Add the devices you want to use in HA to the Maker API instance
-3. Setup the integration in HA
+3. Make sure Home Assistant's internal URL (and, for [Hubitat cloud access](#hubitat-cloud-access) without Home Assistant Cloud, its external URL) is set to an address Hubitat can reach. See [Home Assistant network settings](#home-assistant-network-settings).
+4. Setup the integration in HA
 
 If you plan to use the integration over SSL, you‘ll probably want to enable the “Ignore SSL Certificates” toggle.
 
@@ -79,9 +80,22 @@ To configure the Hubitat integration, go to **Settings** › **Devices & service
 
 Hubitat’s official way to push events to receivers is via HTTP POST requests. Every time a device event occurs, the Maker API will make an HTTP POST request to the address set in its “URL to send device events to by POST” setting.
 
-By default, the integration registers a Home Assistant webhook and updates the POST URL setting in the Maker API instance to point at it. Events arrive on Home Assistant's own port (usually 8123), so no extra port needs to be opened. For a hub on the local network, the integration uses Home Assistant's internal URL (**Settings** › **System** › **Network**), or Home Assistant's LAN IP address if the internal URL is a `.local` name, since Hubitat can't resolve those. If Home Assistant has no usable local URL (for example, it serves HTTPS and no internal URL is set), the integration falls back to the [legacy event server](#legacy-event-server) and logs a warning.
+By default, the integration registers a Home Assistant webhook and updates the POST URL setting in the Maker API instance to point at it. Events arrive on Home Assistant's own port (usually 8123), so no extra port needs to be opened. The address Hubitat is given comes from Home Assistant's own network settings, so those need to be right (see below).
 
 Note that the POST URL **must** be visible to Hubitat. If the automatically selected address doesn't work (for example, Home Assistant runs in a VM or container that isn't bridged to the local network), set the **Event URL** option to the base URL Hubitat should use to reach Home Assistant, like `http://192.168.0.10:8123`. Don't include a path; the integration adds the webhook path itself.
+
+#### Home Assistant network settings
+
+Home Assistant keeps two addresses for itself in **Settings** › **System** › **Network** (the **Home Assistant URL** card). The integration uses them to tell Hubitat where to send events, so setting them correctly is the most important step in getting device updates to work.
+
+- **Local network (internal URL).** Used for a hub on the same network as Home Assistant. It should be an address Hubitat can reach directly, ideally Home Assistant's LAN IP address and port, like `http://192.168.0.10:8123`.
+    - Hubitat can't resolve `.local` (mDNS) names. If the internal URL is one, like `http://homeassistant.local:8123`, the integration uses Home Assistant's detected LAN IP address instead. That address is only correct if Home Assistant itself sees the LAN; in a VM or container without bridged networking it will be an internal address Hubitat can't reach.
+    - If no internal URL is set, Home Assistant falls back to its detected IP address, which has the same limitation. If Home Assistant serves HTTPS and no internal URL is set, there's no usable address at all, and the integration falls back to the [legacy event server](#legacy-event-server) and logs a warning.
+- **Internet (external URL).** Used for a hub accessed through the [Hubitat cloud](#hubitat-cloud-access) when Home Assistant Cloud isn't set up. It must be reachable from the internet, like `https://ha.example.com`. Home Assistant Cloud's remote URL isn't used for this; with Home Assistant Cloud logged in, the integration uses a cloudhook instead.
+
+The integration's **Event URL** option overrides both. Use it when the address Hubitat needs is one Home Assistant shouldn't advertise for itself, such as the IP address of the machine running a Docker container, or a VPN address.
+
+The integration works out the event URL when it connects to the hub, so after changing any of these settings, reload the integration (**Settings** › **Devices & services** › **Hubitat** › **⋮** › **Reload**). You can check the URL Hubitat was given in the Maker API instance's “URL to send device events to by POST” setting.
 
 #### Hubitat cloud access
 
@@ -90,7 +104,7 @@ If Home Assistant can't reach the hub on the local network, the integration can 
 In this mode the hub also needs a public way to send events back to Home Assistant:
 
 - If Home Assistant Cloud (Nabu Casa) is set up, the integration creates a cloudhook for its webhook and gives that URL to Hubitat. If Home Assistant Cloud hasn't connected yet when the hub connects, the URL is set as soon as it does. The cloudhook is deleted when the integration entry is removed.
-- Otherwise, the integration uses Home Assistant's external URL, or the **Event URL** option if it's set.
+- Otherwise, the integration uses Home Assistant's [external URL](#home-assistant-network-settings), or the **Event URL** option if it's set. If neither is set, the integration can't be set up for a cloud hub.
 
 Hubs accessed through the cloud can't use the legacy event server. Because every request goes through the cloud relay, the initial device load takes longer than it does on a local network.
 
@@ -98,7 +112,7 @@ Hubs accessed through the cloud can't use the legacy event server. Because every
 
 Before webhooks, the integration received events with its own Python-based web server, listening on a separate port. It's still available with the **Use the legacy event server** option in the form's **Legacy event server** section, for setups where Hubitat can reach that server but not Home Assistant itself. Existing installations that had customized the event server URL, port, or SSL settings keep using it after upgrading; other installations switch to the webhook automatically.
 
-When the legacy event server is enabled, the **Event URL** option is the complete URL (host + port) that Hubitat should use to access the server. This is the complete URL (host + port) that Hubitat should use to access the server. Using the Docker example given earlier, this would typically be the address or hostname of the machine hosting the Docker container. The port in the URL will also be used internally for the event server.
+When the legacy event server is enabled, the **Event URL** option is the complete URL (host + port) that Hubitat should use to access the server. If Home Assistant runs in a Docker container, this would typically be the address or hostname of the machine hosting the container. The port in the URL will also be used internally for the event server. The legacy event server doesn't use Home Assistant's internal or external URLs.
 
 If, for some reason, the event server needs to bind to a different port internally than the port given in the event server URL, you would use the **event server port** option. This option is also useful on its own if you want the event server to bind to a known port all the time instead of using a randomly available port.
 
@@ -115,7 +129,7 @@ If the only way for HA to reach the hub is through the Hubitat cloud, see [Hubit
 
 **Hub address.** The hub address can be a full URL with a scheme and an optional port, like `https://hub.example.com:8443`. The integration uses the scheme, host, and port you give and adds `/apps/api/<app id>` itself, so don’t include a path (Hubitat cloud URLs are the exception). A bare hostname or IP address (with or without a port) uses `http`. The integration doesn’t verify the hub’s SSL certificate, so a self-signed certificate on the hub side (or on a proxy in front of it) will work.
 
-**Events.** By default Hubitat sends events to HA's internal URL, which won’t work from another network. Set the **Event URL** option to an address Hubitat can use to reach HA itself, such as a public hostname or a VPN address, plus HA’s port (e.g., `http://ha.example.com:8123`). See [Receiving events](#receiving-events).
+**Events.** By default Hubitat sends events to HA's [internal URL](#home-assistant-network-settings), which usually won’t work from another network. Set the **Event URL** option to an address Hubitat can use to reach HA itself, such as a public hostname or a VPN address, plus HA’s port (e.g., `http://ha.example.com:8123`). See [Receiving events](#receiving-events).
 
 If you use the [legacy event server](#legacy-event-server) instead, set the **Event URL** to the server’s address plus a fixed port (e.g., `http://ha.example.com:12345`), and use the **event server port** option if the port HA listens on is different from the one in the URL (for example, when a router forwards an external port to a different internal one).
 
@@ -282,9 +296,11 @@ Note that you will need to restart Home Assistant after updating, whichever meth
 
 ### Devices aren't updating
 
-If the integration was set up successfully but devices aren't updating, the problem is almost always that Hubitat is unable to send messages to Home Assistant. Just because HA can talk to Hubitat does _not_ mean that Hubitat can talk back to HA. This usually happens when Home Assistant is running in a VM or Docker container that hasn't been bridged to the local network. In this situation, the URL that the integration tells Maker API to send device events to will be an address on the virtualization system's internal network, which Hubitat won't be able to address.
+If the integration was set up successfully but devices aren't updating, the problem is almost always that Hubitat is unable to send messages to Home Assistant. Just because HA can talk to Hubitat does _not_ mean that Hubitat can talk back to HA.
 
-There are two solutions. One is to update the container or VM to use network bridging, so that the virtual system appears like a host on the local network. In this situation, HA's network address will be directly visible to Hubitat, so the integration will be able to set things up automatically.
+Start by checking the URL in the Maker API instance's “URL to send device events to by POST” setting. If its address isn't one Hubitat can reach, fix Home Assistant's [internal URL](#home-assistant-network-settings) (or, for a hub accessed through the Hubitat cloud, its external URL), then reload the integration.
+
+A common cause is Home Assistant running in a VM or Docker container that hasn't been bridged to the local network. In this situation, Home Assistant's detected address is on the virtualization system's internal network, which Hubitat won't be able to address. There are two solutions. One is to update the container or VM to use network bridging, so that the virtual system appears like a host on the local network. In this situation, HA's network address will be directly visible to Hubitat, so the integration will be able to set things up automatically.
 
 The second solution is to manually set the **Event URL** option in the integration to something that Hubitat _can_ see. It should point to the host that's running your Home Assistant VM or container, at the port Home Assistant is published on. For example, if the host running the HA instance is on the local network at 192.168.0.10, the event URL would be `http://192.168.0.10:8123`.
 
