@@ -65,48 +65,65 @@ If you plan to use the integration over SSL, you‘ll probably want to enable th
 
 To configure the Hubitat integration, go to **Settings** › **Devices & services** in Home Assistant and click **Add integration**. Select **Hubitat**, then provide:
 
-- The address of the hub, like `http://10.0.1.99`. You can also just provide a hostname or address `10.0.1.99` (uses HTTP by default)
+- The address of the hub, like `http://10.0.1.99`. You can also just provide a hostname or address `10.0.1.99` (uses HTTP by default). To reach the hub through the Hubitat cloud, use its cloud Maker API URL instead (see [Hubitat cloud access](#hubitat-cloud-access)).
 - The app ID of the Maker API instance (the number after `/apps/api/` in the Maker API URLs)
 - The Maker API access token
-- Optional event server config (more details are below)
-    - Event server URL. This is useful when Home Assistant runs in a VM or container and Hubitat cannot reach the automatically selected address. More details are below.
-    - Event server port. The port is selected automatically when it is omitted. More details are below.
+- Optional: **Event URL** -- the address Hubitat should use to reach Home Assistant, when the automatically selected one doesn't work (more details are below)
+- Optional: **Use the legacy event server** and its settings (more details are below)
+    - Event server port. The port is selected automatically when it is omitted.
     - Relative paths to an SSL private key and certificate (for example, `ssl/localhost-key.pem` and `ssl/localhost.pem`). When both are provided, the event server serves HTTPS only.
 - Optional: the temperature unit (default is `F`)
 - Optional: **Synchronize rooms** -- this assigns Home Assistant device areas to the Hubitat rooms reported by Maker API.
 
-### Event server
+### Receiving events
 
 Hubitat’s official way to push events to receivers is via HTTP POST requests. Every time a device event occurs, the Maker API will make an HTTP POST request to the address set in its “URL to send device events to by POST” setting.
 
-To receive these events, the integration starts up a Python-based web server and updates the POST URL setting in the Maker API instance to point at that server.
+By default, the integration registers a Home Assistant webhook and updates the POST URL setting in the Maker API instance to point at it. Events arrive on Home Assistant's own port (usually 8123), so no extra port needs to be opened. For a hub on the local network, the integration uses Home Assistant's internal URL (**Settings** › **System** › **Network**), or Home Assistant's LAN IP address if the internal URL is a `.local` name, since Hubitat can't resolve those.
 
-Note that the POST URL **must** be visible to Hubitat. Often this will be the case, but not always. For example, if your Home Assistant instance is running in Docker with host mode networking, Home Assistant's IP address will *not* be visible to Hubitat. In this case the default POST URL configured by the integration won’t work. This is where the event server options become useful. 
+Note that the POST URL **must** be visible to Hubitat. If the automatically selected address doesn't work (for example, Home Assistant runs in a VM or container that isn't bridged to the local network), set the **Event URL** option to the base URL Hubitat should use to reach Home Assistant, like `http://192.168.0.10:8123`. Don't include a path; the integration adds the webhook path itself.
 
-The key option for this use case is the **event server URL**. This is the complete URL (host + port) that Hubitat should use to access the server. Using the Docker example given earlier, this would typically be the address or hostname of the machine hosting the Docker container. The port in the URL will also be used internally for the event server.
+#### Hubitat cloud access
+
+If Home Assistant can't reach the hub on the local network, the integration can talk to it through the Hubitat cloud relay. Enable remote access for the Maker API instance in Hubitat, then use its cloud URL as the hub address, like `https://cloud.hubitat.com/api/<hub UID>/apps/<app ID>`. You can paste any of the cloud URLs Maker API shows; anything after the app ID (and the access token) is ignored.
+
+In this mode the hub also needs a public way to send events back to Home Assistant:
+
+- If Home Assistant Cloud (Nabu Casa) is set up, the integration creates a cloudhook for its webhook and gives that URL to Hubitat. If Home Assistant Cloud hasn't connected yet when the hub connects, the URL is set as soon as it does. The cloudhook is deleted when the integration entry is removed.
+- Otherwise, the integration uses Home Assistant's external URL, or the **Event URL** option if it's set.
+
+Hubs accessed through the cloud can't use the legacy event server. Because every request goes through the cloud relay, the initial device load takes longer than it does on a local network.
+
+### Legacy event server
+
+Before webhooks, the integration received events with its own Python-based web server, listening on a separate port. It's still available with the **Use the legacy event server** option, for setups where Hubitat can reach that server but not Home Assistant itself. Existing installations that had customized the event server URL, port, or SSL settings keep using it after upgrading; other installations switch to the webhook automatically.
+
+When the legacy event server is enabled, the **Event URL** option is the complete URL (host + port) that Hubitat should use to access the server. This is the complete URL (host + port) that Hubitat should use to access the server. Using the Docker example given earlier, this would typically be the address or hostname of the machine hosting the Docker container. The port in the URL will also be used internally for the event server.
 
 If, for some reason, the event server needs to bind to a different port internally than the port given in the event server URL, you would use the **event server port** option. This option is also useful on its own if you want the event server to bind to a known port all the time instead of using a randomly available port.
 
-> ⚠️ Note that the event server URL, if specified, should only include a protocol and a host, _not_ a path. The server always listens at `/`.
+> ⚠️ Note that with the legacy event server, the event URL, if specified, should only include a protocol and a host, _not_ a path. The server always listens at `/`.
 
 ### Hub on a different network
 
 The integration assumes by default that Home Assistant and Hubitat are on the same local network, but it can also be used when they’re on different networks (for example, HA in the cloud or at another site). The basic requirements are the same as on a local network, they just aren’t handled automatically:
 
 1. Home Assistant must be able to reach the Maker API at the hub address you provide.
-2. Hubitat must be able to reach the integration’s event server at the event server URL.
+2. Hubitat must be able to reach Home Assistant (or the legacy event server) to deliver events.
 
-**Hub address.** The hub address can be a full URL with a scheme and an optional port, like `https://hub.example.com:8443`. The integration uses the scheme, host, and port you give and adds `/apps/api/<app id>` itself, so don’t include a path. A bare hostname or IP address (with or without a port) uses `http`. The integration doesn’t verify the hub’s SSL certificate, so a self-signed certificate on the hub side (or on a proxy in front of it) will work.
+If the only way for HA to reach the hub is through the Hubitat cloud, see [Hubitat cloud access](#hubitat-cloud-access) instead.
 
-**Event server.** Because the automatically selected event server URL is an address on HA’s local network, it won’t work from another network. Set the **event server URL** to an address Hubitat can use to reach HA, such as a public hostname or a VPN address, plus a fixed port (e.g., `http://ha.example.com:12345`). See [Event server](#event-server) for how the URL and **event server port** options work together; use the event server port if the port HA listens on is different from the one in the URL (for example, when a router forwards an external port to a different internal one).
+**Hub address.** The hub address can be a full URL with a scheme and an optional port, like `https://hub.example.com:8443`. The integration uses the scheme, host, and port you give and adds `/apps/api/<app id>` itself, so don’t include a path (Hubitat cloud URLs are the exception). A bare hostname or IP address (with or without a port) uses `http`. The integration doesn’t verify the hub’s SSL certificate, so a self-signed certificate on the hub side (or on a proxy in front of it) will work.
 
-The event server binds to the local address HA uses to reach the hub, not to all interfaces. Any port forwarding, container port mapping, or reverse proxy needs to send traffic to that address and port. With [debug logging](#logging) enabled, the address and port are logged in a “Listening on …” message when the integration starts.
+**Events.** By default Hubitat sends events to HA's internal URL, which won’t work from another network. Set the **Event URL** option to an address Hubitat can use to reach HA itself, such as a public hostname or a VPN address, plus HA’s port (e.g., `http://ha.example.com:8123`). See [Receiving events](#receiving-events).
 
-To have the event server use HTTPS, provide paths to an SSL certificate and private key (for example, `/config/ssl/fullchain.pem` and `/config/ssl/privkey.pem`), and use `https` in the event server URL. If the certificate is self-signed, enable the “Ignore SSL Certificates” toggle in the Maker API app so Hubitat will accept it.
+If you use the [legacy event server](#legacy-event-server) instead, set the **Event URL** to the server’s address plus a fixed port (e.g., `http://ha.example.com:12345`), and use the **event server port** option if the port HA listens on is different from the one in the URL (for example, when a router forwards an external port to a different internal one).
 
-**Security.** The Maker API access token is sent in the query string of every request, and anyone with the token can control the devices shared through Maker API. Avoid exposing the Maker API or the event server over plain HTTP on the public internet. The simplest option is usually to connect the two networks with a VPN such as WireGuard or Tailscale, and then use the VPN addresses for the hub address and the event server URL. Otherwise, put the hub and event server behind a reverse proxy that terminates TLS.
+The legacy event server binds to the local address HA uses to reach the hub, not to all interfaces. Any port forwarding, container port mapping, or reverse proxy needs to send traffic to that address and port. With [debug logging](#logging) enabled, the address and port are logged in a “Listening on …” message when the integration starts.
 
-> ⚠️ Hubitat’s cloud relay URLs (`https://cloud.hubitat.com/api/<hub uid>/...`) are not currently supported. HA needs to be able to talk to the hub directly. See [#118](https://github.com/jason0x43/hacs-hubitat/issues/118).
+To have the legacy event server use HTTPS, provide paths to an SSL certificate and private key (for example, `/config/ssl/fullchain.pem` and `/config/ssl/privkey.pem`), and use `https` in the event server URL. If the certificate is self-signed, enable the “Ignore SSL Certificates” toggle in the Maker API app so Hubitat will accept it.
+
+**Security.** The Maker API access token is sent in the query string of every request, and anyone with the token can control the devices shared through Maker API. Avoid exposing the Maker API, Home Assistant, or the event server over plain HTTP on the public internet. The simplest option is usually to connect the two networks with a VPN such as WireGuard or Tailscale, and then use the VPN addresses for the hub address and the event URL. Otherwise, put them behind a reverse proxy that terminates TLS, or use the [Hubitat cloud](#hubitat-cloud-access) with Home Assistant Cloud.
 
 If devices load but don’t update, see [Devices aren't updating](#devices-arent-updating).
 
@@ -269,9 +286,13 @@ If the integration was set up successfully but devices aren't updating, the prob
 
 There are two solutions. One is to update the container or VM to use network bridging, so that the virtual system appears like a host on the local network. In this situation, HA's network address will be directly visible to Hubitat, so the integration will be able to set things up automatically.
 
-The second solution is to manually set the event server URL in the integration to something that Hubitat _can_ see. The event server URL should point to the host that's running your Home Assistant VM or container. For example, if the host running the HA instance is on the local network at 192.168.0.10, then the host part of the event server URL would be set to http://192.168.0.10. The port should be set to some open port value (e.g., 12345).
+The second solution is to manually set the **Event URL** option in the integration to something that Hubitat _can_ see. It should point to the host that's running your Home Assistant VM or container, at the port Home Assistant is published on. For example, if the host running the HA instance is on the local network at 192.168.0.10, the event URL would be `http://192.168.0.10:8123`.
 
-> ⚠️ Note that the event server URL should only include a protocol and a host, _not_ a path. The server always listens at `/`.
+If Home Assistant is served only over HTTPS with a self-signed certificate, Hubitat may refuse to send events to it. In that case use an HTTP address, or enable the legacy event server.
+
+You can check which URL the integration gave Hubitat in the Maker API instance's “URL to send device events to by POST” setting.
+
+> ⚠️ Note that the event URL should only include a protocol, a host, and a port, _not_ a path.
 
 ### Checking device capabilities
 

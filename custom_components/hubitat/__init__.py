@@ -11,6 +11,7 @@ from custom_components.hubitat.services import (
     async_register_services,
     async_remove_services,
 )
+from homeassistant.components import webhook
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ACCESS_TOKEN, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant
@@ -21,9 +22,16 @@ from .const import (
     H_CONF_HUB_ID,
     H_CONF_HUBITAT_EVENT,
     H_CONF_LEGACY_LIGHT_NAME_HEURISTIC,
+    H_CONF_SERVER_PORT,
+    H_CONF_SERVER_SSL_CERT,
+    H_CONF_SERVER_SSL_KEY,
+    H_CONF_SERVER_URL,
+    H_CONF_USE_EVENT_SERVER,
+    H_CONF_WEBHOOK_ID,
     PLATFORMS,
     Platform,
 )
+from .event_delivery import async_delete_cloudhook
 from .hub import Hub, get_domain_data, get_hub
 from .hubitatmaker.error import (
     ConnectionError as HubitatConnectionError,
@@ -75,6 +83,22 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         new_data[H_CONF_LEGACY_LIGHT_NAME_HEURISTIC] = True
         minor_version = 2
 
+    if minor_version < 3:
+        # Deliver events through a Home Assistant webhook. Entries that customized
+        # the event server keep using it, since their setup may depend on it
+        # (port mappings, tunnels, SSL certificates).
+        new_data[H_CONF_WEBHOOK_ID] = webhook.async_generate_id()
+        new_data[H_CONF_USE_EVENT_SERVER] = any(
+            config_entry.options.get(key, config_entry.data.get(key))
+            for key in (
+                H_CONF_SERVER_URL,
+                H_CONF_SERVER_PORT,
+                H_CONF_SERVER_SSL_CERT,
+                H_CONF_SERVER_SSL_KEY,
+            )
+        )
+        minor_version = 3
+
     if (
         new_data != config_entry.data
         or version != config_entry.version
@@ -111,6 +135,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         config_entry, _HUB_STATUS_PLATFORMS
     )
     hub.mark_platforms_setup(_HUB_STATUS_PLATFORMS)
+    hub.async_register_webhook()
 
     async_register_services(hass, config_entry)
 
@@ -180,6 +205,13 @@ async def _cancel_connect_task(hub: Hub) -> None:
     _ = task.cancel()
     with contextlib.suppress(asyncio.CancelledError):
         await task
+
+
+async def async_remove_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    """Clean up when a config entry is removed."""
+    webhook_id: str | None = config_entry.data.get(H_CONF_WEBHOOK_ID)
+    if webhook_id:
+        await async_delete_cloudhook(hass, webhook_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:

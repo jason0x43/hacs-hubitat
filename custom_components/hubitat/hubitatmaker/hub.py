@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import re
 import socket
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
@@ -55,13 +56,16 @@ class Hub:
         port: int | None = None,
         event_url: str | None = None,
         ssl_context: SSLContext | None = None,
+        start_server: bool = True,
     ):
         """Initialize a Hubitat hub interface.
 
         host:
           The URL of the host to connect to (e.g., http://10.0.1.99), or just
           the host name/address. If only a name or address are provided, http
-          is assumed.
+          is assumed. A URL with a path (e.g., a Hubitat cloud URL like
+          https://cloud.hubitat.com/api/<hub uid>/apps/<app id>) is used as
+          the Maker API base URL.
         app_id:
           The ID of the Maker API instance this interface should use
         access_token:
@@ -74,6 +78,10 @@ class Hub:
         ssl_context:
           The SSLContext the event listener server will use. Passing in a SSLContext
           object will make the event listener server HTTPS only.
+        start_server:
+          If True (the default), start a local event listener server and point
+          Maker API at it. If False, events must be delivered by some other means
+          (see process_event) to a URL set with set_event_url.
         """
         if not host or not app_id or not access_token:
             raise InvalidConfig()
@@ -93,6 +101,7 @@ class Hub:
         self.token = access_token
         self.mac = ""
         self.ssl_context: SSLContext | None = ssl_context
+        self.use_server: bool = start_server
 
         self.set_host(host)
 
@@ -274,7 +283,8 @@ class Hub:
             _LOGGER.warning(f"Unable to access HSM status: {e}")
 
         # Only start the event server after successfully connecting to the hub
-        await self._start_server()
+        if self.use_server:
+            await self._start_server()
 
     def stop(self) -> None:
         """Remove all listeners and stop the event server (if running)."""
@@ -309,11 +319,14 @@ class Hub:
         return cast(dict[str, Any], await self._api_request(path))
 
     async def set_event_url(self, event_url: str | None) -> None:
-        """Set the URL that Hubitat will POST device events to."""
-        if not self._server:
-            return
+        """Set the URL that Hubitat will POST device events to.
 
+        If event_url is empty, the URL of the local event server is used (if one
+        is running).
+        """
         if not event_url:
+            if not self._server:
+                return
             event_url = self._server.url
         url = quote(str(event_url), safe="")
         _LOGGER.info("Setting event update URL to %s", url)
@@ -352,7 +365,12 @@ class Hub:
 
         base_url = f"{self.scheme}://{self.host}"
         self.base_url = base_url
-        self.api_url = f"{base_url}/apps/api/{self.app_id}"
+
+        if host_url.scheme and host_url.netloc and host_url.path.strip("/"):
+            # A full URL, such as a Hubitat cloud URL
+            self.api_url = f"{base_url}{_get_api_path(host_url.path, self.app_id)}"
+        else:
+            self.api_url = f"{base_url}/apps/api/{self.app_id}"
 
     async def set_port(self, port: int) -> None:
         """Set the port that the event listener server will listen on.
@@ -361,6 +379,8 @@ class Hub:
         """
         self.port = port
         _LOGGER.info("Setting port to %s", port)
+        if not self.use_server:
+            return
         if self._server:
             self._server.stop()
         await self._start_server()
@@ -379,6 +399,8 @@ class Hub:
         else:
             _LOGGER.debug("Enabling SSL for event listener server")
 
+        if not self.use_server:
+            return
         if self._server:
             self._server.stop()
         await self._start_server()
@@ -389,6 +411,14 @@ class Hub:
         An error will be raised if a test API request fails.
         """
         await self._api_request("devices")
+
+    def process_event(self, event: dict[str, Any]) -> None:
+        """Process an event POSTed by the hub.
+
+        This is used to handle events delivered through something other than the
+        built-in event server, such as a Home Assistant webhook.
+        """
+        self._process_event(event)
 
     def _process_event(self, event: dict[str, Any]) -> None:
         """Process an event received from the hub."""
@@ -627,6 +657,22 @@ class Hub:
         )
 
         await self.set_event_url(self.event_url)
+
+
+def _get_api_path(path: str, app_id: str) -> str:
+    """Return the Maker API base path for a user-supplied URL path.
+
+    Users may paste a full Maker API URL (e.g., a cloud "get all devices" URL),
+    so anything after the app ID is dropped. If the path doesn't include an app
+    ID, the configured one is appended.
+    """
+    path = path.rstrip("/")
+    match = re.match(r"^(.*?/apps(?:/api)?/\d+)(?:/.*)?$", path)
+    if match:
+        return match.group(1)
+    if path.endswith("/apps"):
+        return f"{path}/{app_id}"
+    return f"{path}/apps/{app_id}"
 
 
 @contextmanager

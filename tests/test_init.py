@@ -7,6 +7,7 @@ import pytest
 from custom_components.hubitat import (
     _async_connect_loop,
     _cancel_connect_task,
+    async_remove_entry,
     async_setup,
     async_setup_entry,
     async_unload_entry,
@@ -56,6 +57,7 @@ async def test_setup_entry_schedules_background_task() -> None:
     )
 
     hub.mark_platforms_setup.assert_called_once()
+    hub.async_register_webhook.assert_called_once()
     register.assert_called_once_with(hass, entry)
 
     entry.async_create_background_task.assert_called_once()
@@ -155,3 +157,20 @@ async def test_unload_entry() -> None:
         for item in hass.config_entries.async_forward_entry_unload.call_args_list
     }
     assert unloaded == {platform for platform in PLATFORMS if platform != "select"}
+
+
+@pytest.mark.asyncio
+async def test_remove_entry_deletes_cloudhook() -> None:
+    hass = Mock()
+    entry = Mock(data={"webhook_id": "hook-id"})
+    with patch(
+        "custom_components.hubitat.async_delete_cloudhook", AsyncMock()
+    ) as delete:
+        await async_remove_entry(hass, entry)
+    delete.assert_awaited_once_with(hass, "hook-id")
+
+    with patch(
+        "custom_components.hubitat.async_delete_cloudhook", AsyncMock()
+    ) as delete:
+        await async_remove_entry(hass, Mock(data={}))
+    delete.assert_not_awaited()

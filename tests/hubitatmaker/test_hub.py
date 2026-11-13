@@ -652,3 +652,98 @@ async def test_mode_is_supported() -> None:
     assert hub.mode_supported is None
     await hub.start()
     assert hub.mode_supported is True
+
+
+@pytest.mark.parametrize(
+    ("host", "api_url"),
+    [
+        ("1.2.3.4", "http://1.2.3.4/apps/api/1234"),
+        ("https://hub.local", "https://hub.local/apps/api/1234"),
+        (
+            "https://cloud.hubitat.com/api/abc-123/apps/1234",
+            "https://cloud.hubitat.com/api/abc-123/apps/1234",
+        ),
+        (
+            "https://cloud.hubitat.com/api/abc-123/apps/1234/",
+            "https://cloud.hubitat.com/api/abc-123/apps/1234",
+        ),
+        (
+            "https://cloud.hubitat.com/api/abc-123/apps/1234/devices?access_token=x",
+            "https://cloud.hubitat.com/api/abc-123/apps/1234",
+        ),
+        (
+            "https://cloud.hubitat.com/api/abc-123/apps",
+            "https://cloud.hubitat.com/api/abc-123/apps/1234",
+        ),
+        (
+            "https://cloud.hubitat.com/api/abc-123",
+            "https://cloud.hubitat.com/api/abc-123/apps/1234",
+        ),
+        ("http://hub.local/apps/api/1234/devices", "http://hub.local/apps/api/1234"),
+    ],
+)
+def test_set_host_api_url(host: str, api_url: str) -> None:
+    """A host with a path is used as the Maker API base URL."""
+    hub = Hub(host, "1234", "token")
+    assert hub.api_url == api_url
+
+
+@patch("aiohttp.request", new=create_fake_request())
+@pytest.mark.asyncio
+async def test_cloud_hub_requests_use_cloud_url() -> None:
+    """Requests for a cloud hub go to the cloud API URL."""
+    hub = Hub(
+        "https://cloud.hubitat.com/api/abc-123/apps/1234",
+        "1234",
+        "token",
+        start_server=False,
+    )
+    await hub.check_config()
+    assert (
+        requests[-1]["url"] == "https://cloud.hubitat.com/api/abc-123/apps/1234/devices"
+    )
+
+
+@patch("aiohttp.request", new=create_fake_request())
+@patch("custom_components.hubitat.hubitatmaker.server.Server")
+@pytest.mark.asyncio
+async def test_start_without_server(MockServer: mock.Mock) -> None:
+    """A hub that doesn't use the server neither starts it nor sets a URL."""
+    hub = Hub("1.2.3.4", "1234", "token", start_server=False)
+    await hub.start()
+    assert MockServer.called is False
+    assert not any("postURL" in r["url"] for r in requests)
+
+    await hub.set_port(14)
+    assert MockServer.called is False
+
+
+@patch("aiohttp.request", new=create_fake_request())
+@patch("custom_components.hubitat.hubitatmaker.server.Server")
+@pytest.mark.asyncio
+async def test_set_event_url_without_server(MockServer: mock.Mock) -> None:
+    """An explicit event URL is sent even if no server is running."""
+    hub = Hub("1.2.3.4", "1234", "token", start_server=False)
+    await hub.start()
+
+    await hub.set_event_url(None)
+    assert not any("postURL" in r["url"] for r in requests)
+
+    webhook_url = "http://10.0.1.2:8123/api/webhook/abc"
+    await hub.set_event_url(webhook_url)
+    event_url = unquote(requests[-1]["url"])
+    assert re.search(f"postURL/{webhook_url}$", event_url) is not None
+
+
+@patch("aiohttp.request", new=create_fake_request())
+@pytest.mark.asyncio
+async def test_process_event_public() -> None:
+    """process_event handles events delivered from outside the server."""
+    hub = Hub("1.2.3.4", "1234", "token", start_server=False)
+    await hub.start()
+    device = hub.devices["176"]
+    assert device.attributes[DeviceAttribute.SWITCH].value == "off"
+
+    hub.process_event(events["device"])
+
+    assert device.attributes[DeviceAttribute.SWITCH].value == "on"

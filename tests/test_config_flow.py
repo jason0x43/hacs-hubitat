@@ -13,6 +13,8 @@ from custom_components.hubitat.const import (
     H_CONF_SERVER_PORT,
     H_CONF_SYNC_AREAS,
     H_CONF_SYNC_DEVICES,
+    H_CONF_USE_EVENT_SERVER,
+    H_CONF_WEBHOOK_ID,
     TEMP_C,
     TEMP_F,
 )
@@ -151,6 +153,7 @@ async def test_options_update_finishes_from_the_first_form() -> None:
             CONF_HOST: "hub.local",
             H_CONF_SERVER_PORT: None,
             "server_url": None,
+            H_CONF_USE_EVENT_SERVER: False,
             "server_ssl_cert": None,
             "server_ssl_key": None,
             CONF_TEMPERATURE_UNIT: "F",
@@ -197,8 +200,9 @@ async def test_async_migrate_entry_v1_to_v2() -> None:
 
     # Check version was updated
     assert call_args.kwargs["version"] == 2
-    assert call_args.kwargs["minor_version"] == 2
+    assert call_args.kwargs["minor_version"] == 3
     assert new_data[H_CONF_LEGACY_LIGHT_NAME_HEURISTIC] is True
+    assert new_data[H_CONF_WEBHOOK_ID]
 
     # Check unique_id was set
     assert call_args.kwargs["unique_id"] == "abcd1234"
@@ -354,3 +358,133 @@ def test_get_hub_device_id_uses_hub_id() -> None:
     mock_device.id = "device_99"
     result = get_hub_device_id(mock_hub, mock_device)
     assert result == "my_hub_id::device_99"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("data", "options", "use_event_server"),
+    [
+        ({}, {}, False),
+        ({H_CONF_SERVER_PORT: 0}, {H_CONF_SERVER_PORT: None}, False),
+        ({H_CONF_SERVER_PORT: 12345}, {}, True),
+        ({}, {"server_url": "http://10.0.0.2:12345"}, True),
+        ({"server_ssl_cert": "/ssl/cert.pem"}, {}, True),
+    ],
+)
+async def test_migration_enables_webhook_unless_server_was_customized(
+    data: dict[str, Any], options: dict[str, Any], use_event_server: bool
+) -> None:
+    """Entries move to webhook delivery unless they customized the event server."""
+    from custom_components.hubitat import async_migrate_entry
+
+    mock_entry = Mock()
+    mock_entry.version = 2
+    mock_entry.minor_version = 2
+    mock_entry.data = {CONF_ACCESS_TOKEN: "token", **data}
+    mock_entry.options = options
+    mock_hass = Mock()
+    mock_hass.config_entries.async_update_entry = Mock()
+
+    assert await async_migrate_entry(mock_hass, mock_entry) is True
+
+    kwargs = mock_hass.config_entries.async_update_entry.call_args.kwargs
+    assert kwargs["minor_version"] == 3
+    assert len(kwargs["data"][H_CONF_WEBHOOK_ID]) == 64
+    assert kwargs["data"][H_CONF_USE_EVENT_SERVER] is use_event_server
+
+
+@pytest.mark.asyncio
+async def test_migration_keeps_existing_webhook_id() -> None:
+    """Already-migrated entries are left alone."""
+    from custom_components.hubitat import async_migrate_entry
+
+    mock_entry = Mock()
+    mock_entry.version = 2
+    mock_entry.minor_version = 3
+    mock_entry.data = {
+        CONF_ACCESS_TOKEN: "token",
+        H_CONF_WEBHOOK_ID: "hook-id",
+        H_CONF_USE_EVENT_SERVER: False,
+    }
+    mock_entry.options = {}
+    mock_hass = Mock()
+
+    assert await async_migrate_entry(mock_hass, mock_entry) is True
+    mock_hass.config_entries.async_update_entry.assert_not_called()
+
+
+CLOUD_HOST = "https://cloud.hubitat.com/api/abc-123/apps/123"
+
+
+@patch("custom_components.hubitat.config_flow.HubitatHub")
+@pytest.mark.asyncio
+async def test_validate_input_rejects_event_server_for_cloud_hub(
+    HubitatHub: Mock,
+) -> None:
+    HubitatHub.return_value.check_config = AsyncMock()
+    from custom_components.hubitat import config_flow
+
+    with pytest.raises(config_flow.CloudRequiresWebhook):
+        _ = await config_flow._validate_input(
+            {
+                CONF_HOST: CLOUD_HOST,
+                H_CONF_APP_ID: "123",
+                CONF_ACCESS_TOKEN: "token",
+                H_CONF_USE_EVENT_SERVER: True,
+            },
+            Mock(),
+        )
+
+
+@patch("custom_components.hubitat.config_flow.HubitatHub")
+@pytest.mark.asyncio
+async def test_validate_input_requires_a_public_url_for_cloud_hub(
+    HubitatHub: Mock,
+) -> None:
+    HubitatHub.return_value.check_config = AsyncMock()
+    from custom_components.hubitat import config_flow
+
+    user_input = {
+        CONF_HOST: CLOUD_HOST,
+        H_CONF_APP_ID: "123",
+        CONF_ACCESS_TOKEN: "token",
+    }
+
+    with (
+        patch.object(config_flow, "can_deliver_cloud_events", return_value=False),
+        pytest.raises(config_flow.NoPublicUrl),
+    ):
+        _ = await config_flow._validate_input(user_input, Mock())
+
+    with patch.object(config_flow, "can_deliver_cloud_events", return_value=True):
+        _ = await config_flow._validate_input(user_input, Mock())
+
+
+@patch("custom_components.hubitat.config_flow.HubitatHub")
+@pytest.mark.asyncio
+async def test_config_flow_creates_entry_with_webhook_id(HubitatHub: Mock) -> None:
+    HubitatHub.return_value.check_config = AsyncMock()
+    HubitatHub.return_value.token = "abcd1234efgh"
+    from custom_components.hubitat import config_flow
+
+    flow = config_flow.HubitatConfigFlow()
+    flow.hass = Mock()
+    with (
+        patch.object(flow, "async_set_unique_id", AsyncMock()),
+        patch.object(flow, "_abort_if_unique_id_configured"),
+        patch.object(
+            flow, "async_create_entry", return_value={"type": "create_entry"}
+        ) as create_entry,
+    ):
+        _ = await flow.async_step_user(
+            {
+                CONF_HOST: "10.0.1.2",
+                H_CONF_APP_ID: "123",
+                CONF_ACCESS_TOKEN: "abcd1234efgh",
+                H_CONF_USE_EVENT_SERVER: False,
+            }
+        )
+
+    data = create_entry.call_args.kwargs["data"]
+    assert len(data[H_CONF_WEBHOOK_ID]) == 64
+    assert data[H_CONF_USE_EVENT_SERVER] is False

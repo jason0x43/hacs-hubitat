@@ -4,23 +4,27 @@
 		"step": {
 			"user": {
 				"title": "Connect to your Hubitat hub",
-				"description": "Provide the IP address or hostname of your Hubitat hub, along with the app ID of its Maker API instance. Optionally, provide a port number for the integration's event server to listen on, the units used for temperature sensors (F by default), and/or the URL that Hubitat should POST events to.",
+				"description": "Provide the address of your Hubitat hub (or a Hubitat cloud Maker API URL), along with the app ID and access token of its Maker API instance. By default the hub sends events to Home Assistant through a webhook.",
 				"data": {
 					"host": "Hub address",
 					"app_id": "Maker API app ID",
 					"access_token": "Maker API access token",
 					"server_port": "Event server port (optional)",
-					"server_url": "Event server URL (optional)",
+					"server_url": "Event URL (optional)",
 					"temperature_unit": "Temperature units (optional)",
 					"sync_devices": "Synchronize devices",
-					"sync_areas": "Synchronize rooms"
+					"sync_areas": "Synchronize rooms",
+					"use_event_server": "Use the legacy event server"
 				},
 				"data_description": {
 					"server_ssl_cert": "Absolute path to a certificate (e.g., /config/ssl/cert.pem)",
 					"server_ssl_key": "Absolute path to a key (e.g., /config/ssl/key.pem)",
 					"temperature_unit": "This should match the temperature scale in your hub's settings.",
 					"sync_devices": "Automatically remove devices that are no longer shared by Maker API after a successful device load.",
-					"sync_areas": "Assign Home Assistant device areas to rooms reported by Maker API."
+					"sync_areas": "Assign Home Assistant device areas to rooms reported by Maker API.",
+					"use_event_server": "Receive events through a standalone event server instead of a Home Assistant webhook. Only needed if the hub can't reach Home Assistant's own address. Not available for hubs accessed through the Hubitat cloud.",
+					"server_url": "Webhook mode: the base URL the hub should use to reach Home Assistant (e.g., http://192.168.1.10:8123). Event server mode: the full URL Hubitat should POST events to. Leave empty to detect automatically.",
+					"host": "The IP address or hostname of your hub, or a Hubitat cloud Maker API URL (https://cloud.hubitat.com/api/<hub UID>/apps/<app ID>)."
 				}
 			}
 		},
@@ -30,7 +34,9 @@
 			"invalid_event_url": "Invalid event URL",
 			"invalid_hub_config": "Invalid hub config",
 			"request_error": "Error communicating with the hub",
-			"unknown": "Unexpected error"
+			"unknown": "Unexpected error",
+			"cloud_requires_webhook": "Hubs accessed through the Hubitat cloud must use webhook event delivery",
+			"no_public_url": "Hubs accessed through the Hubitat cloud need Home Assistant Cloud, an external URL, or an event URL so the hub can send events"
 		},
 		"abort": {
 			"already_configured": "Hub is already configured"
@@ -61,7 +67,9 @@
 			"invalid_event_url": "Invalid event URL",
 			"invalid_hub_config": "Invalid hub config",
 			"request_error": "Error communicating with the hub",
-			"unknown": "Unexpected error"
+			"unknown": "Unexpected error",
+			"cloud_requires_webhook": "Hubs accessed through the Hubitat cloud must use webhook event delivery",
+			"no_public_url": "Hubs accessed through the Hubitat cloud need Home Assistant Cloud, an external URL, or an event URL so the hub can send events"
 		},
 		"step": {
 			"user": {
@@ -70,17 +78,21 @@
 					"app_id": "Maker API app ID",
 					"access_token": "Maker API access token",
 					"server_port": "Event server port (optional)",
-					"server_url": "Event server URL (optional)",
+					"server_url": "Event URL (optional)",
 					"temperature_unit": "Temperature units (optional)",
 					"sync_devices": "Synchronize devices",
-					"sync_areas": "Synchronize rooms"
+					"sync_areas": "Synchronize rooms",
+					"use_event_server": "Use the legacy event server"
 				},
 				"data_description": {
 					"server_ssl_cert": "Absolute path to a certificate (e.g., /config/ssl/cert.pem)",
 					"server_ssl_key": "Absolute path to a key (e.g., /config/ssl/key.pem)",
 					"temperature_unit": "This should match the temperature scale in your hub's settings.",
 					"sync_devices": "Automatically remove devices that are no longer shared by Maker API after a successful device load.",
-					"sync_areas": "Assign Home Assistant device areas to rooms reported by Maker API."
+					"sync_areas": "Assign Home Assistant device areas to rooms reported by Maker API.",
+					"use_event_server": "Receive events through a standalone event server instead of a Home Assistant webhook. Only needed if the hub can't reach Home Assistant's own address. Not available for hubs accessed through the Hubitat cloud.",
+					"server_url": "Webhook mode: the base URL the hub should use to reach Home Assistant (e.g., http://192.168.1.10:8123). Event server mode: the full URL Hubitat should POST events to. Leave empty to detect automatically.",
+					"host": "The IP address or hostname of your hub, or a Hubitat cloud Maker API URL (https://cloud.hubitat.com/api/<hub UID>/apps/<app ID>)."
 				},
 				"description": "Configure options for Hubitat. Note that changing the Maker API app ID or access token will cause the integration to reload.",
 				"title": "Hubitat options"
