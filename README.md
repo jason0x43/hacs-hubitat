@@ -69,7 +69,7 @@ To configure the Hubitat integration, go to **Settings** › **Devices & service
 - The app ID of the Maker API instance (the number after `/apps/api/` in the Maker API URLs)
 - The Maker API access token
 - Optional: **Event URL** -- the address Hubitat should use to reach Home Assistant, when the automatically selected one doesn't work (more details are below)
-- Optional: **Use the legacy event server** and its settings (more details are below)
+- Optional: the collapsed **Legacy event server** section, with the **Use the legacy event server** checkbox and the server's settings (more details are below)
     - Event server port. The port is selected automatically when it is omitted.
     - Relative paths to an SSL private key and certificate (for example, `ssl/localhost-key.pem` and `ssl/localhost.pem`). When both are provided, the event server serves HTTPS only.
 - Optional: the temperature unit (default is `F`)
@@ -96,7 +96,7 @@ Hubs accessed through the cloud can't use the legacy event server. Because every
 
 ### Legacy event server
 
-Before webhooks, the integration received events with its own Python-based web server, listening on a separate port. It's still available with the **Use the legacy event server** option, for setups where Hubitat can reach that server but not Home Assistant itself. Existing installations that had customized the event server URL, port, or SSL settings keep using it after upgrading; other installations switch to the webhook automatically.
+Before webhooks, the integration received events with its own Python-based web server, listening on a separate port. It's still available with the **Use the legacy event server** option in the form's **Legacy event server** section, for setups where Hubitat can reach that server but not Home Assistant itself. Existing installations that had customized the event server URL, port, or SSL settings keep using it after upgrading; other installations switch to the webhook automatically.
 
 When the legacy event server is enabled, the **Event URL** option is the complete URL (host + port) that Hubitat should use to access the server. This is the complete URL (host + port) that Hubitat should use to access the server. Using the Docker example given earlier, this would typically be the address or hostname of the machine hosting the Docker container. The port in the URL will also be used internally for the event server.
 

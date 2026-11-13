@@ -16,23 +16,31 @@
                     "access_token": "Jeton d'accès 'Maker API' d'Hubitat",
                     "app_id": "Maker API app ID",
                     "host": "L'adresse du Hub",
-                    "server_port": "Port du serveur d'événements (facultatif)",
                     "server_url": "URL du serveur d'événements (facultatif)",
-                    "server_ssl_cert": "Certificat SSL du serveur d'événements (facultatif)",
-                    "server_ssl_key": "Clé privée SSL du serveur d'événements (facultatif)",
                     "temperature_unit": "Unités de température (optionnel)",
                     "sync_devices": "Synchroniser les appareils",
                     "sync_areas": "Synchroniser les pièces"
-				},
-				"data_description": {
-					"server_ssl_cert": "Chemin absolu vers un certificat (par exemple, /config/ssl/cert.pem)",
-					"server_ssl_key": "Chemin absolu vers une clé (par exemple, /config/ssl/key.pem)",
-					"temperature_unit": "Cette option doit correspondre à l’échelle de température définie dans les paramètres de votre hub.",
-					"sync_devices": "Supprime automatiquement les appareils qui ne sont plus partagés par l’API Maker après un chargement réussi des appareils.",
-					"sync_areas": "Associe les zones des appareils Home Assistant aux pièces signalées par l’API Maker."
+                },
+                "data_description": {
+                    "temperature_unit": "Cette option doit correspondre à l’échelle de température définie dans les paramètres de votre hub.",
+                    "sync_devices": "Supprime automatiquement les appareils qui ne sont plus partagés par l’API Maker après un chargement réussi des appareils.",
+                    "sync_areas": "Associe les zones des appareils Home Assistant aux pièces signalées par l’API Maker."
                 },
                 "description": "Indiquez l'adresse IP ou le nom d'hôte de votre hub Hubitat, ainsi que l'ID d'application de son instance API Maker. En option, un numéro de port pour l'écoute du serveur d'événements de l'intégration, les unités utilisées pour les capteurs de température (F par défaut) et / ou l'URL sur laquelle Hubitat doit POSTER les événements.",
-                "title": "Connectez-vous à votre hub Hubitat"
+                "title": "Connectez-vous à votre hub Hubitat",
+                "sections": {
+                    "legacy_event_server": {
+                        "data": {
+                            "server_port": "Port du serveur d'événements (facultatif)",
+                            "server_ssl_cert": "Certificat SSL du serveur d'événements (facultatif)",
+                            "server_ssl_key": "Clé privée SSL du serveur d'événements (facultatif)"
+                        },
+                        "data_description": {
+                            "server_ssl_cert": "Chemin absolu vers un certificat (par exemple, /config/ssl/cert.pem)",
+                            "server_ssl_key": "Chemin absolu vers une clé (par exemple, /config/ssl/key.pem)"
+                        }
+                    }
+                }
             }
         },
         "title": "Hubitat"
@@ -69,23 +77,31 @@
                     "host": "L'adresse du Hub",
                     "app_id": "Maker API app ID",
                     "access_token": "'Maker API' jeton d'accès",
-                    "server_port": "Port du serveur d'événements (facultatif)",
                     "server_url": "URL du serveur d'événements (facultatif)",
-                    "server_ssl_cert": "Certificat SSL du serveur d'événements (facultatif)",
-                    "server_ssl_key": "Clé privée SSL du serveur d'événements (facultatif)",
                     "temperature_unit": "Unités de température (optionnel)",
                     "sync_devices": "Synchroniser les appareils",
                     "sync_areas": "Synchroniser les pièces"
                 },
                 "data_description": {
-					"server_ssl_cert": "Chemin absolu vers un certificat (par exemple, /config/ssl/cert.pem)",
-					"server_ssl_key": "Chemin absolu vers une clé (par exemple, /config/ssl/key.pem)",
-					"temperature_unit": "Cette option doit correspondre à l’échelle de température définie dans les paramètres de votre hub.",
-					"sync_devices": "Supprime automatiquement les appareils qui ne sont plus partagés par l’API Maker après un chargement réussi des appareils.",
-					"sync_areas": "Associe les zones des appareils Home Assistant aux pièces signalées par l’API Maker."
+                    "temperature_unit": "Cette option doit correspondre à l’échelle de température définie dans les paramètres de votre hub.",
+                    "sync_devices": "Supprime automatiquement les appareils qui ne sont plus partagés par l’API Maker après un chargement réussi des appareils.",
+                    "sync_areas": "Associe les zones des appareils Home Assistant aux pièces signalées par l’API Maker."
                 },
                 "description": "Configurez les options pour Hubitat. Notez que la modification du 'Maker API app ID' ou du jeton d'accès provoquera le rechargement de l'intégration.",
-                "title": "Options d'Hubitat"
+                "title": "Options d'Hubitat",
+                "sections": {
+                    "legacy_event_server": {
+                        "data": {
+                            "server_port": "Port du serveur d'événements (facultatif)",
+                            "server_ssl_cert": "Certificat SSL du serveur d'événements (facultatif)",
+                            "server_ssl_key": "Clé privée SSL du serveur d'événements (facultatif)"
+                        },
+                        "data_description": {
+                            "server_ssl_cert": "Chemin absolu vers un certificat (par exemple, /config/ssl/cert.pem)",
+                            "server_ssl_key": "Chemin absolu vers une clé (par exemple, /config/ssl/key.pem)"
+                        }
+                    }
+                }
             }
         }
     },

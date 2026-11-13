@@ -488,3 +488,149 @@ async def test_config_flow_creates_entry_with_webhook_id(HubitatHub: Mock) -> No
     data = create_entry.call_args.kwargs["data"]
     assert len(data[H_CONF_WEBHOOK_ID]) == 64
     assert data[H_CONF_USE_EVENT_SERVER] is False
+
+
+def _section_key(schema: vol.Schema) -> Any:
+    from custom_components.hubitat.const import H_SECTION_EVENT_SERVER
+
+    return next(key for key in schema.schema if key.schema == H_SECTION_EVENT_SERVER)
+
+
+def test_config_schema_groups_event_server_fields_in_collapsed_section() -> None:
+    """The legacy event server fields are in a section that starts collapsed."""
+    from custom_components.hubitat.config_flow import CONFIG_SCHEMA
+    from custom_components.hubitat.const import H_SECTION_EVENT_SERVER
+    from homeassistant.data_entry_flow import section
+
+    event_server = CONFIG_SCHEMA.schema[_section_key(CONFIG_SCHEMA)]
+    assert isinstance(event_server, section)
+    assert event_server.options["collapsed"] is True
+    assert {key.schema for key in event_server.schema.schema} == {
+        H_CONF_USE_EVENT_SERVER,
+        H_CONF_SERVER_PORT,
+        "server_ssl_cert",
+        "server_ssl_key",
+    }
+    top_level = {key.schema for key in CONFIG_SCHEMA.schema}
+    assert H_CONF_SERVER_PORT not in top_level
+    assert "server_url" in top_level
+
+    data = CONFIG_SCHEMA(
+        {CONF_HOST: "hub.local", H_CONF_APP_ID: "123", CONF_ACCESS_TOKEN: "token"}
+    )
+    assert data[H_SECTION_EVENT_SERVER] == {H_CONF_USE_EVENT_SERVER: False}
+
+
+@patch("custom_components.hubitat.config_flow.HubitatHub")
+@pytest.mark.asyncio
+async def test_config_flow_stores_section_values_at_top_level(
+    HubitatHub: Mock,
+) -> None:
+    HubitatHub.return_value.check_config = AsyncMock()
+    HubitatHub.return_value.token = "abcd1234efgh"
+    from custom_components.hubitat import config_flow
+    from custom_components.hubitat.const import H_SECTION_EVENT_SERVER
+
+    flow = config_flow.HubitatConfigFlow()
+    flow.hass = Mock()
+    with (
+        patch.object(flow, "async_set_unique_id", AsyncMock()),
+        patch.object(flow, "_abort_if_unique_id_configured"),
+        patch.object(
+            flow, "async_create_entry", return_value={"type": "create_entry"}
+        ) as create_entry,
+    ):
+        _ = await flow.async_step_user(
+            {
+                CONF_HOST: "10.0.1.2",
+                H_CONF_APP_ID: "123",
+                CONF_ACCESS_TOKEN: "abcd1234efgh",
+                H_SECTION_EVENT_SERVER: {
+                    H_CONF_USE_EVENT_SERVER: True,
+                    H_CONF_SERVER_PORT: 12345,
+                },
+            }
+        )
+
+    data = create_entry.call_args.kwargs["data"]
+    assert H_SECTION_EVENT_SERVER not in data
+    assert data[H_CONF_USE_EVENT_SERVER] is True
+    assert data[H_CONF_SERVER_PORT] == 12345
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("use_event_server", [False, True])
+async def test_options_section_is_expanded_when_event_server_is_used(
+    use_event_server: bool,
+) -> None:
+    from custom_components.hubitat.config_flow import HubitatOptionsFlow
+
+    entry = Mock()
+    entry.data = {
+        CONF_HOST: "hub.local",
+        H_CONF_APP_ID: "123",
+        CONF_ACCESS_TOKEN: "token",
+        H_CONF_USE_EVENT_SERVER: use_event_server,
+        H_CONF_SERVER_PORT: 12345,
+    }
+    entry.options = {}
+    flow = HubitatOptionsFlow(entry)
+    flow.hass = Mock()
+
+    with (
+        patch.object(
+            HubitatOptionsFlow,
+            "config_entry",
+            new_callable=PropertyMock,
+            return_value=entry,
+        ),
+        patch.object(flow, "async_show_form") as show_form,
+    ):
+        _ = await flow.async_step_user()
+
+    schema = show_form.call_args.kwargs["data_schema"]
+    event_server = schema.schema[_section_key(schema)]
+    assert event_server.options["collapsed"] is not use_event_server
+    assert event_server.schema({})[H_CONF_USE_EVENT_SERVER] is use_event_server
+
+
+@pytest.mark.asyncio
+async def test_options_flow_stores_section_values_at_top_level() -> None:
+    from custom_components.hubitat.config_flow import HubitatOptionsFlow
+    from custom_components.hubitat.const import H_SECTION_EVENT_SERVER
+
+    entry = Mock()
+    entry.data = {CONF_HOST: "hub.local", H_CONF_APP_ID: "123", CONF_ACCESS_TOKEN: "t"}
+    entry.options = {}
+    flow = HubitatOptionsFlow(entry)
+    flow.hass = Mock()
+
+    with (
+        patch(
+            "custom_components.hubitat.config_flow._validate_input", AsyncMock()
+        ) as validate,
+        patch.object(
+            HubitatOptionsFlow,
+            "config_entry",
+            new_callable=PropertyMock,
+            return_value=entry,
+        ),
+        patch.object(
+            flow, "async_create_entry", return_value={"type": "create_entry"}
+        ) as create_entry,
+    ):
+        _ = await flow.async_step_user(
+            {
+                CONF_HOST: "hub.local",
+                H_SECTION_EVENT_SERVER: {
+                    H_CONF_USE_EVENT_SERVER: True,
+                    H_CONF_SERVER_PORT: 12345,
+                },
+            }
+        )
+
+    assert validate.call_args.args[0][H_CONF_USE_EVENT_SERVER] is True
+    data = create_entry.call_args.kwargs["data"]
+    assert H_SECTION_EVENT_SERVER not in data
+    assert data[H_CONF_USE_EVENT_SERVER] is True
+    assert data[H_CONF_SERVER_PORT] == 12345

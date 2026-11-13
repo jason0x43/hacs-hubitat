@@ -18,6 +18,7 @@ from homeassistant.const import (
     CONF_TEMPERATURE_UNIT,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import section
 from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
@@ -38,6 +39,7 @@ from .const import (
     H_CONF_SYNC_DEVICES,
     H_CONF_USE_EVENT_SERVER,
     H_CONF_WEBHOOK_ID,
+    H_SECTION_EVENT_SERVER,
     TEMP_C,
     TEMP_F,
     ConfigStep,
@@ -61,10 +63,17 @@ CONFIG_SCHEMA = vol.Schema(
         vol.Required(H_CONF_APP_ID): str,
         vol.Required(CONF_ACCESS_TOKEN): str,
         vol.Optional(H_CONF_SERVER_URL): str,
-        vol.Optional(H_CONF_USE_EVENT_SERVER, default=False): bool,
-        vol.Optional(H_CONF_SERVER_PORT): int,
-        vol.Optional(H_CONF_SERVER_SSL_CERT): str,
-        vol.Optional(H_CONF_SERVER_SSL_KEY): str,
+        vol.Optional(H_SECTION_EVENT_SERVER, default={}): section(
+            vol.Schema(
+                {
+                    vol.Optional(H_CONF_USE_EVENT_SERVER, default=False): bool,
+                    vol.Optional(H_CONF_SERVER_PORT): int,
+                    vol.Optional(H_CONF_SERVER_SSL_CERT): str,
+                    vol.Optional(H_CONF_SERVER_SSL_KEY): str,
+                }
+            ),
+            {"collapsed": True},
+        ),
         vol.Optional(CONF_TEMPERATURE_UNIT): SelectSelector(
             SelectSelectorConfig(
                 options=[TEMP_F, TEMP_C],
@@ -76,6 +85,17 @@ CONFIG_SCHEMA = vol.Schema(
         vol.Optional(H_CONF_SYNC_AREAS, default=False): bool,
     }
 )
+
+
+def _flatten_sections(user_input: dict[str, Any]) -> dict[str, Any]:
+    """Move the values of form sections to the top level.
+
+    Entry data and options store every value at the top level, regardless of how
+    the form groups them.
+    """
+    data = dict(user_input)
+    data.update(data.pop(H_SECTION_EVENT_SERVER, None) or {})
+    return data
 
 
 def _temperature_unit_option(entry: ConfigEntry) -> vol.Marker:
@@ -112,6 +132,7 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            user_input = _flatten_sections(user_input)
             try:
                 info = await _validate_input(user_input, self.hass)
                 entry_data = deepcopy(user_input)
@@ -204,6 +225,7 @@ class HubitatOptionsFlow(OptionsFlow):
         _LOGGER.debug("Setting up entry with user input: %s", user_input)
 
         if user_input is not None:
+            user_input = _flatten_sections(user_input)
             try:
                 # Use new app_id/token if provided, otherwise fall back to existing
                 app_id = user_input.get(H_CONF_APP_ID) or entry.data.get(H_CONF_APP_ID)
@@ -277,6 +299,12 @@ class HubitatOptionsFlow(OptionsFlow):
             form_errors = None
         else:
             form_errors = errors
+        use_event_server = bool(
+            entry.options.get(
+                H_CONF_USE_EVENT_SERVER,
+                entry.data.get(H_CONF_USE_EVENT_SERVER, False),
+            )
+        )
         return self.async_show_form(
             step_id=ConfigStep.USER,
             data_schema=vol.Schema(
@@ -315,45 +343,46 @@ class HubitatOptionsFlow(OptionsFlow):
                             or ""
                         },
                     ): str,
-                    vol.Optional(
-                        H_CONF_USE_EVENT_SERVER,
-                        default=bool(
-                            entry.options.get(
-                                H_CONF_USE_EVENT_SERVER,
-                                entry.data.get(H_CONF_USE_EVENT_SERVER, False),
-                            )
+                    vol.Optional(H_SECTION_EVENT_SERVER, default={}): section(
+                        vol.Schema(
+                            {
+                                vol.Optional(
+                                    H_CONF_USE_EVENT_SERVER, default=use_event_server
+                                ): bool,
+                                vol.Optional(
+                                    H_CONF_SERVER_PORT,
+                                    description={
+                                        "suggested_value": entry.options.get(
+                                            H_CONF_SERVER_PORT,
+                                            entry.data.get(H_CONF_SERVER_PORT),
+                                        )
+                                        or ""
+                                    },
+                                ): int,
+                                vol.Optional(
+                                    H_CONF_SERVER_SSL_CERT,
+                                    description={
+                                        "suggested_value": entry.options.get(
+                                            H_CONF_SERVER_SSL_CERT,
+                                            entry.data.get(H_CONF_SERVER_SSL_CERT),
+                                        )
+                                        or ""
+                                    },
+                                ): str,
+                                vol.Optional(
+                                    H_CONF_SERVER_SSL_KEY,
+                                    description={
+                                        "suggested_value": entry.options.get(
+                                            H_CONF_SERVER_SSL_KEY,
+                                            entry.data.get(H_CONF_SERVER_SSL_KEY),
+                                        )
+                                        or ""
+                                    },
+                                ): str,
+                            }
                         ),
-                    ): bool,
-                    vol.Optional(
-                        H_CONF_SERVER_PORT,
-                        description={
-                            "suggested_value": entry.options.get(
-                                H_CONF_SERVER_PORT,
-                                entry.data.get(H_CONF_SERVER_PORT),
-                            )
-                            or ""
-                        },
-                    ): int,
-                    vol.Optional(
-                        H_CONF_SERVER_SSL_CERT,
-                        description={
-                            "suggested_value": entry.options.get(
-                                H_CONF_SERVER_SSL_CERT,
-                                entry.data.get(H_CONF_SERVER_SSL_CERT),
-                            )
-                            or ""
-                        },
-                    ): str,
-                    vol.Optional(
-                        H_CONF_SERVER_SSL_KEY,
-                        description={
-                            "suggested_value": entry.options.get(
-                                H_CONF_SERVER_SSL_KEY,
-                                entry.data.get(H_CONF_SERVER_SSL_KEY),
-                            )
-                            or ""
-                        },
-                    ): str,
+                        {"collapsed": not use_event_server},
+                    ),
                     _temperature_unit_option(entry): SelectSelector(
                         SelectSelectorConfig(
                             options=[TEMP_F, TEMP_C],
