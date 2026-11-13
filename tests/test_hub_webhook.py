@@ -44,6 +44,7 @@ def _create_hub(entry: Mock | None = None) -> tuple[Hub, Mock]:
     hubitat_hub = Mock()
     hubitat_hub.devices = {}
     hubitat_hub.set_event_url = AsyncMock()
+    hubitat_hub.start_event_server = AsyncMock()
     hub = Hub(hass, entry or _entry(), 1, hubitat_hub, Mock())
     return hub, hubitat_hub
 
@@ -66,10 +67,17 @@ def test_uses_event_server() -> None:
 
 
 @pytest.mark.parametrize(
-    ("host", "local_only"), [("10.0.1.2", True), (CLOUD_HOST, False)]
+    ("host", "options", "local_only"),
+    [
+        ("10.0.1.2", {}, True),
+        ("10.0.1.2", {H_CONF_SERVER_URL: ""}, True),
+        (CLOUD_HOST, {}, False),
+        # A configured event URL may be on another network
+        ("10.0.1.2", {H_CONF_SERVER_URL: "https://ha.example.com"}, False),
+    ],
 )
-def test_register_webhook(host: str, local_only: bool) -> None:
-    hub, _ = _create_hub(_entry({"host": host}))
+def test_register_webhook(host: str, options: dict[str, Any], local_only: bool) -> None:
+    hub, _ = _create_hub(_entry({"host": host}, options))
     with patch.object(hub_module.webhook, "async_register") as register:
         hub.async_register_webhook()
         hub.async_register_webhook()
@@ -151,7 +159,7 @@ async def test_update_event_url_skipped_for_event_server() -> None:
 
 
 @pytest.mark.asyncio
-async def test_update_event_url_logs_when_no_url_available() -> None:
+async def test_local_hub_falls_back_to_event_server_without_url() -> None:
     hub, hubitat_hub = _create_hub()
     with patch.object(
         hub_module,
@@ -160,12 +168,29 @@ async def test_update_event_url_logs_when_no_url_available() -> None:
     ):
         await hub._async_update_event_url()
     hubitat_hub.set_event_url.assert_not_awaited()
+    hubitat_hub.start_event_server.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_cloud_hub_without_url_does_not_start_event_server() -> None:
+    hub, hubitat_hub = _create_hub(_entry({"host": CLOUD_HOST}))
+    with patch.object(
+        hub_module,
+        "async_get_event_url",
+        AsyncMock(side_effect=NoEventUrlAvailable("nope")),
+    ):
+        await hub._async_update_event_url()
+    hubitat_hub.set_event_url.assert_not_awaited()
+    hubitat_hub.start_event_server.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_update_event_url_waits_for_cloud_connection() -> None:
     hub, hubitat_hub = _create_hub(_entry({"host": CLOUD_HOST}))
-    hub._is_connected = True
+    # The hub has started but is still setting up platforms, so it isn't
+    # marked connected yet.
+    hub._accept_webhook_events = True
+    hub._is_connected = False
     unsub = Mock()
     get_event_url = AsyncMock(
         side_effect=[CloudNotConnected("not yet"), "https://hooks.nabu.casa/abc"]
@@ -196,3 +221,28 @@ def test_stop_removes_cloud_listener() -> None:
     hub.stop()
     unsub.assert_called_once()
     assert hub._unsub_cloud_listener is None
+
+
+@pytest.mark.asyncio
+async def test_cloud_callback_waits_while_hub_is_not_running() -> None:
+    hub, hubitat_hub = _create_hub(_entry({"host": CLOUD_HOST}))
+    unsub = Mock()
+    with (
+        patch.object(
+            hub_module,
+            "async_get_event_url",
+            AsyncMock(side_effect=CloudNotConnected("not yet")),
+        ),
+        patch.object(
+            hub_module, "async_listen_cloud_connected", return_value=unsub
+        ) as listen,
+    ):
+        hub._accept_webhook_events = True
+        await hub._async_update_event_url()
+        on_connected = listen.call_args.args[1]
+
+        hub._accept_webhook_events = False
+        await on_connected()
+
+    unsub.assert_not_called()
+    hubitat_hub.set_event_url.assert_not_awaited()

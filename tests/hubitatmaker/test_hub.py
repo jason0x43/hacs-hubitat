@@ -747,3 +747,23 @@ async def test_process_event_public() -> None:
     hub.process_event(events["device"])
 
     assert device.attributes[DeviceAttribute.SWITCH].value == "on"
+
+
+@patch("aiohttp.request", new=create_fake_request())
+@patch("custom_components.hubitat.hubitatmaker.server.Server")
+@pytest.mark.asyncio
+async def test_start_event_server_fallback(MockServer: mock.Mock) -> None:
+    """A hub without a server can start one on demand until it's stopped."""
+    MockServer.return_value.url = "http://127.0.0.1:81"
+    hub = Hub("1.2.3.4", "1234", "token", start_server=False)
+    await hub.start()
+    assert MockServer.called is False
+
+    await hub.start_event_server()
+    await hub.start_event_server()
+    assert MockServer.call_count == 1
+    event_url = unquote(requests[-1]["url"])
+    assert re.search(r"postURL/http://127.0.0.1:81$", event_url) is not None
+
+    hub.stop()
+    assert hub.use_server is False

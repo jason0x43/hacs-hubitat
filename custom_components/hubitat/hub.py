@@ -192,20 +192,31 @@ class Hub(HasId):
         if self.use_event_server or webhook_id is None or self._webhook_registered:
             return
 
-        # Requests through Home Assistant Cloud don't come from a local address,
-        # so only a hub accessed through the Hubitat cloud may use a non-local
-        # connection.
+        # Requests through Home Assistant Cloud, or from a hub on another network
+        # using a configured event URL, don't come from a local address.
+        local_only = not is_cloud_host(self.host) and not self._event_base_url
         webhook.async_register(
             self.hass,
             DOMAIN,
             f"Hubitat ({self.id})",
             webhook_id,
             self._async_handle_webhook,
-            local_only=not is_cloud_host(self.host),
+            local_only=local_only,
             allowed_methods=["POST"],
         )
         self._webhook_registered = True
         _LOGGER.debug("Registered webhook for %s", self.config_entry.entry_id)
+
+    @property
+    def _event_base_url(self) -> str | None:
+        """The user-configured base URL the hub should use to reach HA."""
+        url = cast(
+            str | None,
+            self.config_entry.options.get(
+                H_CONF_SERVER_URL, self.config_entry.data.get(H_CONF_SERVER_URL)
+            ),
+        )
+        return url or None
 
     def async_unregister_webhook(self) -> None:
         """Unregister the event webhook."""
@@ -242,16 +253,9 @@ class Hub(HasId):
         if self.use_event_server or webhook_id is None:
             return
 
-        base_url = cast(
-            str | None,
-            self.config_entry.options.get(
-                H_CONF_SERVER_URL, self.config_entry.data.get(H_CONF_SERVER_URL)
-            ),
-        )
-
         try:
             url = await async_get_event_url(
-                self.hass, webhook_id, self.host, base_url or None
+                self.hass, webhook_id, self.host, self._event_base_url
             )
         except CloudNotConnected:
             _LOGGER.info(
@@ -261,7 +265,18 @@ class Hub(HasId):
             self._listen_for_cloud_connection()
             return
         except HomeAssistantError as e:
-            _LOGGER.error("Unable to set up Hubitat event delivery: %s", e)
+            if is_cloud_host(self.host):
+                _LOGGER.error("Unable to set up Hubitat event delivery: %s", e)
+                return
+            # A local hub can still reach the standalone event server, which is
+            # what entries used before webhook delivery.
+            _LOGGER.warning(
+                "%s; falling back to the legacy event server. Set Home "
+                "Assistant's internal URL or the integration's Event URL option "
+                "to use the webhook instead.",
+                e,
+            )
+            await self._hub.start_event_server()
             return
 
         await self._hub.set_event_url(url)
@@ -272,9 +287,11 @@ class Hub(HasId):
             return
 
         async def handle_cloud_connected() -> None:
-            self._stop_cloud_listener()
-            if not self._is_connected:
+            # If the hub isn't running (it was stopped or failed to start), the
+            # next connection attempt sets the event URL itself.
+            if not self._accept_webhook_events:
                 return
+            self._stop_cloud_listener()
             try:
                 await self._async_update_event_url()
             except Exception:

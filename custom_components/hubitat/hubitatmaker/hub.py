@@ -102,6 +102,7 @@ class Hub:
         self.mac = ""
         self.ssl_context: SSLContext | None = ssl_context
         self.use_server: bool = start_server
+        self._default_use_server = start_server
 
         self.set_host(host)
 
@@ -292,7 +293,19 @@ class Hub:
             self._server.stop()
             self._server = None
             _LOGGER.debug("Stopped event server")
+        self.use_server = self._default_use_server
         self._listeners = {}
+
+    async def start_event_server(self) -> None:
+        """Start the event server and point Maker API at it.
+
+        This is used as a fallback when a hub created with start_server=False
+        has no other way to receive events. The server runs until stop() is
+        called.
+        """
+        self.use_server = True
+        if self._server is None:
+            await self._start_server()
 
     async def refresh_device(self, device_id: str) -> None:
         """Refresh a device's state."""
