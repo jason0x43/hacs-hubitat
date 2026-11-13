@@ -22,6 +22,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import area_registry, device_registry, entity_registry
 from homeassistant.helpers.device_registry import DeviceEntry
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.storage import Store
 
 try:
@@ -85,6 +86,8 @@ HUB_DEVICE_NAME = "Hub"
 HUB_NAME = "Hubitat Elevation"
 ATTRIBUTE_UNIT_STORE_VERSION = 1
 ATTRIBUTE_UNIT_SAVE_DELAY = 60
+# Seconds to wait before retrying a failed event URL update
+EVENT_URL_RETRY_DELAY = 60
 
 # Hubitat attributes that should be emitted as HA events
 _TRIGGER_ATTRS = tuple([v.attr for v in TRIGGER_CAPABILITIES.values()])
@@ -168,6 +171,7 @@ class Hub(HasId):
         self._webhook_registered = False
         self._accept_webhook_events = False
         self._unsub_cloud_listener: Callable[[], None] | None = None
+        self._cancel_event_url_retry: Callable[[], None] | None = None
 
     def set_connect_task(self, task: asyncio.Task[None]) -> None:
         """Store the background connect task so unload can cancel it."""
@@ -292,14 +296,51 @@ class Hub(HasId):
             if not self._accept_webhook_events:
                 return
             self._stop_cloud_listener()
-            try:
-                await self._async_update_event_url()
-            except Exception:
-                _LOGGER.exception("Unable to set the Hubitat event URL")
+            await self._async_update_event_url_or_retry()
 
         self._unsub_cloud_listener = async_listen_cloud_connected(
             self.hass, handle_cloud_connected
         )
+
+    async def _async_update_event_url_or_retry(self) -> None:
+        """Update the event URL, retrying later if the update fails.
+
+        This is used outside of async_connect, where a failure wouldn't
+        otherwise be retried.
+        """
+        try:
+            await self._async_update_event_url()
+        except Exception as e:
+            _LOGGER.warning(
+                "Unable to set the Hubitat event URL (will retry in %d seconds): %s",
+                EVENT_URL_RETRY_DELAY,
+                e,
+            )
+            self._schedule_event_url_retry()
+
+    def _schedule_event_url_retry(self) -> None:
+        if self._cancel_event_url_retry is not None:
+            return
+
+        @callback
+        def retry(_now: Any) -> None:
+            self._cancel_event_url_retry = None
+            if not self._accept_webhook_events:
+                return
+            _ = self.config_entry.async_create_background_task(
+                self.hass,
+                self._async_update_event_url_or_retry(),
+                name=f"hubitat_event_url_{self.config_entry.entry_id}",
+            )
+
+        self._cancel_event_url_retry = async_call_later(
+            self.hass, EVENT_URL_RETRY_DELAY, retry
+        )
+
+    def _cancel_event_url_retries(self) -> None:
+        if self._cancel_event_url_retry is not None:
+            self._cancel_event_url_retry()
+            self._cancel_event_url_retry = None
 
     def _stop_cloud_listener(self) -> None:
         if self._unsub_cloud_listener is not None:
@@ -506,6 +547,7 @@ class Hub(HasId):
             self._hub.stop()
         self._accept_webhook_events = False
         self._stop_cloud_listener()
+        self._cancel_event_url_retries()
         self.set_connected(False)
         self._device_listeners = {}
         self._hub_device_listeners = []
@@ -995,6 +1037,7 @@ class Hub(HasId):
             self._hub.stop()
             self._accept_webhook_events = False
             self._stop_cloud_listener()
+            self._cancel_event_url_retries()
 
             # Clear device listeners that were added
             for device_id in self._hub.devices:

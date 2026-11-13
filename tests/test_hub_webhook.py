@@ -246,3 +246,76 @@ async def test_cloud_callback_waits_while_hub_is_not_running() -> None:
 
     unsub.assert_not_called()
     hubitat_hub.set_event_url.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_cloud_callback_retries_failed_event_url_update() -> None:
+    """A postURL failure after Home Assistant Cloud connects is retried."""
+    entry = _entry({"host": CLOUD_HOST})
+    hub, hubitat_hub = _create_hub(entry)
+    hub._accept_webhook_events = True
+    hubitat_hub.set_event_url.side_effect = [ConnectionError("offline"), None]
+    get_event_url = AsyncMock(
+        side_effect=[
+            CloudNotConnected("not yet"),
+            "https://hooks.nabu.casa/abc",
+            "https://hooks.nabu.casa/abc",
+        ]
+    )
+    cancel_retry = Mock()
+
+    with (
+        patch.object(hub_module, "async_get_event_url", get_event_url),
+        patch.object(
+            hub_module, "async_listen_cloud_connected", return_value=Mock()
+        ) as listen,
+        patch.object(
+            hub_module, "async_call_later", return_value=cancel_retry
+        ) as call_later,
+    ):
+        await hub._async_update_event_url()
+        on_connected = listen.call_args.args[1]
+
+        # The postURL request fails, so a retry is scheduled
+        await on_connected()
+        call_later.assert_called_once()
+        assert call_later.call_args.args[1] == hub_module.EVENT_URL_RETRY_DELAY
+
+        # When the retry fires, it runs the update in a background task
+        retry = call_later.call_args.args[2]
+        retry(None)
+        create_task = entry.async_create_background_task
+        create_task.assert_called_once()
+        await create_task.call_args.args[1]
+
+    assert hubitat_hub.set_event_url.await_count == 2
+    hubitat_hub.set_event_url.assert_awaited_with("https://hooks.nabu.casa/abc")
+    # The retry succeeded, so no new one was scheduled
+    call_later.assert_called_once()
+    assert hub._cancel_event_url_retry is None
+
+
+def test_stop_cancels_event_url_retry() -> None:
+    hub, _ = _create_hub()
+    cancel_retry = Mock()
+    hub._cancel_event_url_retry = cancel_retry
+
+    hub.stop()
+
+    cancel_retry.assert_called_once()
+    assert hub._cancel_event_url_retry is None
+
+
+def test_event_url_retry_is_skipped_when_hub_stopped() -> None:
+    entry = _entry()
+    hub, _ = _create_hub(entry)
+    with patch.object(hub_module, "async_call_later", return_value=Mock()) as later:
+        hub._schedule_event_url_retry()
+        hub._schedule_event_url_retry()
+    later.assert_called_once()
+
+    retry = later.call_args.args[2]
+    hub._accept_webhook_events = False
+    retry(None)
+    entry.async_create_background_task.assert_not_called()
+    assert hub._cancel_event_url_retry is None
