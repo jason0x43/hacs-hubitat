@@ -221,6 +221,46 @@ async def test_start_server(MockServer: mock.Mock) -> None:
     assert MockServer.called is True
 
 
+@pytest.mark.parametrize(
+    ("host", "expected_api_url"),
+    [
+        ("1.2.3.4", "http://1.2.3.4/apps/api/1234"),
+        ("hub.example.com:8080", "http://hub.example.com:8080/apps/api/1234"),
+        ("http://1.2.3.4", "http://1.2.3.4/apps/api/1234"),
+        ("https://hub.example.com:8443", "https://hub.example.com:8443/apps/api/1234"),
+    ],
+)
+def test_set_host(host: str, expected_api_url: str) -> None:
+    """The hub address may include a scheme and/or a port."""
+    hub = Hub(host, "1234", "token")
+    assert hub.api_url == expected_api_url
+
+
+@pytest.mark.parametrize(
+    ("host", "expected_hostname"),
+    [
+        ("1.2.3.4", "1.2.3.4"),
+        ("http://1.2.3.4", "1.2.3.4"),
+        ("https://hub.example.com:8443", "hub.example.com"),
+        ("hub.example.com:8080", "hub.example.com"),
+    ],
+)
+@patch("aiohttp.request", new=create_fake_request())
+@patch("custom_components.hubitat.hubitatmaker.server.Server", new=MagicMock())
+@pytest.mark.asyncio
+async def test_start_server_host_with_port(host: str, expected_hostname: str) -> None:
+    """The event server address lookup should not include the hub's port."""
+    sock = MagicMock()
+    sock.getsockname.return_value = ("10.0.0.2", 12345)
+    with patch(
+        "custom_components.hubitat.hubitatmaker.hub._open_socket"
+    ) as open_socket:
+        open_socket.return_value.__enter__.return_value = sock
+        hub = Hub(host, "1234", "token")
+        await hub.start()
+    sock.connect.assert_called_once_with((expected_hostname, 80))
+
+
 @patch("aiohttp.request", new=create_fake_request())
 @patch("custom_components.hubitat.hubitatmaker.server.Server", new=MagicMock())
 @pytest.mark.asyncio
