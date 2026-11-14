@@ -1,5 +1,6 @@
 import asyncio
 from datetime import timedelta
+from typing import Any
 from unittest.mock import patch
 
 import aiohttp
@@ -11,6 +12,8 @@ from custom_components.hubitat.const import (
     DOMAIN,
     H_CONF_HUBITAT_EVENT,
     H_CONF_SYNC_DEVICES,
+    H_CONF_USE_EVENT_SERVER,
+    H_CONF_WEBHOOK_ID,
     PLATFORMS,
 )
 from custom_components.hubitat.hub import Hub, get_hub
@@ -34,12 +37,18 @@ async def _wait_for(predicate, timeout: float = 5.0) -> None:
             await asyncio.sleep(0.01)
 
 
-async def _setup_entry(hass, fake_hubitat: FakeHubitat) -> MockConfigEntry:
+async def _setup_entry(
+    hass, fake_hubitat: FakeHubitat, options: dict[str, Any] | None = None
+) -> MockConfigEntry:
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="Hubitat (aa:bb:cc:dd:ee:ff)",
         data=fake_hubitat.config_entry_data,
-        options={**fake_hubitat.config_entry_options, H_CONF_SYNC_DEVICES: True},
+        options={
+            **fake_hubitat.config_entry_options,
+            H_CONF_SYNC_DEVICES: True,
+            **(options or {}),
+        },
         unique_id=fake_hubitat.hub_id,
         version=2,
     )
@@ -184,10 +193,110 @@ async def test_existing_entry_does_not_remove_devices_without_sync_enabled(
     await _unload_entry(hass, entry)
 
 
-async def test_hub_event_receiver_updates_entity_state(
+async def test_webhook_receives_events_by_default(
+    hass, hass_client_no_auth, fake_hubitat: FakeHubitat
+) -> None:
+    hass.config.internal_url = "http://192.168.1.10:8123"
+    entry = await _setup_entry(hass, fake_hubitat)
+    try:
+        webhook_id = entry.data[H_CONF_WEBHOOK_ID]
+        assert entry.data[H_CONF_USE_EVENT_SERVER] is False
+        assert fake_hubitat.post_urls[-1] == (
+            f"http://192.168.1.10:8123/api/webhook/{webhook_id}"
+        )
+
+        switch_entity_id = get_state_entity_id(hass, "switch", "Loft Fan")
+        client = await hass_client_no_auth()
+        response = await client.post(
+            f"/api/webhook/{webhook_id}",
+            json={
+                "content": {
+                    "name": "switch",
+                    "value": "on",
+                    "displayName": "Loft Fan",
+                    "descriptionText": "Loft Fan is on",
+                    "deviceId": "176",
+                    "unit": None,
+                    "data": None,
+                }
+            },
+        )
+
+        assert response.status == 200
+        await hass.async_block_till_done()
+        assert hass.states.get(switch_entity_id).state == STATE_ON
+    finally:
+        await _unload_entry(hass, entry)
+
+
+async def test_event_url_follows_internal_url_changes(
     hass, fake_hubitat: FakeHubitat
 ) -> None:
+    hass.config.internal_url = "http://192.168.1.10:8123"
     entry = await _setup_entry(hass, fake_hubitat)
+    try:
+        webhook_id = entry.data[H_CONF_WEBHOOK_ID]
+        assert fake_hubitat.post_urls[-1].startswith("http://192.168.1.10:8123/")
+        post_count = len(fake_hubitat.post_urls)
+
+        await hass.config.async_update(internal_url="http://192.168.1.20:8123")
+        await _wait_for(lambda: len(fake_hubitat.post_urls) > post_count)
+        assert fake_hubitat.post_urls[-1] == (
+            f"http://192.168.1.20:8123/api/webhook/{webhook_id}"
+        )
+
+        # A config change that doesn't affect the URL doesn't update Maker API
+        post_count = len(fake_hubitat.post_urls)
+        await hass.config.async_update(location_name="Elsewhere")
+        await hass.async_block_till_done()
+        assert len(fake_hubitat.post_urls) == post_count
+    finally:
+        await _unload_entry(hass, entry)
+
+
+async def test_legacy_event_server_ignores_internal_url_changes(
+    hass, fake_hubitat: FakeHubitat
+) -> None:
+    hass.config.internal_url = "http://192.168.1.10:8123"
+    entry = await _setup_entry(
+        hass, fake_hubitat, options={H_CONF_USE_EVENT_SERVER: True}
+    )
+    try:
+        server_url = fake_hubitat.post_urls[-1]
+        assert "/api/webhook/" not in server_url
+        post_count = len(fake_hubitat.post_urls)
+
+        await hass.config.async_update(internal_url="http://192.168.1.20:8123")
+        await hass.async_block_till_done()
+
+        assert len(fake_hubitat.post_urls) == post_count
+        assert fake_hubitat.post_urls[-1] == server_url
+    finally:
+        await _unload_entry(hass, entry)
+
+
+async def test_webhook_is_reregistered_on_reload(
+    hass, fake_hubitat: FakeHubitat
+) -> None:
+    hass.config.internal_url = "http://192.168.1.10:8123"
+    entry = await _setup_entry(hass, fake_hubitat)
+    try:
+        # Reloading would fail with "Handler is already defined" if unload didn't
+        # unregister the webhook.
+        assert await hass.config_entries.async_reload(entry.entry_id)
+        await _wait_for(lambda: get_hub(hass, entry.entry_id).is_connected)
+        await hass.async_block_till_done()
+        assert entry.state is ConfigEntryState.LOADED
+    finally:
+        await _unload_entry(hass, entry)
+
+
+async def test_legacy_event_server_updates_entity_state(
+    hass, fake_hubitat: FakeHubitat
+) -> None:
+    entry = await _setup_entry(
+        hass, fake_hubitat, options={H_CONF_USE_EVENT_SERVER: True}
+    )
     try:
         switch_entity_id = get_state_entity_id(hass, "switch", "Loft Fan")
         events = []

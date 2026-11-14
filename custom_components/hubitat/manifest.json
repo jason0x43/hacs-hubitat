@@ -10,7 +10,12 @@
   "ssdp": [],
   "zeroconf": [],
   "homekit": {},
-  "dependencies": [],
+  "dependencies": [
+    "webhook"
+  ],
+  "after_dependencies": [
+    "cloud"
+  ],
   "codeowners": [
     "@jason0x43"
   ],

@@ -5,6 +5,7 @@ from copy import deepcopy
 from typing import Any, TypedDict, cast, override
 
 import homeassistant.helpers.config_validation as cv
+from homeassistant.components import webhook
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -16,7 +17,8 @@ from homeassistant.const import (
     CONF_HOST,
     CONF_TEMPERATURE_UNIT,
 )
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import section
 from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
@@ -35,10 +37,14 @@ from .const import (
     H_CONF_SERVER_URL,
     H_CONF_SYNC_AREAS,
     H_CONF_SYNC_DEVICES,
+    H_CONF_USE_EVENT_SERVER,
+    H_CONF_WEBHOOK_ID,
+    H_SECTION_EVENT_SERVER,
     TEMP_C,
     TEMP_F,
     ConfigStep,
 )
+from .event_delivery import can_deliver_cloud_events, is_cloud_host
 from .hubitatmaker import (
     ConnectionError,
     Hub as HubitatHub,
@@ -57,9 +63,17 @@ CONFIG_SCHEMA = vol.Schema(
         vol.Required(H_CONF_APP_ID): str,
         vol.Required(CONF_ACCESS_TOKEN): str,
         vol.Optional(H_CONF_SERVER_URL): str,
-        vol.Optional(H_CONF_SERVER_PORT): int,
-        vol.Optional(H_CONF_SERVER_SSL_CERT): str,
-        vol.Optional(H_CONF_SERVER_SSL_KEY): str,
+        vol.Optional(H_SECTION_EVENT_SERVER, default={}): section(
+            vol.Schema(
+                {
+                    vol.Optional(H_CONF_USE_EVENT_SERVER, default=False): bool,
+                    vol.Optional(H_CONF_SERVER_PORT): int,
+                    vol.Optional(H_CONF_SERVER_SSL_CERT): str,
+                    vol.Optional(H_CONF_SERVER_SSL_KEY): str,
+                }
+            ),
+            {"collapsed": True},
+        ),
         vol.Optional(CONF_TEMPERATURE_UNIT): SelectSelector(
             SelectSelectorConfig(
                 options=[TEMP_F, TEMP_C],
@@ -71,6 +85,17 @@ CONFIG_SCHEMA = vol.Schema(
         vol.Optional(H_CONF_SYNC_AREAS, default=False): bool,
     }
 )
+
+
+def _flatten_sections(user_input: dict[str, Any]) -> dict[str, Any]:
+    """Move the values of form sections to the top level.
+
+    Entry data and options store every value at the top level, regardless of how
+    the form groups them.
+    """
+    data = dict(user_input)
+    data.update(data.pop(H_SECTION_EVENT_SERVER, None) or {})
+    return data
 
 
 def _temperature_unit_option(entry: ConfigEntry) -> vol.Marker:
@@ -87,7 +112,7 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Hubitat."""
 
     VERSION: int = 2
-    MINOR_VERSION: int = 2
+    MINOR_VERSION: int = 3
 
     hub: HubitatHub | None = None
 
@@ -107,10 +132,12 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            user_input = _flatten_sections(user_input)
             try:
-                info = await _validate_input(user_input)
+                info = await _validate_input(user_input, self.hass)
                 entry_data = deepcopy(user_input)
                 entry_data[H_CONF_LEGACY_LIGHT_NAME_HEURISTIC] = False
+                entry_data[H_CONF_WEBHOOK_ID] = webhook.async_generate_id()
                 self.hub = info["hub"]
 
                 # Generate hub_id from initial token and store it
@@ -147,6 +174,10 @@ class HubitatConfigFlow(ConfigFlow, domain=DOMAIN):
             except vol.Invalid:
                 _LOGGER.exception("Invalid event URL")
                 errors["base"] = "invalid_event_url"
+            except CloudRequiresWebhook:
+                errors["base"] = "cloud_requires_webhook"
+            except NoPublicUrl:
+                errors["base"] = "no_public_url"
             except Exception as e:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception: %s", e)
                 errors["base"] = "unknown"
@@ -194,6 +225,7 @@ class HubitatOptionsFlow(OptionsFlow):
         _LOGGER.debug("Setting up entry with user input: %s", user_input)
 
         if user_input is not None:
+            user_input = _flatten_sections(user_input)
             try:
                 # Use new app_id/token if provided, otherwise fall back to existing
                 app_id = user_input.get(H_CONF_APP_ID) or entry.data.get(H_CONF_APP_ID)
@@ -207,16 +239,20 @@ class HubitatOptionsFlow(OptionsFlow):
                     CONF_ACCESS_TOKEN: access_token,
                     H_CONF_SERVER_PORT: user_input.get(H_CONF_SERVER_PORT),
                     H_CONF_SERVER_URL: user_input.get(H_CONF_SERVER_URL),
+                    H_CONF_USE_EVENT_SERVER: user_input.get(H_CONF_USE_EVENT_SERVER),
                     H_CONF_SERVER_SSL_CERT: user_input.get(H_CONF_SERVER_SSL_CERT),
                     H_CONF_SERVER_SSL_KEY: user_input.get(H_CONF_SERVER_SSL_KEY),
                     H_CONF_SYNC_AREAS: user_input.get(H_CONF_SYNC_AREAS),
                     H_CONF_SYNC_DEVICES: user_input.get(H_CONF_SYNC_DEVICES),
                 }
 
-                _ = await _validate_input(check_input)
+                _ = await _validate_input(check_input, self.hass)
                 self.options[CONF_HOST] = user_input[CONF_HOST]
                 self.options[H_CONF_SERVER_PORT] = user_input.get(H_CONF_SERVER_PORT)
                 self.options[H_CONF_SERVER_URL] = user_input.get(H_CONF_SERVER_URL)
+                self.options[H_CONF_USE_EVENT_SERVER] = bool(
+                    user_input.get(H_CONF_USE_EVENT_SERVER)
+                )
                 self.options[H_CONF_SERVER_SSL_CERT] = user_input.get(
                     H_CONF_SERVER_SSL_CERT
                 )
@@ -251,6 +287,10 @@ class HubitatOptionsFlow(OptionsFlow):
             except vol.Invalid:
                 _LOGGER.exception("Invalid event URL")
                 errors["base"] = "invalid_event_url"
+            except CloudRequiresWebhook:
+                errors["base"] = "cloud_requires_webhook"
+            except NoPublicUrl:
+                errors["base"] = "no_public_url"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
@@ -259,6 +299,12 @@ class HubitatOptionsFlow(OptionsFlow):
             form_errors = None
         else:
             form_errors = errors
+        use_event_server = bool(
+            entry.options.get(
+                H_CONF_USE_EVENT_SERVER,
+                entry.data.get(H_CONF_USE_EVENT_SERVER, False),
+            )
+        )
         return self.async_show_form(
             step_id=ConfigStep.USER,
             data_schema=vol.Schema(
@@ -297,36 +343,46 @@ class HubitatOptionsFlow(OptionsFlow):
                             or ""
                         },
                     ): str,
-                    vol.Optional(
-                        H_CONF_SERVER_PORT,
-                        description={
-                            "suggested_value": entry.options.get(
-                                H_CONF_SERVER_PORT,
-                                entry.data.get(H_CONF_SERVER_PORT),
-                            )
-                            or ""
-                        },
-                    ): int,
-                    vol.Optional(
-                        H_CONF_SERVER_SSL_CERT,
-                        description={
-                            "suggested_value": entry.options.get(
-                                H_CONF_SERVER_SSL_CERT,
-                                entry.data.get(H_CONF_SERVER_SSL_CERT),
-                            )
-                            or ""
-                        },
-                    ): str,
-                    vol.Optional(
-                        H_CONF_SERVER_SSL_KEY,
-                        description={
-                            "suggested_value": entry.options.get(
-                                H_CONF_SERVER_SSL_KEY,
-                                entry.data.get(H_CONF_SERVER_SSL_KEY),
-                            )
-                            or ""
-                        },
-                    ): str,
+                    vol.Optional(H_SECTION_EVENT_SERVER, default={}): section(
+                        vol.Schema(
+                            {
+                                vol.Optional(
+                                    H_CONF_USE_EVENT_SERVER, default=use_event_server
+                                ): bool,
+                                vol.Optional(
+                                    H_CONF_SERVER_PORT,
+                                    description={
+                                        "suggested_value": entry.options.get(
+                                            H_CONF_SERVER_PORT,
+                                            entry.data.get(H_CONF_SERVER_PORT),
+                                        )
+                                        or ""
+                                    },
+                                ): int,
+                                vol.Optional(
+                                    H_CONF_SERVER_SSL_CERT,
+                                    description={
+                                        "suggested_value": entry.options.get(
+                                            H_CONF_SERVER_SSL_CERT,
+                                            entry.data.get(H_CONF_SERVER_SSL_CERT),
+                                        )
+                                        or ""
+                                    },
+                                ): str,
+                                vol.Optional(
+                                    H_CONF_SERVER_SSL_KEY,
+                                    description={
+                                        "suggested_value": entry.options.get(
+                                            H_CONF_SERVER_SSL_KEY,
+                                            entry.data.get(H_CONF_SERVER_SSL_KEY),
+                                        )
+                                        or ""
+                                    },
+                                ): str,
+                            }
+                        ),
+                        {"collapsed": not use_event_server},
+                    ),
                     _temperature_unit_option(entry): SelectSelector(
                         SelectSelectorConfig(
                             options=[TEMP_F, TEMP_C],
@@ -369,12 +425,22 @@ class HubitatOptionsFlow(OptionsFlow):
         return self.async_create_entry(title="", data=self.options)
 
 
+class CloudRequiresWebhook(Exception):
+    """A hub accessed through the Hubitat cloud can't use the event server."""
+
+
+class NoPublicUrl(Exception):
+    """A hub accessed through the Hubitat cloud has no way to reach HA."""
+
+
 class ValidatedInput(TypedDict):
     label: str
     hub: HubitatHub
 
 
-async def _validate_input(user_input: dict[str, Any]) -> ValidatedInput:
+async def _validate_input(
+    user_input: dict[str, Any], hass: HomeAssistant | None = None
+) -> ValidatedInput:
     """Validate that the user input can create a working connection."""
 
     # data has the keys from CONFIG_SCHEMA with values provided by the user.
@@ -386,6 +452,12 @@ async def _validate_input(user_input: dict[str, Any]) -> ValidatedInput:
 
     if event_url:
         event_url = cv.url(event_url)
+
+    if is_cloud_host(host):
+        if user_input.get(H_CONF_USE_EVENT_SERVER):
+            raise CloudRequiresWebhook()
+        if hass is not None and not can_deliver_cloud_events(hass, event_url):
+            raise NoPublicUrl()
 
     hub = HubitatHub(host, app_id, token, port=port, event_url=event_url)
     await hub.check_config()
