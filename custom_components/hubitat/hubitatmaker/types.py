@@ -12,14 +12,16 @@ HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
 
 class AttributeData(TypedDict):
     name: DeviceAttribute
-    dataType: Literal[
-        "ENUM",
-        "STRING",
-        "DYNAMIC_ENUM",
-        "JSON_OBJECT",
-        "NUMBER",
-        "DATE",
-        "VECTOR3",
+    dataType: NotRequired[
+        Literal[
+            "ENUM",
+            "STRING",
+            "DYNAMIC_ENUM",
+            "JSON_OBJECT",
+            "NUMBER",
+            "DATE",
+            "VECTOR3",
+        ]
     ]
     currentValue: str | float | datetime
     unit: str | None
@@ -57,8 +59,8 @@ class Attribute:
         return self._properties["name"]
 
     @property
-    def type(self) -> str:
-        return self._properties["dataType"]
+    def type(self) -> str | None:
+        return self._properties.get("dataType")
 
     @property
     def value(self) -> str | float | datetime | None:

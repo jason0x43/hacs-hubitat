@@ -4,6 +4,7 @@ import re
 from datetime import date, datetime
 from decimal import Decimal
 from logging import getLogger
+from math import isfinite
 from typing import TYPE_CHECKING, Unpack, override
 
 from custom_components.hubitat.hubitatmaker.const import DeviceCapability
@@ -41,7 +42,7 @@ from homeassistant.helpers.typing import StateType
 
 from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
-from .hub import get_hub
+from .hub import Hub, get_hub
 from .hubitatmaker import DeviceAttribute
 from .hubitatmaker.types import Device
 
@@ -69,6 +70,19 @@ HUBITAT_UNIT_ALIASES: dict[SensorDeviceClass, dict[str, str]] = {
 }
 
 
+def _is_finite_number(value: object) -> bool:
+    """Return whether a value is a finite number or a string holding one."""
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        return False
+    try:
+        return isfinite(float(value))
+    except ValueError:
+        return False
+    except OverflowError:
+        # An int too large for a float
+        return False
+
+
 class HubitatSensor(SensorEntity, HubitatEntity):
     """A generic Hubitat sensor."""
 
@@ -86,11 +100,19 @@ class HubitatSensor(SensorEntity, HubitatEntity):
         enabled_default: bool | None = None,
         # TODO: load options from device
         options: list[str] | None = None,
+        numeric: bool = False,
         **kwargs: Unpack[HubitatEntityArgs],
     ):
-        """Initialize a battery sensor."""
+        """Initialize a sensor.
+
+        Set numeric for a sensor without a device class whose attribute holds
+        numbers. Its Hubitat unit is used as reported, and values that aren't
+        finite numbers are reported as unknown.
+        """
         HubitatEntity.__init__(self, **kwargs)
         SensorEntity.__init__(self)
+
+        self._numeric = numeric
 
         attr_name = (
             attribute_name
@@ -129,7 +151,12 @@ class HubitatSensor(SensorEntity, HubitatEntity):
 
     def _get_native_value(self) -> StateType | date | datetime | Decimal:
         """Return this sensor's current value."""
-        return self.get_attr(self._attribute)
+        value = self.get_attr(self._attribute)
+        if self._numeric and not _is_finite_number(value):
+            # Home Assistant rejects non-numeric states for sensors with a
+            # state class or unit, so report values like "n/a" as unknown.
+            return None
+        return value
 
     def _get_native_unit_of_measurement(self) -> str | None:
         """Return the Hubitat unit when Home Assistant supports it for this sensor."""
@@ -142,6 +169,11 @@ class HubitatSensor(SensorEntity, HubitatEntity):
             for unit in DEVICE_CLASS_UNITS.get(device_class, set()):
                 if unit is not None and attr_unit.casefold() == str(unit).casefold():
                     return str(unit)
+
+        if self._numeric and device_class is None and attr_unit:
+            # Without a device class there's no unit list to check against,
+            # so use the unit Hubitat reports as-is.
+            return attr_unit
 
         return self._attr_native_unit_of_measurement
 
@@ -876,6 +908,27 @@ _SENSOR_ATTRS: tuple[
 )
 
 
+def _create_generic_sensor(
+    hub: Hub, device: Device, attribute: DeviceAttribute
+) -> HubitatSensor:
+    """Create a disabled sensor for an attribute with no known sensor type.
+
+    Attributes the driver declares as numbers are measurements, so Home
+    Assistant graphs them and keeps statistics. Other types are shown as text.
+    """
+    is_number = device.attributes[attribute].type == "NUMBER"
+    return HubitatSensor(
+        hub=hub,
+        device=device,
+        attribute=attribute,
+        attribute_name=to_display_name(attribute),
+        enabled_default=False,
+        device_class=None,
+        state_class=SensorStateClass.MEASUREMENT if is_number else None,
+        numeric=is_number,
+    )
+
+
 def is_update_sensor(_device: Device, _overrides: dict[str, str] | None = None) -> bool:
     """Every device can have an update sensor."""
     return True
@@ -929,16 +982,7 @@ async def async_setup_entry(
                     used_device_attrs.add(attr)
         for attr in device.attributes:
             if attr not in used_device_attrs:
-                unknown_entities.append(
-                    HubitatSensor(
-                        hub=hub,
-                        device=device,
-                        attribute=attr,
-                        attribute_name=to_display_name(attr),
-                        enabled_default=False,
-                        device_class=None,
-                    )
-                )
+                unknown_entities.append(_create_generic_sensor(hub, device, attr))
                 _LOGGER.debug(f"Adding generic sensor for {device.id}:{attr}")
 
     if len(unknown_entities) > 0:
