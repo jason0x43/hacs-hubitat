@@ -179,6 +179,22 @@ sendEvent(name: 'setpointStep', value: 0.5)
 
 Changes to the limits are picked up on the next event from the device. If a driver starts reporting the attributes after the integration has loaded, reload the integration (see below).
 
+### Thermostat modes
+
+A thermostat offers the HVAC modes and fan modes its driver lists in the `supportedThermostatModes` and `supportedThermostatFanModes` attributes. Either a JSON list (`["off", "heat"]`) or a Groovy-style list (`[off, heat]`) works. Hubitat modes map to Home Assistant modes as follows:
+
+| Hubitat | Home Assistant |
+| --- | --- |
+| `off` | Off |
+| `heat`, `emergency heat` | Heat |
+| `cool` | Cool |
+| `auto` | Auto and Heat/Cool |
+| `dry`, `fan only` | Dry, Fan only (only if the driver has a `setThermostatMode` command) |
+
+Fan modes are offered as the driver reports them, including `circulate`. Without a `setThermostatFanMode` command, only `on`, `auto`, and `circulate` are offered, and a driver that reports an empty list of fan modes gets no fan mode control. If a driver doesn’t report its modes, or the value can’t be read, the thermostat offers Auto, Heat, Heat/Cool, Cool, and Off, and fan modes On and Auto. A thermostat whose current mode isn’t one it offers shows an unknown mode. Changes to the supported modes are picked up on the next event from the device.
+
+When a driver has `setThermostatMode` and `setThermostatFanMode` commands, the integration uses them to change modes. Otherwise it uses the per-mode commands (`heat`, `cool`, `auto`, `off`, `fanOn`, `fanAuto`, `fanCirculate`). Turning a thermostat off with `climate.turn_off` always sends `off`.
+
 ### Adding new devices
 
 After adding new devices to the Maker API instance in Hubitat, you will need to **reload the integration before the devices will be controllable from Home Assistant**. You can reload the device list by opening **Settings** › **Devices & Services** › **Hubitat**, then tapping **⋮** › **Reload** for the hub instance you’ve updated. Once the integration has loaded the new device list, devices added to the Maker API instance should show up in Home Assistant.

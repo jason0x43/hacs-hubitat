@@ -89,10 +89,28 @@ class Attribute:
 
     @property
     def list_value(self) -> list[Any] | None:
+        """Return the value as a list.
+
+        Drivers report lists as JSON (["off", "heat"]) or in Groovy's format
+        without quotes ([off, heat]). Items of a Groovy-style list are
+        returned as strings. A ValueError is raised for any other value.
+        """
         val = self.str_value
         if val is None:
             return None
-        return cast(list[Any], loads(val))
+        val = val.strip()
+        try:
+            parsed: Any = loads(val)
+        except ValueError:
+            if not (val.startswith("[") and val.endswith("]")):
+                raise
+            inner = val[1:-1].strip()
+            if not inner:
+                return []
+            return [item.strip().strip("\"'").strip() for item in inner.split(",")]
+        if parsed is not None and not isinstance(parsed, list):
+            raise ValueError(f"Not a list: {val}")
+        return cast(list[Any] | None, parsed)
 
     @property
     def dict_value(self) -> dict[str, Any] | None:

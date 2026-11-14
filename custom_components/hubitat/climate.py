@@ -44,7 +44,9 @@ _LOGGER = getLogger(__name__)
 class ClimateMode(StrEnum):
     AUTO = "auto"
     COOL = "cool"
+    DRY = "dry"
     EMERGENCY_HEAT = "emergency heat"
+    FAN_ONLY = "fan only"
     HEAT = "heat"
     NEST_ECO = "eco"
     OFF = "off"
@@ -95,6 +97,60 @@ DEFAULT_MIN_SETPOINT: dict[str, float] = {
 }
 
 HASS_FAN_MODES = [FAN_ON, FAN_AUTO]
+
+# HVAC modes offered when a device doesn't report its supported modes
+DEFAULT_HVAC_MODES = [
+    HVACMode.AUTO,
+    HVACMode.HEAT,
+    HVACMode.HEAT_COOL,
+    HVACMode.COOL,
+    HVACMode.OFF,
+]
+
+# HA HVAC modes for each Hubitat thermostat mode. Hubitat's auto mode keeps the
+# temperature between the heating and cooling setpoints, so it is offered as
+# both AUTO and HEAT_COOL.
+_HVAC_MODES_BY_CLIMATE_MODE: dict[str, tuple[HVACMode, ...]] = {
+    ClimateMode.AUTO: (HVACMode.AUTO, HVACMode.HEAT_COOL),
+    ClimateMode.COOL: (HVACMode.COOL,),
+    ClimateMode.EMERGENCY_HEAT: (HVACMode.HEAT,),
+    ClimateMode.HEAT: (HVACMode.HEAT,),
+    ClimateMode.OFF: (HVACMode.OFF,),
+}
+
+# Modes that can only be set with setThermostatMode
+_SET_MODE_ONLY_HVAC_MODES: dict[str, tuple[HVACMode, ...]] = {
+    ClimateMode.DRY: (HVACMode.DRY,),
+    ClimateMode.FAN_ONLY: (HVACMode.FAN_ONLY,),
+}
+
+# The Hubitat thermostat mode to set for each HA HVAC mode
+_CLIMATE_MODE_BY_HVAC_MODE: dict[str, ClimateMode] = {
+    HVACMode.AUTO: ClimateMode.AUTO,
+    HVACMode.COOL: ClimateMode.COOL,
+    HVACMode.DRY: ClimateMode.DRY,
+    HVACMode.FAN_ONLY: ClimateMode.FAN_ONLY,
+    HVACMode.HEAT: ClimateMode.HEAT,
+    HVACMode.HEAT_COOL: ClimateMode.AUTO,
+    HVACMode.OFF: ClimateMode.OFF,
+}
+
+# Hubitat thermostat modes that have their own command (auto(), cool(), heat(),
+# off()), used when a device has no setThermostatMode command
+_CLIMATE_MODE_COMMANDS: dict[str, DeviceCommand] = {
+    ClimateMode.AUTO: DeviceCommand.AUTO,
+    ClimateMode.COOL: DeviceCommand.COOL,
+    ClimateMode.HEAT: DeviceCommand.HEAT,
+    ClimateMode.OFF: DeviceCommand.OFF,
+}
+
+# Per-mode commands used when a device has no setThermostatFanMode command
+_FAN_MODE_COMMANDS: dict[str, DeviceCommand] = {
+    ClimateFanMode.AUTO: DeviceCommand.FAN_AUTO,
+    ClimateFanMode.CIRCULATE: DeviceCommand.FAN_CIRCULATE,
+    ClimateFanMode.ON: DeviceCommand.FAN_ON,
+}
+
 HASS_PRESET_MODES = [PRESET_HOME, PRESET_AWAY]
 HASS_NEST_PRESET_MODES = [
     PRESET_HOME,
@@ -133,14 +189,6 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
         HubitatEntity.__init__(self, **kwargs)
         ClimateEntity.__init__(self)
 
-        self._attr_hvac_modes: list[HVACMode] = [
-            HVACMode.AUTO,
-            HVACMode.HEAT,
-            HVACMode.HEAT_COOL,
-            HVACMode.COOL,
-            HVACMode.OFF,
-        ]
-        self._attr_fan_modes: list[str] | None = HASS_FAN_MODES
         self._attr_supported_features = (
             ClimateEntityFeature.TARGET_TEMPERATURE
             | ClimateEntityFeature.PRESET_MODE
@@ -167,7 +215,16 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
         self._set_temperature_attr(
             "current_temperature", self._get_current_temperature()
         )
-        self._attr_fan_mode: str | None = self._get_fan_mode()
+        fan_modes = self._get_supported_fan_modes()
+        self._attr_fan_modes: list[str] | None = (
+            list(HASS_FAN_MODES) if fan_modes is None else fan_modes
+        )
+        self._attr_fan_mode: str | None = self._get_fan_mode(fan_modes)
+        if self._attr_fan_modes:
+            self._attr_supported_features |= ClimateEntityFeature.FAN_MODE
+        else:
+            self._attr_supported_features &= ~ClimateEntityFeature.FAN_MODE
+        self._attr_hvac_modes: list[HVACMode] = self._get_hvac_modes()
         self._attr_hvac_mode: HVACMode | None = self._get_hvac_mode()
         self._attr_hvac_action: HVACAction | None = self._get_hvac_action()
         self._attr_preset_mode: str | None = self._get_preset_mode()
@@ -200,24 +257,115 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
     def _get_current_temperature(self) -> float | None:
         return self.get_float_attr(DeviceAttribute.TEMP)
 
-    def _get_fan_mode(self) -> str | None:
+    def _get_supported_fan_modes(self) -> list[str] | None:
+        """Return the fan modes the device reports, if it reports them.
+
+        Without a setThermostatFanMode command, only modes that have their own
+        command (fanAuto, fanCirculate, fanOn) can be set, so other modes are
+        left out.
+        """
+        modes = self._get_mode_list_attr(DeviceAttribute.SUPPORTED_FAN_MODES)
+        if modes is None or self._has_command(DeviceCommand.SET_FAN_MODE):
+            return modes
+        return [m for m in modes if m.lower() in _FAN_MODE_COMMANDS]
+
+    def _get_fan_mode(self, supported: list[str] | None) -> str | None:
+        """Return the current fan mode.
+
+        When the device reports its fan modes, the matching reported mode is
+        returned. Otherwise circulate is shown as on.
+        """
         mode = self.get_str_attr(DeviceAttribute.FAN_MODE)
+        if mode is None:
+            return None
+        mode = mode.strip()
+        if supported is not None:
+            return next((m for m in supported if m.lower() == mode.lower()), None)
+        mode = mode.lower()
         if mode == ClimateFanMode.CIRCULATE or mode == ClimateFanMode.ON:
             return FAN_ON
         if mode == ClimateFanMode.AUTO:
             return FAN_AUTO
         return None
 
+    def _get_hvac_modes(self) -> list[HVACMode]:
+        """Return the HVAC modes for the modes the device reports.
+
+        The default modes are used if the device doesn't report its modes or
+        reports none that map to HVAC modes, since a thermostat needs at least
+        one mode.
+        """
+        modes = self._get_mode_list_attr(DeviceAttribute.SUPPORTED_MODES)
+        if modes is None:
+            return list(DEFAULT_HVAC_MODES)
+        mode_map = dict(_HVAC_MODES_BY_CLIMATE_MODE)
+        if self._has_command(DeviceCommand.SET_THERMOSTAT_MODE):
+            mode_map.update(_SET_MODE_ONLY_HVAC_MODES)
+        hvac_modes: list[HVACMode] = []
+        for mode in modes:
+            for hvac_mode in mode_map.get(mode.lower(), ()):
+                if hvac_mode not in hvac_modes:
+                    hvac_modes.append(hvac_mode)
+        if not hvac_modes:
+            _LOGGER.debug("No supported thermostat modes for %s: %s", self.name, modes)
+            return list(DEFAULT_HVAC_MODES)
+        return hvac_modes
+
     def _get_hvac_mode(self) -> HVACMode | None:
-        """Return hvac operation ie. heat, cool mode."""
+        """Return hvac operation ie. heat, cool mode.
+
+        An unrecognized mode is shown as auto, as long as the thermostat
+        offers auto. Otherwise, and for a mode the thermostat doesn't offer,
+        the mode is unknown.
+        """
         mode = self.get_str_attr(DeviceAttribute.THERMOSTAT_MODE)
+        mode = mode.strip().lower() if mode else None
+        hvac_mode = HVACMode.AUTO
         if mode == ClimateMode.OFF:
-            return HVACMode.OFF
-        if mode == ClimateMode.HEAT or mode == ClimateMode.EMERGENCY_HEAT:
-            return HVACMode.HEAT
-        if mode == ClimateMode.COOL:
-            return HVACMode.COOL
-        return HVACMode.AUTO
+            hvac_mode = HVACMode.OFF
+        elif mode == ClimateMode.HEAT or mode == ClimateMode.EMERGENCY_HEAT:
+            hvac_mode = HVACMode.HEAT
+        elif mode == ClimateMode.COOL:
+            hvac_mode = HVACMode.COOL
+        elif mode == ClimateMode.DRY:
+            hvac_mode = HVACMode.DRY
+        elif mode == ClimateMode.FAN_ONLY:
+            hvac_mode = HVACMode.FAN_ONLY
+        return hvac_mode if hvac_mode in self._attr_hvac_modes else None
+
+    def _get_mode_list_attr(self, attr: DeviceAttribute) -> list[str] | None:
+        """Return the modes listed by a supported modes attribute.
+
+        Modes keep the case the driver reports, since they're sent back to
+        the driver. Duplicates (ignoring case) and non-string items are
+        dropped. None is returned for a missing or unreadable value.
+        """
+        try:
+            items = self.get_list_attr(attr)
+        except ValueError:
+            _LOGGER.debug(
+                "Ignoring invalid %s for %s: %s",
+                attr,
+                self.name,
+                self.get_str_attr(attr),
+            )
+            return None
+        if items is None:
+            return None
+        modes: list[str] = []
+        seen: set[str] = set()
+        for item in items:
+            if not isinstance(item, str):
+                continue
+            mode = item.strip()
+            if mode and mode.lower() not in seen:
+                seen.add(mode.lower())
+                modes.append(mode)
+        return modes
+
+    def _has_command(self, command: DeviceCommand) -> bool:
+        """Return True if the device supports a command."""
+        return command in self._device.commands
 
     def _get_hvac_action(self) -> HVACAction | None:
         """Return the current running hvac operation if supported."""
@@ -350,23 +498,35 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
 
     @override
     async def async_set_fan_mode(self, fan_mode: str) -> None:
-        """Set new target fan mode."""
-        if fan_mode == FAN_ON:
-            await self.send_command(DeviceCommand.FAN_ON)
-        elif fan_mode == FAN_AUTO:
-            await self.send_command(DeviceCommand.FAN_AUTO)
+        """Set new target fan mode.
+
+        setThermostatFanMode is used when the device supports it, since
+        per-mode commands may conflict with other capabilities.
+        """
+        if self._has_command(DeviceCommand.SET_FAN_MODE):
+            await self.send_command(DeviceCommand.SET_FAN_MODE, fan_mode)
+        elif fan_mode.lower() in _FAN_MODE_COMMANDS:
+            await self.send_command(_FAN_MODE_COMMANDS[fan_mode.lower()])
+        else:
+            _LOGGER.warning("%s can't set fan mode %s", self.name, fan_mode)
 
     @override
     async def async_set_hvac_mode(self, hvac_mode: str) -> None:
-        """Set new target hvac mode."""
-        if hvac_mode == HVACMode.COOL:
-            await self.send_command(DeviceCommand.COOL)
-        elif hvac_mode == HVACMode.HEAT:
-            await self.send_command(DeviceCommand.HEAT)
-        elif hvac_mode == HVACMode.HEAT_COOL or hvac_mode == HVACMode.AUTO:
-            await self.send_command(DeviceCommand.AUTO)
-        elif hvac_mode == HVACMode.OFF:
-            await self.send_command(DeviceCommand.OFF)
+        """Set new target hvac mode.
+
+        setThermostatMode is used when the device supports it, since a
+        per-mode command like off() may do something else on some devices
+        (for example, turning off a Thermostat Controller).
+        """
+        mode = _CLIMATE_MODE_BY_HVAC_MODE.get(hvac_mode)
+        if mode is None:
+            _LOGGER.warning("%s can't set HVAC mode %s", self.name, hvac_mode)
+        elif self._has_command(DeviceCommand.SET_THERMOSTAT_MODE):
+            await self.send_command(DeviceCommand.SET_THERMOSTAT_MODE, mode)
+        elif mode in _CLIMATE_MODE_COMMANDS:
+            await self.send_command(_CLIMATE_MODE_COMMANDS[mode])
+        else:
+            _LOGGER.warning("%s can't set HVAC mode %s", self.name, hvac_mode)
 
     @override
     async def async_set_preset_mode(self, preset_mode: str) -> None:
@@ -410,7 +570,7 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
     @override
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the thermostat."""
-        await self.send_command("off")
+        await self.send_command(DeviceCommand.OFF)
 
 
 def _to_temperature_unit(unit: str | None) -> UnitOfTemperature | None:
