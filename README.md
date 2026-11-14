@@ -162,6 +162,8 @@ homeassistant:
       state_class: total_increasing
 ```
 
+Use `state_class: measurement_angle` for a direction in degrees (such as a custom wind or compass bearing), so long-term statistics average it correctly across north.
+
 Hubitat only reports units in device events, so a sensor’s unit isn’t known until the device sends an event with one. The integration remembers units across restarts. If a sensor’s statistics were recorded before its unit was known, Home Assistant may show a repair asking whether to update the statistics’ unit.
 
 ### Color temperature range

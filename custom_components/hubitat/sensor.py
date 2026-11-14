@@ -42,7 +42,7 @@ from homeassistant.helpers.typing import StateType
 
 from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
-from .hub import get_hub
+from .hub import Hub, get_hub
 from .hubitatmaker import DeviceAttribute
 from .hubitatmaker.types import Device
 
@@ -78,6 +78,9 @@ def _is_finite_number(value: object) -> bool:
         return isfinite(float(value))
     except ValueError:
         return False
+    except OverflowError:
+        # An int too large for a float
+        return False
 
 
 class HubitatSensor(SensorEntity, HubitatEntity):
@@ -85,7 +88,6 @@ class HubitatSensor(SensorEntity, HubitatEntity):
 
     _attribute: DeviceAttribute
     _enabled_default: bool | None = None
-    _numeric: bool = False
 
     def __init__(
         self,
@@ -906,6 +908,27 @@ _SENSOR_ATTRS: tuple[
 )
 
 
+def _create_generic_sensor(
+    hub: Hub, device: Device, attribute: DeviceAttribute
+) -> HubitatSensor:
+    """Create a disabled sensor for an attribute with no known sensor type.
+
+    Attributes the driver declares as numbers are measurements, so Home
+    Assistant graphs them and keeps statistics. Other types are shown as text.
+    """
+    is_number = device.attributes[attribute].type == "NUMBER"
+    return HubitatSensor(
+        hub=hub,
+        device=device,
+        attribute=attribute,
+        attribute_name=to_display_name(attribute),
+        enabled_default=False,
+        device_class=None,
+        state_class=SensorStateClass.MEASUREMENT if is_number else None,
+        numeric=is_number,
+    )
+
+
 def is_update_sensor(_device: Device, _overrides: dict[str, str] | None = None) -> bool:
     """Every device can have an update sensor."""
     return True
@@ -959,24 +982,7 @@ async def async_setup_entry(
                     used_device_attrs.add(attr)
         for attr in device.attributes:
             if attr not in used_device_attrs:
-                # Treat attributes the driver declares as numbers as
-                # measurements so Home Assistant graphs them and keeps
-                # statistics.
-                is_number = device.attributes[attr].type == "NUMBER"
-                unknown_entities.append(
-                    HubitatSensor(
-                        hub=hub,
-                        device=device,
-                        attribute=attr,
-                        attribute_name=to_display_name(attr),
-                        enabled_default=False,
-                        device_class=None,
-                        state_class=(
-                            SensorStateClass.MEASUREMENT if is_number else None
-                        ),
-                        numeric=is_number,
-                    )
-                )
+                unknown_entities.append(_create_generic_sensor(hub, device, attr))
                 _LOGGER.debug(f"Adding generic sensor for {device.id}:{attr}")
 
     if len(unknown_entities) > 0:

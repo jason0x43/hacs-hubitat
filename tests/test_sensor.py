@@ -26,6 +26,7 @@ from custom_components.hubitat.sensor import (
     HubitatUpdateSensor,
     HubitatVoltageSensor,
     HubitatWindDirectionSensor,
+    _create_generic_sensor,
     add_hub_entities,
     async_setup_entry,
     is_update_sensor,
@@ -722,39 +723,26 @@ def test_pressure_sensor_unknown_unit_uses_default() -> None:
 
 def _generic_sensor(
     *,
-    value: str | None,
-    data_type: str,
+    value: str | int | None,
+    data_type: str | None,
     unit: str | None,
     attribute: DeviceAttribute = DeviceAttribute.LEVEL,
 ) -> HubitatSensor:
-    """Create a catch-all sensor the way async_setup_entry does."""
+    """Create a catch-all sensor through the same factory async_setup_entry uses."""
+    properties: dict[str, object] = {
+        "name": attribute,
+        "currentValue": value,
+        "unit": unit,
+    }
+    if data_type is not None:
+        properties["dataType"] = data_type
     device = Mock(
         id="test-id",
         name="Test Sensor",
         label="Test Sensor",
-        attributes={
-            attribute: Attribute(
-                cast(
-                    AttributeData,
-                    {
-                        "name": attribute,
-                        "currentValue": value,
-                        "dataType": data_type,
-                        "unit": unit,
-                    },
-                )
-            )
-        },
+        attributes={attribute: Attribute(cast(AttributeData, properties))},
     )
-    is_number = data_type == "NUMBER"
-    return HubitatSensor(
-        hub=Mock(token="token"),
-        device=device,
-        attribute=attribute,
-        device_class=None,
-        state_class=SensorStateClass.MEASUREMENT if is_number else None,
-        numeric=is_number,
-    )
+    return _create_generic_sensor(Mock(token="token"), device, attribute)
 
 
 def test_generic_number_sensor_has_measurement_and_unit() -> None:
@@ -796,6 +784,40 @@ def test_generic_number_sensor_picks_up_later_unit() -> None:
 
     assert sensor.native_value == "9"
     assert sensor.native_unit_of_measurement == "ppm"
+
+
+@pytest.mark.parametrize("unit", [None, ""])
+def test_generic_number_sensor_keeps_unit_when_event_has_none(
+    unit: str | None,
+) -> None:
+    """A later event without a unit doesn't clear a known unit.
+
+    Clearing it would make Home Assistant raise a units_changed statistics
+    repair.
+    """
+    sensor = _generic_sensor(value="8", data_type="NUMBER", unit="ppm")
+    assert sensor.native_unit_of_measurement == "ppm"
+
+    sensor._device.attributes[DeviceAttribute.LEVEL].update_value("9", unit)
+    sensor.load_state()
+
+    assert sensor.native_value == "9"
+    assert sensor.native_unit_of_measurement == "ppm"
+
+
+def test_generic_number_sensor_huge_value_is_unknown() -> None:
+    """A value too large for a float is unknown instead of raising."""
+    sensor = _generic_sensor(value=10**400, data_type="NUMBER", unit=None)
+
+    assert sensor.native_value is None
+
+
+def test_generic_sensor_without_data_type_stays_text() -> None:
+    sensor = _generic_sensor(value="8", data_type=None, unit="%")
+
+    assert sensor.native_value == "8"
+    assert sensor.native_unit_of_measurement is None
+    assert sensor.state_class is None
 
 
 @pytest.mark.parametrize(
