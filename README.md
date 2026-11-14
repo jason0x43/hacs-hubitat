@@ -191,7 +191,7 @@ A thermostat offers the HVAC modes and fan modes its driver lists in the `suppor
 | `auto` | Auto and Heat/Cool |
 | `dry`, `fan only` | Dry, Fan only (only if the driver has a `setThermostatMode` command) |
 
-Fan modes are offered as the driver reports them, including `circulate`. If a driver doesn’t report its modes, or the value can’t be read, the thermostat offers Auto, Heat, Heat/Cool, Cool, and Off, and fan modes On and Auto. Changes to the supported modes are picked up on the next event from the device.
+Fan modes are offered as the driver reports them, including `circulate`. Without a `setThermostatFanMode` command, only `on`, `auto`, and `circulate` are offered, and a driver that reports an empty list of fan modes gets no fan mode control. If a driver doesn’t report its modes, or the value can’t be read, the thermostat offers Auto, Heat, Heat/Cool, Cool, and Off, and fan modes On and Auto. A thermostat whose current mode isn’t one it offers shows an unknown mode. Changes to the supported modes are picked up on the next event from the device.
 
 When a driver has `setThermostatMode` and `setThermostatFanMode` commands, the integration uses them to change modes. Otherwise it uses the per-mode commands (`heat`, `cool`, `auto`, `off`, `fanOn`, `fanAuto`, `fanCirculate`). Turning a thermostat off with `climate.turn_off` always sends `off`.
 
