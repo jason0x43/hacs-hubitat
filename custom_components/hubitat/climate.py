@@ -32,7 +32,10 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.util.unit_conversion import TemperatureConverter
+from homeassistant.util.unit_conversion import (
+    TemperatureConverter,
+    TemperatureDeltaConverter,
+)
 
 from .device import HubitatEntity, HubitatEntityArgs
 from .entities import create_and_add_entities
@@ -330,7 +333,7 @@ class HubitatThermostat(ClimateEntity, HubitatEntity):
         unit = _to_temperature_unit(self._device.attributes[attr].unit)
         if unit is not None and unit != self._temperature_unit:
             convert = (
-                TemperatureConverter.convert_interval
+                TemperatureDeltaConverter.convert
                 if interval
                 else TemperatureConverter.convert
             )
