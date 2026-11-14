@@ -147,6 +147,23 @@ If devices load but don’t update, see [Devices aren't updating](#devices-arent
 
 The integration assigns Home Assistant device classes based on the capabilities reported by Hubitat. Sometimes the device type is ambiguous; a switchable outlet and a light switch may both only implement Hubitat’s [Switch](https://docs.hubitat.com/index.php?title=Driver_Capability_List#Switch) capability, and will therefore look like the same type of device to the integration. In some of these cases, the integration guesses the device class based on the device’s label (e.g., a switch named “Office Lamp” would be setup as a light in Home Assistant). This heuristic behavior is currently only used for lights and switches.
 
+### Generic sensors
+
+Device attributes that don’t match a known sensor type (for example a driver’s custom `PM2.5` or `energy_cost` attribute) are added as generic sensors. These are disabled by default; enable them on the device’s page in Home Assistant.
+
+If the driver declares the attribute as a `number`, the generic sensor is a measurement: Home Assistant graphs it and keeps long-term statistics, and it uses the unit Hubitat sends with the attribute’s events. Values that aren’t numbers (such as `n/a`) show as unknown. Attributes declared with any other type, including a `string` that happens to hold a number, are shown as text.
+
+Generic number sensors always use the `measurement` state class. For a value that only goes up, such as a meter reading or a running cost, you can change it with a [customization](https://www.home-assistant.io/docs/configuration/customizing-devices/) in `configuration.yaml`:
+
+```yaml
+homeassistant:
+  customize:
+    sensor.power_meter_energy_cost:
+      state_class: total_increasing
+```
+
+Hubitat only reports units in device events, so a sensor’s unit isn’t known until the device sends an event with one. The integration remembers units across restarts. If a sensor’s statistics were recorded before its unit was known, Home Assistant may show a repair asking whether to update the statistics’ unit.
+
 ### Color temperature range
 
 Hubitat has no standard attribute for the range of color temperatures a light supports, so lights use Home Assistant’s default range (2000-6535 K). A driver can report a light’s actual range with a custom `colorTemperatureRange` attribute. Its value must be a JSON list of 2 numbers — the minimum and maximum color temperature in Kelvin, in either order (e.g. `[2202, 6535]`). Values are rounded and sorted, acceptable range limits are 1-50000. If the attribute is missing or invalid (out of range, two equal values or not 2 values), the default range is used.

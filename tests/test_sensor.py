@@ -1,3 +1,4 @@
+from typing import cast
 from unittest.mock import Mock, patch
 
 import pytest
@@ -6,10 +7,11 @@ from custom_components.hubitat.hubitatmaker.const import (
     DeviceAttribute,
     DeviceCapability,
 )
-from custom_components.hubitat.hubitatmaker.types import Attribute
+from custom_components.hubitat.hubitatmaker.types import Attribute, AttributeData
 from custom_components.hubitat.sensor import (
     _SENSOR_ATTRS,
     HubitatBatterySensor,
+    HubitatCpuSensor,
     HubitatCurrentSensor,
     HubitatDewPointSensor,
     HubitatEnergySensor,
@@ -718,6 +720,122 @@ def test_pressure_sensor_unknown_unit_uses_default() -> None:
     assert sensor.native_unit_of_measurement == UnitOfPressure.MBAR
 
 
+def _generic_sensor(
+    *,
+    value: str | None,
+    data_type: str,
+    unit: str | None,
+    attribute: DeviceAttribute = DeviceAttribute.LEVEL,
+) -> HubitatSensor:
+    """Create a catch-all sensor the way async_setup_entry does."""
+    device = Mock(
+        id="test-id",
+        name="Test Sensor",
+        label="Test Sensor",
+        attributes={
+            attribute: Attribute(
+                cast(
+                    AttributeData,
+                    {
+                        "name": attribute,
+                        "currentValue": value,
+                        "dataType": data_type,
+                        "unit": unit,
+                    },
+                )
+            )
+        },
+    )
+    is_number = data_type == "NUMBER"
+    return HubitatSensor(
+        hub=Mock(token="token"),
+        device=device,
+        attribute=attribute,
+        device_class=None,
+        state_class=SensorStateClass.MEASUREMENT if is_number else None,
+        numeric=is_number,
+    )
+
+
+def test_generic_number_sensor_has_measurement_and_unit() -> None:
+    """A NUMBER attribute without a sensor type is graphed (#188)."""
+    sensor = _generic_sensor(value="42", data_type="NUMBER", unit="%")
+
+    assert sensor.device_class is None
+    assert sensor.native_value == "42"
+    assert sensor.native_unit_of_measurement == PERCENTAGE
+    assert sensor.state_class == SensorStateClass.MEASUREMENT
+
+
+@pytest.mark.parametrize("value", [None, "", "n/a", "nan", "inf"])
+def test_generic_number_sensor_non_numeric_value_is_unknown(
+    value: str | None,
+) -> None:
+    sensor = _generic_sensor(value=value, data_type="NUMBER", unit="%")
+
+    assert sensor.native_value is None
+    assert sensor.state_class == SensorStateClass.MEASUREMENT
+
+
+@pytest.mark.parametrize("unit", [None, ""])
+def test_generic_number_sensor_without_unit(unit: str | None) -> None:
+    sensor = _generic_sensor(value="8", data_type="NUMBER", unit=unit)
+
+    assert sensor.native_value == "8"
+    assert sensor.native_unit_of_measurement is None
+    assert sensor.state_class == SensorStateClass.MEASUREMENT
+
+
+def test_generic_number_sensor_picks_up_later_unit() -> None:
+    """A unit from a later event (or the unit cache) is used on reload."""
+    sensor = _generic_sensor(value="8", data_type="NUMBER", unit=None)
+    assert sensor.native_unit_of_measurement is None
+
+    sensor._device.attributes[DeviceAttribute.LEVEL].update_value("9", "ppm")
+    sensor.load_state()
+
+    assert sensor.native_value == "9"
+    assert sensor.native_unit_of_measurement == "ppm"
+
+
+@pytest.mark.parametrize(
+    ("data_type", "value"),
+    [("STRING", "Day"), ("ENUM", "Day"), ("ENUM", "1"), ("STRING", "1.2")],
+)
+def test_generic_non_number_sensor_stays_text(data_type: str, value: str) -> None:
+    sensor = _generic_sensor(
+        value=value, data_type=data_type, unit="%", attribute=DeviceAttribute.MODE
+    )
+
+    assert sensor.native_value == value
+    assert sensor.native_unit_of_measurement is None
+    assert sensor.state_class is None
+
+
+def test_known_sensor_without_device_class_ignores_generic_handling() -> None:
+    device = Mock(
+        id="test-id",
+        name="Test Sensor",
+        label="Test Sensor",
+        attributes={
+            DeviceAttribute.CPU: Attribute(
+                {
+                    "name": DeviceAttribute.CPU,
+                    "currentValue": "10",
+                    "dataType": "NUMBER",
+                    "unit": "unrelated-hubitat-unit",
+                }
+            )
+        },
+    )
+
+    sensor = HubitatCpuSensor(hub=Mock(token="token"), device=device)
+
+    assert sensor.device_class is None
+    assert sensor.native_unit_of_measurement == PERCENTAGE
+    assert sensor.state_class == SensorStateClass.MEASUREMENT
+
+
 @pytest.mark.parametrize(("attribute", "sensor_type", "capability"), _SENSOR_ATTRS)
 def test_all_known_sensor_types_can_be_initialized(
     attribute: DeviceAttribute,
@@ -839,6 +957,14 @@ async def test_sensor_setup_adds_unknown_attributes() -> None:
                     "unit": None,
                 }
             ),
+            DeviceAttribute.LEVEL: Attribute(
+                {
+                    "name": DeviceAttribute.LEVEL,
+                    "currentValue": "50",
+                    "dataType": "NUMBER",
+                    "unit": "%",
+                }
+            ),
         },
     )
     hub = Mock(
@@ -894,7 +1020,14 @@ async def test_sensor_setup_adds_unknown_attributes() -> None:
     }
 
     unknown_entities = add_entities.call_args.args[0]
-    assert len(unknown_entities) == 1
-    assert unknown_entities[0].device_attrs == (DeviceAttribute.MODE,)
-    assert unknown_entities[0].entity_registry_enabled_default is False
+    by_attr = {entity.device_attrs: entity for entity in unknown_entities}
+    assert set(by_attr) == {(DeviceAttribute.MODE,), (DeviceAttribute.LEVEL,)}
+    for entity in unknown_entities:
+        assert entity.entity_registry_enabled_default is False
+    mode_sensor = by_attr[(DeviceAttribute.MODE,)]
+    assert mode_sensor.state_class is None
+    assert mode_sensor.native_unit_of_measurement is None
+    level_sensor = by_attr[(DeviceAttribute.LEVEL,)]
+    assert level_sensor.state_class == SensorStateClass.MEASUREMENT
+    assert level_sensor.native_unit_of_measurement == PERCENTAGE
     hub.add_entities.assert_called_once_with(unknown_entities)

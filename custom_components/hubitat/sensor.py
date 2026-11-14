@@ -4,6 +4,7 @@ import re
 from datetime import date, datetime
 from decimal import Decimal
 from logging import getLogger
+from math import isfinite
 from typing import TYPE_CHECKING, Unpack, override
 
 from custom_components.hubitat.hubitatmaker.const import DeviceCapability
@@ -69,11 +70,22 @@ HUBITAT_UNIT_ALIASES: dict[SensorDeviceClass, dict[str, str]] = {
 }
 
 
+def _is_finite_number(value: object) -> bool:
+    """Return whether a value is a finite number or a string holding one."""
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        return False
+    try:
+        return isfinite(float(value))
+    except ValueError:
+        return False
+
+
 class HubitatSensor(SensorEntity, HubitatEntity):
     """A generic Hubitat sensor."""
 
     _attribute: DeviceAttribute
     _enabled_default: bool | None = None
+    _numeric: bool = False
 
     def __init__(
         self,
@@ -86,11 +98,19 @@ class HubitatSensor(SensorEntity, HubitatEntity):
         enabled_default: bool | None = None,
         # TODO: load options from device
         options: list[str] | None = None,
+        numeric: bool = False,
         **kwargs: Unpack[HubitatEntityArgs],
     ):
-        """Initialize a battery sensor."""
+        """Initialize a sensor.
+
+        Set numeric for a sensor without a device class whose attribute holds
+        numbers. Its Hubitat unit is used as reported, and values that aren't
+        finite numbers are reported as unknown.
+        """
         HubitatEntity.__init__(self, **kwargs)
         SensorEntity.__init__(self)
+
+        self._numeric = numeric
 
         attr_name = (
             attribute_name
@@ -129,7 +149,12 @@ class HubitatSensor(SensorEntity, HubitatEntity):
 
     def _get_native_value(self) -> StateType | date | datetime | Decimal:
         """Return this sensor's current value."""
-        return self.get_attr(self._attribute)
+        value = self.get_attr(self._attribute)
+        if self._numeric and not _is_finite_number(value):
+            # Home Assistant rejects non-numeric states for sensors with a
+            # state class or unit, so report values like "n/a" as unknown.
+            return None
+        return value
 
     def _get_native_unit_of_measurement(self) -> str | None:
         """Return the Hubitat unit when Home Assistant supports it for this sensor."""
@@ -142,6 +167,11 @@ class HubitatSensor(SensorEntity, HubitatEntity):
             for unit in DEVICE_CLASS_UNITS.get(device_class, set()):
                 if unit is not None and attr_unit.casefold() == str(unit).casefold():
                     return str(unit)
+
+        if self._numeric and device_class is None and attr_unit:
+            # Without a device class there's no unit list to check against,
+            # so use the unit Hubitat reports as-is.
+            return attr_unit
 
         return self._attr_native_unit_of_measurement
 
@@ -929,6 +959,10 @@ async def async_setup_entry(
                     used_device_attrs.add(attr)
         for attr in device.attributes:
             if attr not in used_device_attrs:
+                # Treat attributes the driver declares as numbers as
+                # measurements so Home Assistant graphs them and keeps
+                # statistics.
+                is_number = device.attributes[attr].type == "NUMBER"
                 unknown_entities.append(
                     HubitatSensor(
                         hub=hub,
@@ -937,6 +971,10 @@ async def async_setup_entry(
                         attribute_name=to_display_name(attr),
                         enabled_default=False,
                         device_class=None,
+                        state_class=(
+                            SensorStateClass.MEASUREMENT if is_number else None
+                        ),
+                        numeric=is_number,
                     )
                 )
                 _LOGGER.debug(f"Adding generic sensor for {device.id}:{attr}")
