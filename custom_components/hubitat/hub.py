@@ -211,6 +211,9 @@ class Hub(HasId):
         # Requests through Home Assistant Cloud, or from a hub on another network
         # using a configured event URL, don't come from a local address.
         local_only = not is_cloud_host(self.host) and not self._event_base_url
+        # Setup may have failed after registering the webhook on a previous
+        # attempt, so make sure it isn't still registered.
+        webhook.async_unregister(self.hass, webhook_id)
         webhook.async_register(
             self.hass,
             DOMAIN,
@@ -226,13 +229,17 @@ class Hub(HasId):
     @property
     def _event_base_url(self) -> str | None:
         """The user-configured base URL the hub should use to reach HA."""
-        url = cast(
-            str | None,
-            self.config_entry.options.get(
-                H_CONF_SERVER_URL, self.config_entry.data.get(H_CONF_SERVER_URL)
-            ),
+        return get_event_base_url(self.config_entry)
+
+    @property
+    def uses_cloudhook(self) -> bool:
+        """True if this hub may deliver events through a cloudhook."""
+        return (
+            not self.use_event_server
+            and self.webhook_id is not None
+            and is_cloud_host(self.host)
+            and not self._event_base_url
         )
-        return url or None
 
     def async_unregister_webhook(self) -> None:
         """Unregister the event webhook."""
@@ -293,7 +300,13 @@ class Hub(HasId):
                 return
             except HomeAssistantError as e:
                 if is_cloud_host(self.host):
-                    _LOGGER.error("Unable to set up Hubitat event delivery: %s", e)
+                    _LOGGER.error(
+                        "Unable to set up Hubitat event delivery (will retry in "
+                        "%d seconds): %s",
+                        EVENT_URL_RETRY_DELAY,
+                        e,
+                    )
+                    self._schedule_event_url_retry()
                     return
                 if not initial:
                     _LOGGER.warning("%s; keeping the current Hubitat event URL", e)
@@ -318,7 +331,8 @@ class Hub(HasId):
 
             if self._using_fallback_server:
                 _LOGGER.info("Switching from the legacy event server to the webhook")
-                self._hub.stop_event_server()
+                # Stopping the server blocks while it shuts down
+                await self.hass.async_add_executor_job(self._hub.stop_event_server)
                 self._using_fallback_server = False
 
     def _listen_for_event_url_changes(self) -> None:
@@ -719,21 +733,11 @@ class Hub(HasId):
         if CONF_ACCESS_TOKEN not in entry.data:
             raise ValueError("Missing access token in config entry")
 
-        url = cast(
-            str | None,
-            entry.options.get(H_CONF_SERVER_URL, entry.data.get(H_CONF_SERVER_URL)),
-        )
+        url = get_event_base_url(entry)
         port = cast(
             int | None,
             entry.options.get(H_CONF_SERVER_PORT, entry.data.get(H_CONF_SERVER_PORT)),
         )
-
-        # Previous versions of the integration may have saved a value of "" for
-        # server_url with the assumption that a use_server_url flag would control
-        # it's use. The current version uses a value of null for "no user URL"
-        # rather than a flag.
-        if url == "":
-            url = None
 
         ssl_cert = cast(
             str | None,
@@ -884,17 +888,11 @@ class Hub(HasId):
         if CONF_ACCESS_TOKEN not in entry.data:
             raise ValueError("Missing access token in config entry")
 
-        url = cast(
-            str | None,
-            entry.options.get(H_CONF_SERVER_URL, entry.data.get(H_CONF_SERVER_URL)),
-        )
+        url = get_event_base_url(entry)
         port = cast(
             int | None,
             entry.options.get(H_CONF_SERVER_PORT, entry.data.get(H_CONF_SERVER_PORT)),
         )
-
-        if url == "":
-            url = None
 
         ssl_cert = cast(
             str | None,
@@ -1143,14 +1141,7 @@ class Hub(HasId):
             await hub.set_port(port)
             _LOGGER.debug("Set event server port to %s", port)
 
-        url = cast(
-            str | None,
-            config_entry.options.get(
-                H_CONF_SERVER_URL, config_entry.data.get(H_CONF_SERVER_URL)
-            ),
-        )
-        if url == "":
-            url = None
+        url = get_event_base_url(config_entry)
         if url != hub.event_url:
             await hub.set_event_url(url)
             _LOGGER.debug("Set event server URL to %s", url)
@@ -1246,6 +1237,19 @@ class Hub(HasId):
             evt[ATTR_HA_DEVICE_ID] = get_hub_device_id(self, event.device_id)
             self.hass.bus.async_fire(H_CONF_HUBITAT_EVENT, evt)
             _LOGGER.debug("Emitted event %s", evt)
+
+
+def get_event_base_url(entry: ConfigEntry) -> str | None:
+    """Return the user-configured URL the hub should use to reach HA.
+
+    Previous versions of the integration may have saved "" to mean "no URL", so
+    that's normalized to None.
+    """
+    url = cast(
+        str | None,
+        entry.options.get(H_CONF_SERVER_URL, entry.data.get(H_CONF_SERVER_URL)),
+    )
+    return url or None
 
 
 def uses_event_server(entry: ConfigEntry) -> bool:

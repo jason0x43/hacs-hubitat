@@ -201,10 +201,10 @@ async def test_hub_variables_are_loaded_written_and_updated_from_location_events
     hub._api_request.assert_awaited_with("hubvariables/number%20with%20spaces/2")
 
     boolean_event = {"deviceId": None, "name": "variable:enabled", "value": "false"}
-    hub._process_event(boolean_event)
+    hub.process_event(boolean_event)
     assert hub.hub_variables["enabled"].value == "false"
 
-    hub._process_event(
+    hub.process_event(
         {"deviceId": None, "name": "variable:number with spaces", "value": "3"}
     )
     listener.assert_called_once()
@@ -433,7 +433,7 @@ async def test_forced_device_load_preserves_instances_for_events() -> None:
     await hub.load_devices(force_refresh=True)
 
     assert hub.devices["176"] is device
-    hub._process_event(events["device"])
+    hub.process_event(events["device"])
     assert device.attributes[DeviceAttribute.SWITCH].value == "on"
 
 
@@ -448,7 +448,7 @@ async def test_process_event() -> None:
     attr = device.attributes[DeviceAttribute.SWITCH]
     assert attr.value == "off"
 
-    hub._process_event(events["device"])
+    hub.process_event(events["device"])
 
     attr = device.attributes[DeviceAttribute.SWITCH]
     assert attr.value == "on"
@@ -465,7 +465,7 @@ async def test_process_top_level_event() -> None:
     attr = device.attributes[DeviceAttribute.SWITCH]
     assert attr.value == "off"
 
-    hub._process_event(events["device"]["content"])
+    hub.process_event(events["device"]["content"])
 
     attr = device.attributes[DeviceAttribute.SWITCH]
     assert attr.value == "on"
@@ -485,11 +485,11 @@ async def test_process_mode_event() -> None:
         nonlocal handler_called
         handler_called = True
 
-    hub._process_event(events["mode"])
+    hub.process_event(events["mode"])
     assert handler_called is False
 
     hub.add_mode_listener(listener)
-    hub._process_event(events["mode"])
+    hub.process_event(events["mode"])
     assert handler_called is True
 
 
@@ -508,7 +508,7 @@ async def test_process_top_level_mode_event() -> None:
         handler_called = True
 
     hub.add_mode_listener(listener)
-    hub._process_event(events["mode"]["content"])
+    hub.process_event(events["mode"]["content"])
     assert handler_called is True
 
 
@@ -526,11 +526,11 @@ async def test_process_hsm_event() -> None:
         nonlocal handler_called
         handler_called = True
 
-    hub._process_event(events["hsmArmedAway"])
+    hub.process_event(events["hsmArmedAway"])
     assert handler_called is False
 
     hub.add_hsm_listener(listener)
-    hub._process_event(events["hsmArmedAway"])
+    hub.process_event(events["hsmArmedAway"])
     assert handler_called is True
 
 
@@ -549,7 +549,7 @@ async def test_process_top_level_hsm_event() -> None:
         handler_called = True
 
     hub.add_hsm_listener(listener)
-    hub._process_event(events["hsmArmedAway"]["content"])
+    hub.process_event(events["hsmArmedAway"]["content"])
     assert handler_called is True
 
 
@@ -564,7 +564,7 @@ async def test_process_other_event() -> None:
     attr = device.attributes[DeviceAttribute.SWITCH]
     assert attr.value == "off"
 
-    hub._process_event(events["other"])
+    hub.process_event(events["other"])
 
     attr = device.attributes[DeviceAttribute.SWITCH]
     assert attr.value == "off"
@@ -581,7 +581,7 @@ async def test_process_set_hsm() -> None:
     await hub.set_hsm(HsmCommand.DISARM)
     assert re.search(f"hsm/{HsmCommand.DISARM}$", requests[-1]["url"]) is not None
 
-    hub._process_event(events["hsmAllDisarmed"])
+    hub.process_event(events["hsmAllDisarmed"])
     assert hub.hsm_status == "allDisarmed"
 
 
@@ -596,7 +596,7 @@ async def test_process_set_mode() -> None:
     await hub.set_mode("Evening")
     assert re.search("modes/2$", requests[-1]["url"]) is not None
 
-    hub._process_event(events["mode"])
+    hub.process_event(events["mode"])
     assert hub.mode == "Evening"
 
 
@@ -680,10 +680,13 @@ async def test_mode_is_supported() -> None:
             "https://cloud.hubitat.com/api/abc-123/apps/1234",
         ),
         ("http://hub.local/apps/api/1234/devices", "http://hub.local/apps/api/1234"),
+        # Only Hubitat cloud URLs use their path
+        ("http://hub.local/apps/api/99/devices", "http://hub.local/apps/api/1234"),
+        ("https://10.0.0.5/some/proxy", "https://10.0.0.5/apps/api/1234"),
     ],
 )
 def test_set_host_api_url(host: str, api_url: str) -> None:
-    """A host with a path is used as the Maker API base URL."""
+    """A Hubitat cloud URL's path is used as the Maker API base URL."""
     hub = Hub(host, "1234", "token")
     assert hub.api_url == api_url
 
@@ -786,3 +789,23 @@ async def test_stop_event_server_keeps_listeners(MockServer: mock.Mock) -> None:
     assert hub.use_server is False
     hub.process_event(events["device"])
     listener.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("url", "redacted"),
+    [
+        (
+            "https://hooks.nabu.casa/secret-token",
+            "https://hooks.nabu.casa/[redacted]",
+        ),
+        (
+            "http://user:pw@10.0.0.2:8123/api/webhook/secret",
+            "http://10.0.0.2:8123/[redacted]",
+        ),
+        ("not a url", "[redacted]"),
+    ],
+)
+def test_redact_url(url: str, redacted: str) -> None:
+    from custom_components.hubitat.hubitatmaker.hub import _redact_url
+
+    assert _redact_url(url) == redacted

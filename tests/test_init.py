@@ -20,12 +20,15 @@ async def test_legacy_setup() -> None:
     assert await async_setup(Mock(), {}) is True
 
 
+@pytest.mark.parametrize("uses_cloudhook", [True, False])
 @pytest.mark.asyncio
-async def test_setup_entry_schedules_background_task() -> None:
+async def test_setup_entry_schedules_background_task(uses_cloudhook: bool) -> None:
     hub = Mock(
         id="hub",
         mark_platforms_setup=Mock(),
         set_connect_task=Mock(),
+        webhook_id="hook-id",
+        uses_cloudhook=uses_cloudhook,
     )
     hass = Mock()
     hass.config_entries.async_forward_entry_setups = AsyncMock()
@@ -49,8 +52,17 @@ async def test_setup_entry_schedules_background_task() -> None:
             AsyncMock(return_value=hub),
         ),
         patch("custom_components.hubitat.async_register_services") as register,
+        patch(
+            "custom_components.hubitat.async_delete_cloudhook", AsyncMock()
+        ) as delete_cloudhook,
     ):
         assert await async_setup_entry(hass, entry) is True
+
+    # An entry that doesn't use its cloudhook removes any it had before
+    if uses_cloudhook:
+        delete_cloudhook.assert_not_awaited()
+    else:
+        delete_cloudhook.assert_awaited_once_with(hass, "hook-id")
 
     hass.config_entries.async_update_entry.assert_called_once_with(
         entry, title="Hubitat (hub)"

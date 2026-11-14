@@ -33,6 +33,7 @@ def _hass(
 def _cloud(logged_in: bool = True, connected: bool = True) -> Mock:
     cloud = Mock()
     cloud.async_is_logged_in.return_value = logged_in
+    cloud.async_active_subscription.return_value = logged_in
     cloud.async_is_connected.return_value = connected
     cloud.async_get_or_create_cloudhook = AsyncMock(
         return_value="https://hooks.nabu.casa/abc"
@@ -232,3 +233,63 @@ def test_listen_cloud_changes_without_cloudhook_listener() -> None:
 
 def test_listen_cloud_changes_without_cloud() -> None:
     assert async_listen_cloud_changes(_hass(), "hook-id", Mock()) == []
+
+
+@pytest.mark.asyncio
+async def test_cloud_hub_with_expired_subscription_uses_external_url() -> None:
+    cloud = _cloud()
+    cloud.async_active_subscription.return_value = False
+    hass = _hass({"cloud"})
+    with (
+        patch.object(event_delivery, "_get_cloud", return_value=cloud),
+        patch.object(event_delivery, "get_url", return_value="https://ha.example"),
+    ):
+        url = await async_get_event_url(hass, "hook-id", CLOUD_HOST, None)
+
+    assert url == f"https://ha.example{WEBHOOK_PATH}"
+    cloud.async_get_or_create_cloudhook.assert_not_called()
+
+    with (
+        patch.object(event_delivery, "_get_cloud", return_value=cloud),
+        patch.object(event_delivery, "get_url", side_effect=NoURLAvailableError),
+    ):
+        assert can_deliver_cloud_events(hass, None) is False
+
+
+@pytest.mark.asyncio
+async def test_cloud_hub_falls_back_when_cloudhook_creation_fails() -> None:
+    cloud = _cloud()
+    cloud.async_get_or_create_cloudhook.side_effect = ValueError("no")
+    hass = _hass({"cloud"})
+    with (
+        patch.object(event_delivery, "_get_cloud", return_value=cloud),
+        patch.object(event_delivery, "get_url", return_value="https://ha.example"),
+    ):
+        url = await async_get_event_url(hass, "hook-id", CLOUD_HOST, None)
+
+    assert url == f"https://ha.example{WEBHOOK_PATH}"
+
+
+@pytest.mark.asyncio
+async def test_cloud_hub_cloudhook_failure_without_external_url_raises() -> None:
+    cloud = _cloud()
+    error = ValueError("no")
+    cloud.async_get_or_create_cloudhook.side_effect = error
+    hass = _hass({"cloud"})
+    with (
+        patch.object(event_delivery, "_get_cloud", return_value=cloud),
+        patch.object(event_delivery, "get_url", side_effect=NoURLAvailableError),
+        pytest.raises(NoEventUrlAvailable) as exc_info,
+    ):
+        _ = await async_get_event_url(hass, "hook-id", CLOUD_HOST, None)
+
+    assert exc_info.value.__cause__ is error
+
+
+@pytest.mark.asyncio
+async def test_delete_missing_cloudhook_is_ignored() -> None:
+    cloud = _cloud()
+    cloud.async_delete_cloudhook.side_effect = ValueError("not enabled")
+    hass = _hass({"cloud"})
+    with patch.object(event_delivery, "_get_cloud", return_value=cloud):
+        await async_delete_cloudhook(hass, "hook-id")

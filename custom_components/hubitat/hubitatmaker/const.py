@@ -1,5 +1,8 @@
 from enum import StrEnum
 
+# The host of Hubitat's cloud relay
+HUBITAT_CLOUD_HOST = "cloud.hubitat.com"
+
 
 class DeviceCapability(StrEnum):
     ACCELERATION_SENSOR = "AccelerationSensor"

@@ -46,6 +46,11 @@ def _create_hub(entry: Mock | None = None) -> tuple[Hub, Mock]:
     hubitat_hub.devices = {}
     hubitat_hub.set_event_url = AsyncMock()
     hubitat_hub.start_event_server = AsyncMock()
+
+    async def run_in_executor(func: Any, *args: Any) -> Any:
+        return func(*args)
+
+    hass.async_add_executor_job = run_in_executor
     hub = Hub(hass, entry or _entry(), 1, hubitat_hub, Mock())
     return hub, hubitat_hub
 
@@ -175,14 +180,19 @@ async def test_local_hub_falls_back_to_event_server_without_url() -> None:
 @pytest.mark.asyncio
 async def test_cloud_hub_without_url_does_not_start_event_server() -> None:
     hub, hubitat_hub = _create_hub(_entry({"host": CLOUD_HOST}))
-    with patch.object(
-        hub_module,
-        "async_get_event_url",
-        AsyncMock(side_effect=NoEventUrlAvailable("nope")),
+    with (
+        patch.object(
+            hub_module,
+            "async_get_event_url",
+            AsyncMock(side_effect=NoEventUrlAvailable("nope")),
+        ),
+        patch.object(hub_module, "async_call_later") as call_later,
     ):
         await hub._async_update_event_url()
     hubitat_hub.set_event_url.assert_not_awaited()
     hubitat_hub.start_event_server.assert_not_awaited()
+    # A cloud hub retries, since a cloudhook or external URL may appear later
+    call_later.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -394,3 +404,31 @@ def test_event_url_retry_is_skipped_when_hub_stopped() -> None:
     retry(None)
     entry.async_create_background_task.assert_not_called()
     assert hub._cancel_event_url_retry is None
+
+
+def test_register_webhook_replaces_stale_registration() -> None:
+    """A webhook left from a failed setup doesn't prevent registration."""
+    hub, _ = _create_hub()
+    with (
+        patch.object(hub_module.webhook, "async_unregister") as unregister,
+        patch.object(hub_module.webhook, "async_register") as register,
+    ):
+        hub.async_register_webhook()
+    unregister.assert_called_once_with(hub.hass, "hook-id")
+    register.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("data", "options", "expected"),
+    [
+        ({"host": CLOUD_HOST}, {}, True),
+        ({"host": CLOUD_HOST}, {H_CONF_SERVER_URL: "https://ha.example.com"}, False),
+        ({"host": CLOUD_HOST, H_CONF_USE_EVENT_SERVER: True}, {}, False),
+        ({}, {}, False),
+    ],
+)
+def test_uses_cloudhook(
+    data: dict[str, Any], options: dict[str, Any], expected: bool
+) -> None:
+    hub, _ = _create_hub(_entry(data, options))
+    assert hub.uses_cloudhook is expected

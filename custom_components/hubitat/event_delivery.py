@@ -18,9 +18,9 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.network import NoURLAvailableError, get_url
 
-_LOGGER = getLogger(__name__)
+from .hubitatmaker.const import HUBITAT_CLOUD_HOST
 
-HUBITAT_CLOUD_HOST = "cloud.hubitat.com"
+_LOGGER = getLogger(__name__)
 
 
 class NoEventUrlAvailable(HomeAssistantError):
@@ -44,9 +44,10 @@ def _get_cloud(hass: HomeAssistant) -> ModuleType | None:
     return cloud
 
 
-def _cloud_logged_in(hass: HomeAssistant) -> bool:
+def _cloud_subscribed(hass: HomeAssistant) -> bool:
+    """Return True if Home Assistant Cloud has an active subscription."""
     cloud = _get_cloud(hass)
-    return cloud is not None and bool(cloud.async_is_logged_in(hass))
+    return cloud is not None and bool(cloud.async_active_subscription(hass))
 
 
 def async_listen_cloud_changes(
@@ -93,7 +94,7 @@ def is_cloud_host(host: str | None) -> bool:
 
 def can_deliver_cloud_events(hass: HomeAssistant, base_url: str | None) -> bool:
     """Return True if a cloud hub would have some way to reach Home Assistant."""
-    if base_url or _cloud_logged_in(hass):
+    if base_url or _cloud_subscribed(hass):
         return True
     try:
         _ = _get_external_url(hass)
@@ -122,17 +123,23 @@ async def async_get_event_url(
 
     if is_cloud_host(host):
         cloud = _get_cloud(hass)
-        if cloud is not None and cloud.async_is_logged_in(hass):
+        cloudhook_error: Exception | None = None
+        if cloud is not None and cloud.async_active_subscription(hass):
             if not cloud.async_is_connected(hass):
                 raise CloudNotConnected("Home Assistant Cloud is not connected")
-            return str(await cloud.async_get_or_create_cloudhook(hass, webhook_id))
+            try:
+                return str(await cloud.async_get_or_create_cloudhook(hass, webhook_id))
+            except Exception as e:
+                # Fall back to the external URL, if there is one
+                _LOGGER.warning("Unable to create a cloudhook: %s", e)
+                cloudhook_error = e
         try:
             return f"{_get_external_url(hass)}{path}"
         except NoURLAvailableError as e:
             raise NoEventUrlAvailable(
                 "A hub accessed through the Hubitat cloud needs Home Assistant "
                 "Cloud or an external URL to send events to"
-            ) from e
+            ) from (cloudhook_error or e)
 
     try:
         return f"{_get_internal_url(hass)}{path}"
@@ -143,12 +150,19 @@ async def async_get_event_url(
 
 
 async def async_delete_cloudhook(hass: HomeAssistant, webhook_id: str) -> None:
-    """Delete the cloudhook for a webhook, if one exists."""
+    """Delete the cloudhook for a webhook, if one exists.
+
+    Deleting a cloudhook only updates Home Assistant Cloud's local preferences,
+    so it works while the cloud is disconnected.
+    """
     cloud = _get_cloud(hass)
     if cloud is None or not cloud.async_is_logged_in(hass):
         return
     try:
         await cloud.async_delete_cloudhook(hass, webhook_id)
+    except ValueError:
+        # The webhook doesn't have a cloudhook
+        pass
     except Exception as e:
         _LOGGER.debug("Unable to delete cloudhook: %s", e)
 

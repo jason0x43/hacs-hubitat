@@ -18,7 +18,7 @@ from aiohttp.client_exceptions import (
     ContentTypeError,
 )
 
-from .const import ID_HSM_STATUS, ID_MODE, DeviceAttribute
+from .const import HUBITAT_CLOUD_HOST, ID_HSM_STATUS, ID_MODE, DeviceAttribute
 from .error import InvalidConfig, InvalidMode, InvalidToken, RequestError
 from .server import Server, create_server
 from .types import Device, Event, HubVariable, Mode
@@ -289,11 +289,7 @@ class Hub:
 
     def stop(self) -> None:
         """Remove all listeners and stop the event server (if running)."""
-        if self._server:
-            self._server.stop()
-            self._server = None
-            _LOGGER.debug("Stopped event server")
-        self.use_server = self._default_use_server
+        self.stop_event_server()
         self._listeners = {}
 
     async def start_event_server(self) -> None:
@@ -353,8 +349,9 @@ class Hub:
             if not self._server:
                 return
             event_url = self._server.url
+        # Webhook URLs are secrets, so only log where events are going
+        _LOGGER.info("Setting event update URL to %s", _redact_url(str(event_url)))
         url = quote(str(event_url), safe="")
-        _LOGGER.info("Setting event update URL to %s", url)
         await self._api_request(f"postURL/{url}")
 
     async def set_hsm(self, hsm_mode: str) -> None:
@@ -391,8 +388,8 @@ class Hub:
         base_url = f"{self.scheme}://{self.host}"
         self.base_url = base_url
 
-        if host_url.scheme and host_url.netloc and host_url.path.strip("/"):
-            # A full URL, such as a Hubitat cloud URL
+        if host_url.hostname == HUBITAT_CLOUD_HOST and host_url.path.strip("/"):
+            # A Hubitat cloud URL, which includes the hub's UID
             self.api_url = f"{base_url}{_get_api_path(host_url.path, self.app_id)}"
         else:
             self.api_url = f"{base_url}/apps/api/{self.app_id}"
@@ -440,13 +437,9 @@ class Hub:
     def process_event(self, event: dict[str, Any]) -> None:
         """Process an event POSTed by the hub.
 
-        This is used to handle events delivered through something other than the
-        built-in event server, such as a Home Assistant webhook.
+        Events come from the built-in event server or from something else, such
+        as a Home Assistant webhook.
         """
-        self._process_event(event)
-
-    def _process_event(self, event: dict[str, Any]) -> None:
-        """Process an event received from the hub."""
         content = event.get("content", event)
         if not isinstance(content, dict):
             _LOGGER.warning("Received invalid event: %s", event)
@@ -671,7 +664,7 @@ class Hub:
             address = cast(str, s.getsockname()[0])
 
         self._server = create_server(
-            self._process_event, address, self.port or 0, self.ssl_context
+            self.process_event, address, self.port or 0, self.ssl_context
         )
         self._server.start()
         _LOGGER.debug(
@@ -682,6 +675,15 @@ class Hub:
         )
 
         await self.set_event_url(self.event_url)
+
+
+def _redact_url(url: str) -> str:
+    """Return a URL with everything but the scheme and host removed."""
+    parsed = urlparse(url)
+    if not parsed.hostname:
+        return "[redacted]"
+    port = f":{parsed.port}" if parsed.port else ""
+    return f"{parsed.scheme}://{parsed.hostname}{port}/[redacted]"
 
 
 def _get_api_path(path: str, app_id: str) -> str:

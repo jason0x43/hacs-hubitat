@@ -136,6 +136,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     )
     hub.mark_platforms_setup(_HUB_STATUS_PLATFORMS)
     hub.async_register_webhook()
+    webhook_id = hub.webhook_id
+    if webhook_id is not None and not hub.uses_cloudhook:
+        # The entry may have used a cloudhook before its settings changed
+        await async_delete_cloudhook(hass, webhook_id)
 
     async_register_services(hass, config_entry)
 
