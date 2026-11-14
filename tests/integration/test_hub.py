@@ -254,6 +254,27 @@ async def test_event_url_follows_internal_url_changes(
         await _unload_entry(hass, entry)
 
 
+async def test_legacy_event_server_ignores_internal_url_changes(
+    hass, fake_hubitat: FakeHubitat
+) -> None:
+    hass.config.internal_url = "http://192.168.1.10:8123"
+    entry = await _setup_entry(
+        hass, fake_hubitat, options={H_CONF_USE_EVENT_SERVER: True}
+    )
+    try:
+        server_url = fake_hubitat.post_urls[-1]
+        assert "/api/webhook/" not in server_url
+        post_count = len(fake_hubitat.post_urls)
+
+        await hass.config.async_update(internal_url="http://192.168.1.20:8123")
+        await hass.async_block_till_done()
+
+        assert len(fake_hubitat.post_urls) == post_count
+        assert fake_hubitat.post_urls[-1] == server_url
+    finally:
+        await _unload_entry(hass, entry)
+
+
 async def test_webhook_is_reregistered_on_reload(
     hass, fake_hubitat: FakeHubitat
 ) -> None:
