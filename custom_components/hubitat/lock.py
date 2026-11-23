@@ -56,9 +56,19 @@ class HubitatLock(LockEntity, HubitatEntity):
             return f"^(\\d{{{code_length}}}|)$"
         return None
 
-    def _get_is_locked(self) -> bool:
-        """Return True if the lock is locked."""
-        return self.get_attr(DeviceAttribute.LOCK) == DeviceState.LOCKED
+    def _get_is_locked(self) -> bool | None:
+        """Return True if locked, False if unlocked, or None if the state is unknown.
+
+        Hubitat reports "unknown" when a lock can't confirm its state, such as when
+        it jams while locking. Treating that as unlocked would hide the problem, so
+        it maps to None, which Home Assistant shows as unknown.
+        """
+        state = self.get_attr(DeviceAttribute.LOCK)
+        if state == DeviceState.LOCKED:
+            return True
+        if state in (DeviceState.UNLOCKED, DeviceState.UNLOCKED_WITH_TIMEOUT):
+            return False
+        return None
 
     @property
     def code_length(self) -> int | None:
