@@ -6,7 +6,7 @@ authors = [{ name = "Jason Cheatham", email = "jason@jasoncheatham.com" }]
 requires-python = ">=3.14.2"
 license = { text = "MIT" }
 dependencies = [
-    "homeassistant>=2025.9.0",
+    "homeassistant>=2025.11.0",
 ]
 
 [project.urls]
