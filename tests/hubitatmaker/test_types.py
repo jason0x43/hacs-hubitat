@@ -3,6 +3,8 @@ from datetime import datetime
 from os.path import dirname, join
 from typing import Any, cast
 
+import pytest
+
 from custom_components.hubitat.hubitatmaker.const import DeviceAttribute
 from custom_components.hubitat.hubitatmaker.types import Attribute, Device
 
@@ -85,3 +87,40 @@ def test_attribute_sanitizes_html_wrapped_dynamic_enum_value() -> None:
     )
 
     assert attr.value == "open"
+
+
+def _list_attr(value: str | None) -> Attribute:
+    return Attribute(
+        {
+            "name": DeviceAttribute.SUPPORTED_MODES,
+            "dataType": "JSON_OBJECT",
+            "currentValue": value,  # type: ignore[typeddict-item]
+            "unit": None,
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ('["off", "heat"]', ["off", "heat"]),
+        ("[2200, 6500]", [2200, 6500]),
+        ("[off, heat]", ["off", "heat"]),
+        ("[ \"off\" , 'emergency heat' ]", ["off", "emergency heat"]),
+        (" [Cool] ", ["Cool"]),
+        ("[]", []),
+        ("[ ]", []),
+        ("null", None),
+        (None, None),
+    ],
+)
+def test_attribute_list_value(value: str | None, expected: list[Any] | None) -> None:
+    """Test list values in JSON and Groovy formats."""
+    assert _list_attr(value).list_value == expected
+
+
+@pytest.mark.parametrize("value", ["heat", '{"mode": "heat"}', "42", ""])
+def test_attribute_list_value_invalid(value: str) -> None:
+    """Test values that aren't lists raise a ValueError."""
+    with pytest.raises(ValueError):
+        _ = _list_attr(value).list_value

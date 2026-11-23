@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, Mock, call, patch
 import pytest
 
 from custom_components.hubitat.climate import (
+    DEFAULT_HVAC_MODES,
     PRESET_AWAY_AND_ECO,
     HubitatThermostat,
     async_setup_entry,
@@ -25,6 +26,7 @@ from homeassistant.components.climate.const import (
     PRESET_AWAY,
     PRESET_ECO,
     PRESET_HOME,
+    ClimateEntityFeature,
     HVACAction,
     HVACMode,
 )
@@ -95,6 +97,7 @@ def create_thermostat_device(**kwargs: Any) -> Mock:
         label="Test Thermostat",
         attributes=default_attrs,
         capabilities={DeviceCapability.THERMOSTAT},
+        commands=kwargs.get("commands", []),
     )
     return device
 
@@ -787,3 +790,266 @@ def test_thermostat_setpoint_range_hub_unit_change() -> None:
     assert temperature_attr(thermostat, "temperature_unit") == UnitOfTemperature.CELSIUS
     assert thermostat.min_temp == pytest.approx(4.4)
     assert thermostat.max_temp == pytest.approx(35)
+
+
+def _enum_attr(name: DeviceAttribute, value: str) -> Attribute:
+    return Attribute(
+        {"name": name, "currentValue": value, "dataType": "ENUM", "unit": None}
+    )
+
+
+def _thermostat_with_modes(
+    modes: str | None = None,
+    fan_modes: str | None = None,
+    commands: list[str] | None = None,
+    attrs: dict[DeviceAttribute, str] | None = None,
+) -> tuple[HubitatThermostat, AsyncMock]:
+    """Create a thermostat that reports supported modes and attribute values.
+
+    Returns the thermostat and its mocked send_command.
+    """
+    values = dict(attrs or {})
+    if modes is not None:
+        values[DeviceAttribute.SUPPORTED_MODES] = modes
+    if fan_modes is not None:
+        values[DeviceAttribute.SUPPORTED_FAN_MODES] = fan_modes
+    attributes = {name: _enum_attr(name, value) for name, value in values.items()}
+    thermostat = HubitatThermostat(
+        hub=Mock(token="token", temperature_unit=UnitOfTemperature.FAHRENHEIT),
+        device=create_thermostat_device(attributes=attributes, commands=commands or []),
+    )
+    send_command = AsyncMock()
+    thermostat.send_command = send_command  # type: ignore[method-assign]
+    return thermostat, send_command
+
+
+@pytest.mark.asyncio
+async def test_thermostat_set_fan_mode_with_set_fan_mode_keeps_case() -> None:
+    thermostat, send_command = _thermostat_with_modes(
+        fan_modes='["Auto", "Circulate"]', commands=[DeviceCommand.SET_FAN_MODE]
+    )
+    await thermostat.async_set_fan_mode("Circulate")
+    assert send_command.await_args_list == [
+        call(DeviceCommand.SET_FAN_MODE, "Circulate")
+    ]
+
+
+@pytest.mark.asyncio
+async def test_thermostat_set_unsupported_fan_mode() -> None:
+    thermostat, send_command = _thermostat_with_modes()
+    await thermostat.async_set_fan_mode("followschedule")
+    send_command.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    ("modes", "commands", "expected"),
+    [
+        ("[off, heat]", [], [HVACMode.OFF, HVACMode.HEAT]),
+        ('["heat", "emergency heat", "off"]', [], [HVACMode.HEAT, HVACMode.OFF]),
+        (
+            "[auto, off, heat, emergency heat, cool]",
+            [],
+            [
+                HVACMode.AUTO,
+                HVACMode.HEAT_COOL,
+                HVACMode.OFF,
+                HVACMode.HEAT,
+                HVACMode.COOL,
+            ],
+        ),
+        ("[off, cool, dry, fan only]", [], [HVACMode.OFF, HVACMode.COOL]),
+        (
+            "[off, cool, dry, fan only]",
+            [DeviceCommand.SET_THERMOSTAT_MODE],
+            [HVACMode.OFF, HVACMode.COOL, HVACMode.DRY, HVACMode.FAN_ONLY],
+        ),
+        ("[OFF, Heat]", [], [HVACMode.OFF, HVACMode.HEAT]),
+        (None, [], DEFAULT_HVAC_MODES),
+        ("not a list", [], DEFAULT_HVAC_MODES),
+        ('{"mode": "heat"}', [], DEFAULT_HVAC_MODES),
+        ("[eco]", [], DEFAULT_HVAC_MODES),
+        ("[]", [], DEFAULT_HVAC_MODES),
+    ],
+)
+def test_thermostat_hvac_modes(
+    modes: str | None, commands: list[str], expected: list[HVACMode]
+) -> None:
+    thermostat, _ = _thermostat_with_modes(modes=modes, commands=commands)
+    assert thermostat.hvac_modes == expected
+
+
+def test_thermostat_hvac_modes_update() -> None:
+    """Supported modes reported after startup are picked up on the next event."""
+    thermostat, _ = _thermostat_with_modes(modes="[off, heat]")
+    thermostat._device.attributes[DeviceAttribute.SUPPORTED_MODES].update_value(
+        "[off, cool]"
+    )
+    thermostat.load_state()
+    assert thermostat.hvac_modes == [HVACMode.OFF, HVACMode.COOL]
+
+
+@pytest.mark.parametrize(
+    ("mode", "expected"),
+    [("dry", HVACMode.DRY), ("fan only", HVACMode.FAN_ONLY)],
+)
+def test_thermostat_extra_hvac_mode_states(mode: str, expected: HVACMode) -> None:
+    thermostat, _ = _thermostat_with_modes(
+        modes="[off, dry, fan only]",
+        commands=[DeviceCommand.SET_THERMOSTAT_MODE],
+        attrs={DeviceAttribute.THERMOSTAT_MODE: mode},
+    )
+    assert thermostat.hvac_mode == expected
+
+
+@pytest.mark.parametrize("mode", ["eco", "auto"])
+def test_thermostat_hvac_mode_not_offered(mode: str) -> None:
+    """A mode the thermostat doesn't offer is reported as unknown."""
+    thermostat, _ = _thermostat_with_modes(
+        modes="[off, heat, cool, eco]", attrs={DeviceAttribute.THERMOSTAT_MODE: mode}
+    )
+    assert thermostat.hvac_modes == [HVACMode.OFF, HVACMode.HEAT, HVACMode.COOL]
+    assert thermostat.hvac_mode is None
+
+
+def test_thermostat_unknown_hvac_mode_with_default_modes() -> None:
+    """Without reported modes, an unrecognized mode is still shown as auto."""
+    thermostat, _ = _thermostat_with_modes(
+        attrs={DeviceAttribute.THERMOSTAT_MODE: "eco"}
+    )
+    assert thermostat.hvac_mode == HVACMode.AUTO
+
+
+def test_thermostat_reported_fan_modes() -> None:
+    thermostat, _ = _thermostat_with_modes(
+        fan_modes='["circulate"]', attrs={DeviceAttribute.FAN_MODE: "circulate"}
+    )
+    assert thermostat.fan_modes == ["circulate"]
+    assert thermostat.fan_mode == "circulate"
+
+
+def test_thermostat_reported_fan_mode_unsupported() -> None:
+    thermostat, _ = _thermostat_with_modes(
+        fan_modes="[auto, on]", attrs={DeviceAttribute.FAN_MODE: "circulate"}
+    )
+    assert thermostat.fan_modes == ["auto", "on"]
+    assert thermostat.fan_mode is None
+
+
+@pytest.mark.parametrize("fan_modes", [None, "garbage"])
+def test_thermostat_default_fan_modes(fan_modes: str | None) -> None:
+    thermostat, _ = _thermostat_with_modes(
+        fan_modes=fan_modes, attrs={DeviceAttribute.FAN_MODE: "circulate"}
+    )
+    assert thermostat.fan_modes == [FAN_ON, FAN_AUTO]
+    assert thermostat.fan_mode == FAN_ON
+
+
+def test_thermostat_reported_fan_modes_keep_case() -> None:
+    """Fan modes keep the driver's case, since they're sent back to it."""
+    thermostat, _ = _thermostat_with_modes(
+        fan_modes='["Auto", "On", "auto", "Circulate"]',
+        commands=[DeviceCommand.SET_FAN_MODE],
+        attrs={DeviceAttribute.FAN_MODE: "circulate"},
+    )
+    assert thermostat.fan_modes == ["Auto", "On", "Circulate"]
+    assert thermostat.fan_mode == "Circulate"
+
+
+def test_thermostat_reported_fan_modes_without_set_fan_mode() -> None:
+    """Without setThermostatFanMode, only modes with a command are offered."""
+    thermostat, _ = _thermostat_with_modes(fan_modes="[auto, on, followschedule]")
+    assert thermostat.fan_modes == ["auto", "on"]
+
+
+def test_thermostat_no_fan_modes() -> None:
+    """A device that reports no fan modes doesn't support setting one."""
+    thermostat, _ = _thermostat_with_modes(fan_modes="[]")
+    assert thermostat.fan_modes == []
+    assert ClimateEntityFeature.FAN_MODE not in thermostat.supported_features
+
+    thermostat._device.attributes[DeviceAttribute.SUPPORTED_FAN_MODES].update_value(
+        "[auto]"
+    )
+    thermostat.load_state()
+    assert thermostat.fan_modes == ["auto"]
+    assert ClimateEntityFeature.FAN_MODE in thermostat.supported_features
+
+
+def test_thermostat_supported_mode_attrs_are_generic_sensors() -> None:
+    """Supported mode attributes stay available as generic sensors.
+
+    Claiming them would orphan generic sensors that users have enabled.
+    """
+    attrs = _thermostat_with_modes()[0].device_attrs
+    assert attrs is not None
+    assert DeviceAttribute.SUPPORTED_MODES not in attrs
+    assert DeviceAttribute.SUPPORTED_FAN_MODES not in attrs
+
+
+@pytest.mark.asyncio
+async def test_thermostat_set_hvac_mode_with_set_thermostat_mode() -> None:
+    thermostat, send_command = _thermostat_with_modes(
+        commands=[DeviceCommand.SET_THERMOSTAT_MODE, DeviceCommand.OFF]
+    )
+    for mode in (
+        HVACMode.COOL,
+        HVACMode.HEAT,
+        HVACMode.AUTO,
+        HVACMode.HEAT_COOL,
+        HVACMode.OFF,
+        HVACMode.DRY,
+        HVACMode.FAN_ONLY,
+    ):
+        await thermostat.async_set_hvac_mode(mode)
+    await thermostat.async_turn_off()
+
+    assert send_command.await_args_list == [
+        call(DeviceCommand.SET_THERMOSTAT_MODE, "cool"),
+        call(DeviceCommand.SET_THERMOSTAT_MODE, "heat"),
+        call(DeviceCommand.SET_THERMOSTAT_MODE, "auto"),
+        call(DeviceCommand.SET_THERMOSTAT_MODE, "auto"),
+        call(DeviceCommand.SET_THERMOSTAT_MODE, "off"),
+        call(DeviceCommand.SET_THERMOSTAT_MODE, "dry"),
+        call(DeviceCommand.SET_THERMOSTAT_MODE, "fan only"),
+        call(DeviceCommand.OFF),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_thermostat_set_temperature_with_set_thermostat_mode() -> None:
+    thermostat, send_command = _thermostat_with_modes(
+        commands=[DeviceCommand.SET_THERMOSTAT_MODE]
+    )
+    await thermostat.async_set_temperature(
+        **{ATTR_HVAC_MODE: HVACMode.HEAT, ATTR_TEMPERATURE: 68}
+    )
+    assert send_command.await_args_list == [
+        call(DeviceCommand.SET_THERMOSTAT_MODE, "heat"),
+        call(DeviceCommand.SET_HEATING_SETPOINT, 68),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_thermostat_set_fan_mode_with_set_fan_mode() -> None:
+    thermostat, send_command = _thermostat_with_modes(
+        fan_modes="[on, auto, circulate]", commands=[DeviceCommand.SET_FAN_MODE]
+    )
+    for mode in ("on", "auto", "circulate"):
+        await thermostat.async_set_fan_mode(mode)
+    assert send_command.await_args_list == [
+        call(DeviceCommand.SET_FAN_MODE, "on"),
+        call(DeviceCommand.SET_FAN_MODE, "auto"),
+        call(DeviceCommand.SET_FAN_MODE, "circulate"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_thermostat_set_fan_mode_commands() -> None:
+    thermostat, send_command = _thermostat_with_modes(fan_modes="[on, auto, circulate]")
+    for mode in ("on", "auto", "circulate"):
+        await thermostat.async_set_fan_mode(mode)
+    assert send_command.await_args_list == [
+        call(DeviceCommand.FAN_ON),
+        call(DeviceCommand.FAN_AUTO),
+        call(DeviceCommand.FAN_CIRCULATE),
+    ]
